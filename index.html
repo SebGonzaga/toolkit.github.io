@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homeroom — Classroom Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --chalkboard: #26332E;
+    --chalkboard-dark: #1B2622;
+    --paper: #E9E6D8;
+    --paper-card: #F5F3E9;
+    --ink: #23261F;
+    --ink-soft: #5C6157;
+    --yellow: #F0C64C;
+    --coral: #E37A56;
+    --blue: #6FA6B4;
+    --line: rgba(35,38,31,0.12);
+    --danger: #C24C3E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk',sans-serif;
+    margin:0;
+  }
+  button{
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    border:none;
+  }
+  input,textarea,select{
+    font-family:'Inter',sans-serif;
+  }
+  .app{
+    display:flex;
+    min-height:100vh;
+  }
+
+  /* ---------- DOCK ---------- */
+  .dock{
+    width:236px;
+    flex-shrink:0;
+    background:var(--chalkboard);
+    color:#EFEDE2;
+    padding:22px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .brand{
+    padding:0 8px;
+  }
+  .brand .display{
+    font-size:22px;
+    font-weight:700;
+    color:#fff;
+  }
+  .brand p{
+    margin:4px 0 0;
+    font-size:12.5px;
+    color:#B7BDB2;
+    line-height:1.4;
+  }
+  .class-select{
+    padding:0 4px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .class-select label{
+    font-size:11px;
+    color:#9BA69A;
+  }
+  .class-select select{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:var(--chalkboard-dark);
+    color:#fff;
+    font-size:13.5px;
+  }
+  .new-class-btn{
+    background:transparent;
+    color:#C9CFC3;
+    font-size:12px;
+    text-align:left;
+    padding:2px 4px;
+    text-decoration:underline;
+    text-underline-offset:2px;
+  }
+  .tools{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    margin-top:4px;
+  }
+  .tool-btn{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:10px 10px;
+    background:transparent;
+    color:#D6D9CE;
+    border-radius:9px;
+    font-size:14px;
+    border-left:3px solid transparent;
+    text-align:left;
+  }
+  .tool-btn .dot{
+    width:9px;height:9px;border-radius:50%;
+    flex-shrink:0;
+  }
+  .tool-btn:hover{ background:rgba(255,255,255,0.06); }
+  .tool-btn.active{
+    background:rgba(255,255,255,0.09);
+    color:#fff;
+    border-left-color: var(--accent, var(--yellow));
+    font-weight:600;
+  }
+
+  /* ---------- STAGE ---------- */
+  .stage{
+    flex:1;
+    padding:36px 44px;
+    overflow-y:auto;
+  }
+  .panel{ display:none; max-width:920px; }
+  .panel.active{ display:block; }
+  .panel-head{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom:6px;
+  }
+  .panel-head h2{
+    font-size:26px;
+    font-weight:700;
+  }
+  .accent-underline{
+    height:4px;
+    width:46px;
+    border-radius:3px;
+    background:var(--accent, var(--yellow));
+    margin-bottom:22px;
+  }
+  .subtext{
+    color:var(--ink-soft);
+    font-size:14px;
+    margin:0 0 22px;
+    max-width:560px;
+    line-height:1.5;
+  }
+  .card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px;
+  }
+  .btn{
+    padding:10px 18px;
+    border-radius:9px;
+    font-size:14px;
+    font-weight:600;
+    background:var(--ink);
+    color:#fff;
+  }
+  .btn:hover{ opacity:0.88; }
+  .btn.secondary{
+    background:transparent;
+    color:var(--ink);
+    border:1px solid var(--line);
+  }
+  .btn.danger{ background:var(--danger); }
+  .btn:disabled{ opacity:0.45; cursor:not-allowed; }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+  /* ---------- ROSTER ---------- */
+  textarea.roster-input{
+    width:100%;
+    min-height:220px;
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    font-size:14px;
+    line-height:1.7;
+    resize:vertical;
+    background:#fff;
+  }
+  .roster-count{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:8px;
+  }
+
+  /* ---------- PICKER ---------- */
+  .picker-layout{
+    display:flex;
+    gap:34px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .wheel-wrap{
+    position:relative;
+    width:340px;
+    height:340px;
+    flex-shrink:0;
+  }
+  .wheel-pointer{
+    position:absolute;
+    top:-6px; left:50%;
+    transform:translateX(-50%);
+    width:0;height:0;
+    border-left:14px solid transparent;
+    border-right:14px solid transparent;
+    border-top:22px solid var(--ink);
+    z-index:3;
+  }
+  #wheelCanvas{
+    width:340px;height:340px;
+    border-radius:50%;
+    box-shadow:0 6px 0 rgba(0,0,0,0.08), 0 10px 24px rgba(0,0,0,0.12);
+    transition: transform 4.2s cubic-bezier(.17,.67,.16,1);
+  }
+  .picker-side{ flex:1; min-width:240px; }
+  .winner-banner{
+    margin-top:18px;
+    padding:16px 18px;
+    border-radius:12px;
+    background:var(--yellow);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:19px;
+    display:none;
+    transform:scale(0.9);
+    opacity:0;
+    transition:transform .35s ease, opacity .35s ease;
+  }
+  .winner-banner.show{ display:block; transform:scale(1); opacity:1; }
+  .toggle-row{
+    display:flex; align-items:center; gap:10px;
+    font-size:13.5px;
+    margin:14px 0;
+  }
+  .switch{
+    position:relative; width:38px; height:22px;
+    background:#c9c6b8; border-radius:20px; flex-shrink:0;
+  }
+  .switch input{ display:none; }
+  .switch .knob{
+    position:absolute; top:2px; left:2px;
+    width:18px;height:18px;border-radius:50%;
+    background:#fff; transition:left .18s ease;
+  }
+  .switch input:checked + .knob{ left:18px; }
+  .switch.on{ background:var(--blue); }
+  .pool-note{ font-size:12.5px; color:var(--ink-soft); }
+
+  /* ---------- GROUPS ---------- */
+  .group-controls{ display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;}
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size:12px; color:var(--ink-soft); }
+  .field input, .field select{
+    padding:8px 10px; border-radius:8px; border:1px solid var(--line); width:100px; background:#fff;
+  }
+  .groups-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(180px,1fr));
+    gap:14px;
+  }
+  .group-card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-top:4px solid var(--blue);
+    border-radius:10px;
+    padding:14px;
+  }
+  .group-card h3{ font-size:14px; margin-bottom:8px; }
+  .group-card ul{ margin:0; padding-left:18px; font-size:13.5px; line-height:1.7; }
+
+  /* ---------- SEATING ---------- */
+  .seat-grid{
+    display:grid;
+    gap:10px;
+    margin-top:20px;
+  }
+  .seat{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 8px;
+    text-align:center;
+    font-size:13px;
+    min-height:56px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    user-select:none;
+  }
+  .seat.empty{ color:var(--ink-soft); border-style:dashed; }
+  .seat.selected{ outline:2px solid var(--coral); background:#fff; }
+  .leftover-note{ margin-top:14px; font-size:12.5px; color:var(--ink-soft); }
+
+  /* ---------- TIMER ---------- */
+  .timer-display{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:96px;
+    font-weight:700;
+    letter-spacing:2px;
+    text-align:center;
+    padding:30px 0;
+    transition:color .2s ease;
+  }
+  .timer-display.done{ color:var(--danger); }
+  .timer-setup{ display:flex; gap:12px; justify-content:center; margin-bottom:6px;}
+  .timer-setup .field input{ width:70px; text-align:center; font-size:16px; }
+  .timer-buttons{ display:flex; gap:10px; justify-content:center; margin-top:10px; }
+
+  /* ---------- NOISE ---------- */
+  .noise-gauge-wrap{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:24px;
+    text-align:center;
+    transition:background .15s ease;
+  }
+  .noise-gauge-wrap.hot{ background:#F4D9D2; }
+  .noise-bar-track{
+    position:relative;
+    height:26px;
+    border-radius:13px;
+    background:#DEDACB;
+    overflow:hidden;
+    margin:18px 0 10px;
+  }
+  .noise-bar-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--blue), var(--yellow), var(--danger));
+    transition:width .08s linear;
+  }
+  .noise-threshold{
+    position:absolute;
+    top:-4px; bottom:-4px;
+    width:3px;
+    background:var(--ink);
+  }
+  .noise-msg{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px; margin-top:6px; }
+
+  /* ---------- POINTS ---------- */
+  .points-list{ display:flex; flex-direction:column; gap:8px; margin-top:18px;}
+  .points-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 14px;
+  }
+  .points-name{ font-size:14.5px; font-weight:600; }
+  .points-controls{ display:flex; align-items:center; gap:10px; }
+  .pt-btn{
+    width:28px;height:28px;border-radius:50%;
+    background:var(--ink); color:#fff; font-size:16px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pt-btn.minus{ background:#8b8d81; }
+  .pt-score{ min-width:26px; text-align:center; font-family:'Space Grotesk',sans-serif; font-weight:700; }
+
+  .empty-state{
+    padding:30px; text-align:center; color:var(--ink-soft); font-size:14px;
+    border:1px dashed var(--line); border-radius:12px;
+  }
+
+  @media (max-width: 760px){
+    .app{ flex-direction:column; }
+    .dock{ width:100%; flex-direction:row; flex-wrap:wrap; align-items:center; gap:12px; }
+    .brand{ width:100%; }
+    .class-select{ flex:1; min-width:160px; }
+    .tools{ flex-direction:row; flex-wrap:wrap; flex:1; }
+    .stage{ padding:24px 18px; }
+    .wheel-wrap, #wheelCanvas{ width:280px; height:280px; }
+    .timer-display{ font-size:64px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="dock">
+    <div class="brand">
+      <div class="display">Homeroom</div>
+      <p>Your classroom's supply drawer of quick tools.</p>
+    </div>
+
+    <div class="class-select">
+      <label for="classPicker">Class</label>
+      <select id="classPicker"></select>
+      <button class="new-class-btn" id="newClassBtn">+ New class</button>
+    </div>
+
+    <nav class="tools" id="toolNav">
+      <button class="tool-btn" data-panel="roster" style="--accent:#8b8d81"><span class="dot" style="background:#8b8d81"></span>Class roster</button>
+      <button class="tool-btn" data-panel="picker" style="--accent:#F0C64C"><span class="dot" style="background:#F0C64C"></span>Name picker</button>
+      <button class="tool-btn" data-panel="groups" style="--accent:#6FA6B4"><span class="dot" style="background:#6FA6B4"></span>Groups</button>
+      <button class="tool-btn" data-panel="seating" style="--accent:#E37A56"><span class="dot" style="background:#E37A56"></span>Seating chart</button>
+      <button class="tool-btn" data-panel="timer" style="--accent:#F0C64C"><span class="dot" style="background:#F0C64C"></span>Timer</button>
+      <button class="tool-btn" data-panel="noise" style="--accent:#6FA6B4"><span class="dot" style="background:#6FA6B4"></span>Noise meter</button>
+      <button class="tool-btn" data-panel="points" style="--accent:#E37A56"><span class="dot" style="background:#E37A56"></span>Points</button>
+    </nav>
+  </aside>
+
+  <main class="stage">
+
+    <!-- ROSTER -->
+    <section class="panel" id="panel-roster" style="--accent:#8b8d81">
+      <div class="panel-head"><h2>Class roster</h2></div>
+      <div class="accent-underline"></div>
+      <p class="subtext">One student per line. This roster feeds the picker, groups, seating chart, and points list for this class.</p>
+      <div class="card">
+        <textarea class="roster-input" id="rosterInput" placeholder="Amara&#10;Diego&#10;Priya&#10;Wes&#10;..."></textarea>
+        <div class="roster-count" id="rosterCount">0 students</div>
+        <div class="row" style="margin-top:14px;">
+          <button class="btn" id="saveRosterBtn">Save roster</button>
+          <button class="btn secondary" id="deleteClassBtn">Delete this class</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PICKER -->
+    <section class="panel" id="panel-picker" style="--accent:#F0C64C">
+      <div class="panel-head"><h2>Name picker</h2></div>
+      <div class="accent-underline"></div>
+      <p class="subtext">Spin to call on a student at random.</p>
+      <div class="picker-layout">
+        <div class="wheel-wrap">
+          <div class="wheel-pointer"></div>
+          <canvas id="wheelCanvas" width="340" height="340"></canvas>
+        </div>
+        <div class="picker-side">
+          <button class="btn" id="spinBtn" style="background:#E37A56;">Spin the wheel</button>
+          <div class="toggle-row">
+            <label class="switch" id="noRepeatSwitch">
+              <input type="checkbox" id="noRepeatCheckbox">
+              <span class="knob"></span>
+            </label>
+            <span>Don't repeat a student until everyone's had a turn</span>
+          </div>
+          <div class="pool-note" id="poolNote"></div>
+          <div class="winner-banner" id="winnerBanner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GROUPS -->
+    <section class="panel" id="panel-groups" style="--accent:#6FA6B4">
+      <div class="panel-head"><h2>Groups</h2></div>
+      <div class="accent-underline"></div>
+      <p class="subtext">Shuffle the roster into random groups.</p>
+      <div class="group-controls">
+        <div class="field">
+          <label for="groupMode">Split by</label>
+          <select id="groupMode">
+            <option value="count">Number of groups</option>
+            <option value="size">Students per group</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="groupNumber">Value</label>
+          <input type="number" id="groupNumber" min="1" value="4">
+        </div>
+        <button class="btn" id="makeGroupsBtn">Make groups</button>
+      </div>
+      <div class="groups-grid" id="groupsGrid"></div>
+    </section>
+
+    <!-- SEATING -->
+    <section class="panel" id="panel-seating" style="--accent:#E37A56">
+      <div class="panel-head"><h2>Seating chart</h2></div>
+      <div class="accent-underline"></div>
+      <p class="subtext">Generate a random layout, then click two desks to swap them.</p>
+      <div class="group-controls">
+        <div class="field"><label for="seatRows">Rows</label><input type="number" id="seatRows" min="1" value="4"></div>
+        <div class="field"><label for="seatCols">Columns</label><input type="number" id="seatCols" min="1" value="5"></div>
+        <button class="btn" id="genSeatingBtn">Generate layout</button>
+      </div>
+      <div class="seat-grid" id="seatGrid"></div>
+      <div class="leftover-note" id="leftoverNote"></div>
+    </section>
+
+    <!-- TIMER -->
+    <section class="panel" id="panel-timer" style="--accent:#F0C64C">
+      <div class="panel-head"><h2>Timer</h2></div>
+      <div class="accent-underline"></div>
+      <p class="subtext">Set a countdown for activities, tests, or transitions.</p>
+      <div class="card">
+        <div class="timer-setup">
+          <div class="field"><label for="timerMin">Minutes</label><input type="number" id="timerMin" min="0" value="5"></div>
+          <div class="field"><label for="timerSec">Seconds</label><input type="number" id="timerSec" min="0" max="59" value="0"></div>
+        </div>
+        <div class="timer-display" id="timerDisplay">05:00</div>
+        <div class="timer-buttons">
+          <button class="btn" id="timerStartBtn">Start</button>
+          <button class="btn secondary" id="timerPauseBtn">Pause</button>
+          <button class="btn secondary" id="timerResetBtn">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- NOISE -->
+    <section class="panel" id="panel-noise" style="--accent:#6FA6B4">
+      <div class="panel-head"><h2>Noise meter</h2></div>
+      <div class="accent-underline"></div>
+      <p class="subtext">Uses your microphone to show classroom volume. Nothing is recorded or saved.</p>
+      <div class="noise-gauge-wrap" id="noiseWrap">
+        <button class="btn" id="noiseToggleBtn">Turn on microphone</button>
+        <div class="noise-bar-track">
+          <div class="noise-bar-fill" id="noiseBarFill"></div>
+          <div class="noise-threshold" id="noiseThresholdMark" style="left:70%;"></div>
+        </div>
+        <div class="row" style="justify-content:center;">
+          <label for="noiseThreshold" style="font-size:12.5px;color:var(--ink-soft);">Quiet-down line</label>
+          <input type="range" id="noiseThreshold" min="10" max="95" value="70">
+        </div>
+        <div class="noise-msg" id="noiseMsg">Mic is off</div>
+      </div>
+    </section>
+
+    <!-- POINTS -->
+    <section class="panel" id="panel-points" style="--accent:#E37A56">
+      <div class="panel-head"><h2>Points</h2></div>
+      <div class="accent-underline"></div>
+      <p class="subtext">Track participation or behavior points per student.</p>
+      <div class="row" style="margin-bottom:6px;">
+        <button class="btn secondary" id="resetPointsBtn">Reset all to 0</button>
+      </div>
+      <div class="points-list" id="pointsList"></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  const PALETTE = ['#F0C64C','#E37A56','#6FA6B4','#B7B08A','#D89A8A','#8FB6A6','#E0B84C','#7C9EB2'];
+  const STORAGE_PREFIX = 'homeroom:';
+  let classes = [];          // [{id, name}]
+  let currentClassId = null;
+  let roster = [];           // current class's student names
+  let points = {};           // name -> number
+  let pickerPool = [];       // remaining names for no-repeat mode
+  let wheelNames = [];       // names currently drawn on the wheel
+  let wheelRotation = 0;
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  async function storeGet(key, fallback){
+    try{
+      const r = await window.storage.get(key, false);
+      return r ? JSON.parse(r.value) : fallback;
+    }catch(e){ return fallback; }
+  }
+  async function storeSet(key, value){
+    try{ await window.storage.set(key, JSON.stringify(value), false); }catch(e){ /* ignore */ }
+  }
+  async function storeDelete(key){
+    try{ await window.storage.delete(key, false); }catch(e){ /* ignore */ }
+  }
+
+  function uid(){ return 'c' + Math.random().toString(36).slice(2,9); }
+
+  // ---------------- INIT ----------------
+  async function init(){
+    classes = await storeGet(STORAGE_PREFIX + 'classes', []);
+    if(classes.length === 0){
+      const id = uid();
+      classes = [{id, name:'My class'}];
+      await storeSet(STORAGE_PREFIX + 'classes', classes);
+      await storeSet(STORAGE_PREFIX + 'roster:' + id, ['Amara','Diego','Priya','Wes','Jonah','Leila']);
+    }
+    const lastId = await storeGet(STORAGE_PREFIX + 'lastClass', null);
+    currentClassId = (lastId && classes.find(c=>c.id===lastId)) ? lastId : classes[0].id;
+    await loadClass(currentClassId);
+    renderClassPicker();
+    bindNav();
+    bindRoster();
+    bindPicker();
+    bindGroups();
+    bindSeating();
+    bindTimer();
+    bindNoise();
+    bindPoints();
+    showPanel('roster');
+  }
+
+  async function loadClass(id){
+    currentClassId = id;
+    roster = await storeGet(STORAGE_PREFIX + 'roster:' + id, []);
+    points = await storeGet(STORAGE_PREFIX + 'points:' + id, {});
+    pickerPool = roster.slice();
+    await storeSet(STORAGE_PREFIX + 'lastClass', id);
+    refreshAllPanels();
+  }
+
+  function refreshAllPanels(){
+    $('#rosterInput').value = roster.join('\n');
+    updateRosterCount();
+    drawWheelFromRoster();
+    hideBanner();
+    renderGroupsGrid([]);
+    renderSeatGrid([], 0, 0);
+    renderPoints();
+  }
+
+  function renderClassPicker(){
+    const sel = $('#classPicker');
+    sel.innerHTML = '';
+    classes.forEach(c=>{
+      const opt = document.createElement('option');
+      opt.value = c.id; opt.textContent = c.name;
+      if(c.id === currentClassId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ---------------- NAV ----------------
+  function bindNav(){
+    $$('.tool-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=> showPanel(btn.dataset.panel));
+    });
+    $('#classPicker').addEventListener('change', async (e)=>{
+      await loadClass(e.target.value);
+    });
+    $('#newClassBtn').addEventListener('click', async ()=>{
+      const name = prompt('Name this class (e.g. "Period 3", "Room 12"):');
+      if(!name) return;
+      const id = uid();
+      classes.push({id, name});
+      await storeSet(STORAGE_PREFIX + 'classes', classes);
+      await storeSet(STORAGE_PREFIX + 'roster:' + id, []);
+      renderClassPicker();
+      $('#classPicker').value = id;
+      await loadClass(id);
+      showPanel('roster');
+    });
+  }
+
+  function showPanel(name){
+    $$('.panel').forEach(p=> p.classList.remove('active'));
+    $('#panel-' + name).classList.add('active');
+    $$('.tool-btn').forEach(b=> b.classList.toggle('active', b.dataset.panel === name));
+  }
+
+  // ---------------- ROSTER ----------------
+  function bindRoster(){
+    $('#rosterInput').addEventListener('input', updateRosterCount);
+    $('#saveRosterBtn').addEventListener('click', async ()=>{
+      roster = $('#rosterInput').value.split('\n').map(s=>s.trim()).filter(Boolean);
+      await storeSet(STORAGE_PREFIX + 'roster:' + currentClassId, roster);
+      pickerPool = roster.slice();
+      drawWheelFromRoster();
+      hideBanner();
+      renderPoints();
+      updateRosterCount();
+    });
+    $('#deleteClassBtn').addEventListener('click', async ()=>{
+      if(classes.length <= 1){ alert("You need at least one class."); return; }
+      if(!confirm('Delete this class and its saved data? This cannot be undone.')) return;
+      await storeDelete(STORAGE_PREFIX + 'roster:' + currentClassId);
+      await storeDelete(STORAGE_PREFIX + 'points:' + currentClassId);
+      classes = classes.filter(c=>c.id !== currentClassId);
+      await storeSet(STORAGE_PREFIX + 'classes', classes);
+      renderClassPicker();
+      await loadClass(classes[0].id);
+    });
+  }
+  function updateRosterCount(){
+    const n = $('#rosterInput').value.split('\n').map(s=>s.trim()).filter(Boolean).length;
+    $('#rosterCount').textContent = n + (n===1 ? ' student' : ' students');
+  }
+
+  // ---------------- PICKER (WHEEL) ----------------
+  function bindPicker(){
+    $('#spinBtn').addEventListener('click', spinWheel);
+    $('#noRepeatCheckbox').addEventListener('change', (e)=>{
+      $('#noRepeatSwitch').classList.toggle('on', e.target.checked);
+      pickerPool = roster.slice();
+      updatePoolNote();
+    });
+  }
+
+  function drawWheelFromRoster(){
+    wheelNames = roster.slice();
+    const canvas = $('#wheelCanvas');
+    canvas.style.transition = 'none';
+    canvas.style.transform = 'rotate(0deg)';
+    wheelRotation = 0;
+    void canvas.offsetHeight; // force reflow
+    canvas.style.transition = '';
+    drawWheel(wheelNames);
+    updatePoolNote();
+    $('#spinBtn').disabled = wheelNames.length === 0;
+  }
+
+  function drawWheel(names){
+    const canvas = $('#wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+    const cx = size/2, cy = size/2, r = size/2 - 4;
+    ctx.clearRect(0,0,size,size);
+    if(names.length === 0){
+      ctx.fillStyle = '#DEDACB';
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#5C6157';
+      ctx.font = '15px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText('Add students in the roster tab', cx, cy);
+      return;
+    }
+    const seg = (Math.PI*2) / names.length;
+    names.forEach((name, i)=>{
+      const start = i*seg, end = start+seg;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,end);
+      ctx.closePath();
+      ctx.fillStyle = PALETTE[i % PALETTE.length];
+      ctx.fill();
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.rotate(start + seg/2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#23261F';
+      ctx.font = '600 14px Inter';
+      const label = name.length > 12 ? name.slice(0,11)+'…' : name;
+      ctx.fillText(label, r - 14, 5);
+      ctx.restore();
+    });
+  }
+
+  function spinWheel(){
+    if(wheelNames.length === 0) return;
+    const noRepeat = $('#noRepeatCheckbox').checked;
+    let pool = noRepeat ? pickerPool : wheelNames;
+    if(noRepeat && pool.length === 0){
+      pickerPool = roster.slice();
+      pool = pickerPool;
+    }
+    const chosenName = pool[Math.floor(Math.random()*pool.length)];
+    const index = wheelNames.indexOf(chosenName);
+    const seg = 360 / wheelNames.length;
+    const center = index*seg + seg/2;
+    const spins = 5 + Math.floor(Math.random()*3);
+    // The pointer sits at the top of the wheel (12 o'clock), which is 270deg
+    // in canvas-arc terms (0deg = 3 o'clock, measured clockwise). The wheel
+    // needs to be rotated so the chosen segment's center lands on 270deg,
+    // not 0deg — otherwise the highlighted segment doesn't match the
+    // announced winner.
+    const POINTER_ANGLE = 270;
+    const offset = ((POINTER_ANGLE - center) % 360 + 360) % 360;
+    const target = spins*360 + offset;
+    wheelRotation += target;
+    const canvas = $('#wheelCanvas');
+    canvas.style.transform = `rotate(${wheelRotation}deg)`;
+    hideBanner();
+    $('#spinBtn').disabled = true;
+    const onEnd = ()=>{
+      canvas.removeEventListener('transitionend', onEnd);
+      $('#spinBtn').disabled = false;
+      showBanner(chosenName);
+      if(noRepeat){
+        pickerPool = pickerPool.filter(n=> n!==chosenName);
+        updatePoolNote();
+      }
+    };
+    canvas.addEventListener('transitionend', onEnd);
+  }
+
+  function showBanner(name){
+    const b = $('#winnerBanner');
+    b.textContent = "It's " + name + "'s turn!";
+    b.classList.add('show');
+  }
+  function hideBanner(){ $('#winnerBanner').classList.remove('show'); }
+
+  function updatePoolNote(){
+    const noRepeat = $('#noRepeatCheckbox').checked;
+    const note = $('#poolNote');
+    if(!noRepeat){ note.textContent = ''; return; }
+    note.textContent = pickerPool.length + ' of ' + roster.length + ' students left in this round.';
+  }
+
+  // ---------------- GROUPS ----------------
+  function bindGroups(){
+    $('#makeGroupsBtn').addEventListener('click', ()=>{
+      const mode = $('#groupMode').value;
+      const val = Math.max(1, parseInt($('#groupNumber').value) || 1);
+      if(roster.length === 0){ renderGroupsGrid([]); return; }
+      const shuffled = shuffle(roster.slice());
+      let groups = [];
+      if(mode === 'count'){
+        groups = Array.from({length: val}, ()=>[]);
+        shuffled.forEach((name, i)=> groups[i % val].push(name));
+      } else {
+        for(let i=0;i<shuffled.length;i+=val) groups.push(shuffled.slice(i,i+val));
+      }
+      renderGroupsGrid(groups);
+    });
+  }
+  function renderGroupsGrid(groups){
+    const grid = $('#groupsGrid');
+    grid.innerHTML = '';
+    if(groups.length === 0){
+      grid.innerHTML = '<div class="empty-state">No groups yet — set your options and click "Make groups".</div>';
+      return;
+    }
+    groups.forEach((g,i)=>{
+      const card = document.createElement('div');
+      card.className = 'group-card';
+      card.innerHTML = `<h3>Group ${i+1}</h3><ul>${g.map(n=>`<li>${escapeHtml(n)}</li>`).join('') || '<li>—</li>'}</ul>`;
+      grid.appendChild(card);
+    });
+  }
+
+  // ---------------- SEATING ----------------
+  let seatAssignments = [];
+  let selectedSeat = null;
+  function bindSeating(){
+    $('#genSeatingBtn').addEventListener('click', ()=>{
+      const rows = Math.max(1, parseInt($('#seatRows').value)||1);
+      const cols = Math.max(1, parseInt($('#seatCols').value)||1);
+      const seats = rows*cols;
+      const shuffled = shuffle(roster.slice());
+      seatAssignments = Array.from({length:seats}, (_,i)=> shuffled[i] || null);
+      selectedSeat = null;
+      renderSeatGrid(seatAssignments, rows, cols);
+      const leftover = shuffled.slice(seats);
+      $('#leftoverNote').textContent = leftover.length ? ('Not enough seats for: ' + leftover.join(', ')) : '';
+    });
+  }
+  function renderSeatGrid(assignments, rows, cols){
+    const grid = $('#seatGrid');
+    grid.innerHTML = '';
+    if(assignments.length === 0){
+      grid.style.gridTemplateColumns = '';
+      grid.innerHTML = '<div class="empty-state">No layout yet — choose rows and columns, then generate.</div>';
+      return;
+    }
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    assignments.forEach((name, i)=>{
+      const seat = document.createElement('div');
+      seat.className = 'seat' + (name ? '' : ' empty');
+      seat.textContent = name || '(empty)';
+      seat.dataset.index = i;
+      seat.addEventListener('click', ()=> onSeatClick(i));
+      grid.appendChild(seat);
+    });
+  }
+  function onSeatClick(i){
+    if(selectedSeat === null){
+      selectedSeat = i;
+      $$('.seat')[i].classList.add('selected');
+    } else if(selectedSeat === i){
+      $$('.seat')[i].classList.remove('selected');
+      selectedSeat = null;
+    } else {
+      const tmp = seatAssignments[i];
+      seatAssignments[i] = seatAssignments[selectedSeat];
+      seatAssignments[selectedSeat] = tmp;
+      $$('.seat')[selectedSeat].classList.remove('selected');
+      const cols = parseInt($('#seatCols').value)||1;
+      renderSeatGrid(seatAssignments, 0, cols);
+      selectedSeat = null;
+    }
+  }
+
+  // ---------------- TIMER ----------------
+  let timerInterval = null;
+  let timerRemaining = 300;
+  function bindTimer(){
+    updateTimerDisplay();
+    $('#timerMin').addEventListener('change', syncTimerFromInputs);
+    $('#timerSec').addEventListener('change', syncTimerFromInputs);
+    $('#timerStartBtn').addEventListener('click', startTimer);
+    $('#timerPauseBtn').addEventListener('click', ()=>{ clearInterval(timerInterval); timerInterval=null; });
+    $('#timerResetBtn').addEventListener('click', ()=>{
+      clearInterval(timerInterval); timerInterval=null;
+      syncTimerFromInputs();
+      $('#timerDisplay').classList.remove('done');
+    });
+  }
+  function syncTimerFromInputs(){
+    const m = Math.max(0, parseInt($('#timerMin').value)||0);
+    const s = Math.min(59, Math.max(0, parseInt($('#timerSec').value)||0));
+    timerRemaining = m*60+s;
+    updateTimerDisplay();
+  }
+  function startTimer(){
+    if(timerInterval) return;
+    if(timerRemaining <= 0) syncTimerFromInputs();
+    if(timerRemaining <= 0) return;
+    $('#timerDisplay').classList.remove('done');
+    timerInterval = setInterval(()=>{
+      timerRemaining--;
+      updateTimerDisplay();
+      if(timerRemaining <= 0){
+        clearInterval(timerInterval); timerInterval = null;
+        $('#timerDisplay').classList.add('done');
+        playBeep();
+      }
+    },1000);
+  }
+  function updateTimerDisplay(){
+    const m = Math.floor(timerRemaining/60), s = timerRemaining%60;
+    $('#timerDisplay').textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  function playBeep(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0,0.3,0.6].forEach(delay=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.2;
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.2);
+      });
+    }catch(e){ /* audio not available */ }
+  }
+
+  // ---------------- NOISE ----------------
+  let audioCtx=null, analyser=null, micStream=null, noiseRAF=null;
+  function bindNoise(){
+    $('#noiseToggleBtn').addEventListener('click', toggleMic);
+    $('#noiseThreshold').addEventListener('input', (e)=>{
+      $('#noiseThresholdMark').style.left = e.target.value + '%';
+    });
+  }
+  async function toggleMic(){
+    if(micStream){
+      stopMic();
+      return;
+    }
+    try{
+      micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(micStream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      $('#noiseToggleBtn').textContent = 'Turn off microphone';
+      $('#noiseMsg').textContent = 'Listening…';
+      loopNoise();
+    }catch(e){
+      $('#noiseMsg').textContent = "Couldn't access the microphone — check your browser permissions.";
+    }
+  }
+  function stopMic(){
+    if(noiseRAF) cancelAnimationFrame(noiseRAF);
+    if(micStream) micStream.getTracks().forEach(t=>t.stop());
+    if(audioCtx) audioCtx.close();
+    micStream = null; audioCtx = null; analyser = null;
+    $('#noiseToggleBtn').textContent = 'Turn on microphone';
+    $('#noiseMsg').textContent = 'Mic is off';
+    $('#noiseBarFill').style.width = '0%';
+    $('#noiseWrap').classList.remove('hot');
+  }
+  function loopNoise(){
+    const data = new Uint8Array(analyser.fftSize);
+    const tick = ()=>{
+      analyser.getByteTimeDomainData(data);
+      let sum=0;
+      for(let i=0;i<data.length;i++){
+        const v = (data[i]-128)/128;
+        sum += v*v;
+      }
+      const rms = Math.sqrt(sum/data.length);
+      const level = Math.min(100, Math.round(rms*260));
+      $('#noiseBarFill').style.width = level + '%';
+      const threshold = parseInt($('#noiseThreshold').value);
+      const hot = level > threshold;
+      $('#noiseWrap').classList.toggle('hot', hot);
+      $('#noiseMsg').textContent = hot ? "Whoa — let's bring it down a notch!" : 'Sounding good';
+      noiseRAF = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  // ---------------- POINTS ----------------
+  function bindPoints(){
+    $('#resetPointsBtn').addEventListener('click', async ()=>{
+      roster.forEach(n=> points[n] = 0);
+      await storeSet(STORAGE_PREFIX + 'points:' + currentClassId, points);
+      renderPoints();
+    });
+  }
+  function renderPoints(){
+    const list = $('#pointsList');
+    list.innerHTML = '';
+    if(roster.length === 0){
+      list.innerHTML = '<div class="empty-state">Add students in the class roster tab to start tracking points.</div>';
+      return;
+    }
+    roster.forEach(name=>{
+      if(!(name in points)) points[name] = 0;
+      const row = document.createElement('div');
+      row.className = 'points-row';
+      row.innerHTML = `
+        <span class="points-name">${escapeHtml(name)}</span>
+        <span class="points-controls">
+          <button class="pt-btn minus">–</button>
+          <span class="pt-score">${points[name]}</span>
+          <button class="pt-btn plus">+</button>
+        </span>`;
+      row.querySelector('.minus').addEventListener('click', async ()=>{
+        points[name]--; row.querySelector('.pt-score').textContent = points[name];
+        await storeSet(STORAGE_PREFIX + 'points:' + currentClassId, points);
+      });
+      row.querySelector('.plus').addEventListener('click', async ()=>{
+        points[name]++; row.querySelector('.pt-score').textContent = points[name];
+        await storeSet(STORAGE_PREFIX + 'points:' + currentClassId, points);
+      });
+      list.appendChild(row);
+    });
+  }
+
+  // ---------------- HELPERS ----------------
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
