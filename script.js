@@ -146,7 +146,9 @@
   let pegs = [];
   const MARGIN_X = 24, MARGIN_TOP = 26, MARGIN_BOTTOM = 46;
   const PEG_R = 4, BALL_R = 7;
-  let FINISH_Y = 0;
+  let FINISH_Y = 0;   // the real finish line — only the winner (or, later, everyone) crosses this
+  let HOLD_Y = 0;     // an invisible barrier above the finish line where non-winners bounce back
+  let PLAY_BOTTOM = 0; // the peg field stops here, leaving an open chute down to the finish line
 
   // Physics tuning. Simulation runs in fixed-size substeps (see SUBSTEP_DT
   // below) so collisions stay accurate regardless of the browser's actual
@@ -167,6 +169,8 @@
     ctx = canvas.getContext('2d');
     W = canvas.width; H = canvas.height;
     FINISH_Y = H - MARGIN_BOTTOM;
+    HOLD_Y = FINISH_Y - 34;
+    PLAY_BOTTOM = FINISH_Y - 66;
   }
 
   function generatePegs(){
@@ -174,7 +178,7 @@
     pegs = [];
     const rows = 8;
     const spacingX = 34;
-    const spacingY = (FINISH_Y - MARGIN_TOP) / (rows - 1);
+    const spacingY = (PLAY_BOTTOM - MARGIN_TOP) / (rows - 1);
     const cols = Math.floor((W - 2*MARGIN_X) / spacingX);
     for(let r=0;r<rows;r++){
       const y = MARGIN_TOP + r*spacingY;
@@ -282,12 +286,17 @@
       }
     }
 
-    if(b.y+BALL_R >= FINISH_Y){
-      if(b.name !== winnerName && !winnerDone){
-        b.y = FINISH_Y-BALL_R-2;
-        b.vy = 0;
-        return false;
+    if(!winnerDone && b.name !== winnerName){
+      // Held back: bounce off an invisible barrier before the real finish
+      // line, so a non-winner can never appear to arrive before the winner.
+      if(b.y+BALL_R >= HOLD_Y){
+        b.y = HOLD_Y-BALL_R;
+        b.vy = -Math.abs(b.vy)*0.4 - 30;
       }
+      return false;
+    }
+
+    if(b.y+BALL_R >= FINISH_Y){
       b.finished = true;
       b.y = FINISH_Y-BALL_R;
       return b.name === winnerName;
