@@ -2,169 +2,379 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Homeroom — Classroom Toolkit</title>
+<title>Duck Race Name Picker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-top:#BFE6F2;
+    --sky-bottom:#E8F6E0;
+    --water-top:#5BB3D9;
+    --water-bottom:#2E7DAF;
+    --sun:#FFC857;
+    --grass:#7CB369;
+    --grass-dark:#5C9450;
+    --ink:#1F3A3D;
+    --card:#FFFFFF;
+    --coral:#FF7B54;
+    --lane-line: rgba(255,255,255,0.35);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Nunito',sans-serif;
+    background:linear-gradient(180deg,var(--sky-top) 0%, var(--sky-bottom) 45%, var(--grass) 46%, var(--grass-dark) 100%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 16px;
+    color:var(--ink);
+  }
+  .app{
+    width:100%;
+    max-width:960px;
+    background:var(--card);
+    border-radius:28px;
+    box-shadow:0 24px 60px rgba(31,58,61,0.18);
+    overflow:hidden;
+  }
+  header{
+    padding:28px 32px 18px;
+    text-align:center;
+  }
+  h1{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:800;
+    font-size:2.1rem;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  header p{
+    margin:0;
+    color:#5A7A7D;
+    font-size:1rem;
+  }
+  .controls{
+    display:flex;
+    gap:12px;
+    padding:0 32px 24px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  textarea{
+    flex:1;
+    min-width:220px;
+    height:64px;
+    resize:vertical;
+    border:2px solid #DCEEF2;
+    border-radius:14px;
+    padding:12px 14px;
+    font-family:'Nunito',sans-serif;
+    font-size:0.95rem;
+    color:var(--ink);
+  }
+  textarea:focus{outline:none;border-color:var(--water-top);}
+  .timer-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    justify-content:center;
+  }
+  .timer-field label{
+    font-size:0.78rem;
+    font-weight:700;
+    color:#5A7A7D;
+  }
+  .timer-input{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    border:2px solid #DCEEF2;
+    border-radius:14px;
+    padding:0 12px;
+    height:64px;
+  }
+  .timer-input input{
+    width:52px;
+    border:none;
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:1.3rem;
+    color:var(--ink);
+    text-align:center;
+    background:transparent;
+  }
+  .timer-input input:focus{outline:none;}
+  .timer-input span{
+    font-size:0.85rem;
+    color:#7A9497;
+    font-weight:600;
+  }
+  .timer-input input::-webkit-outer-spin-button,
+  .timer-input input::-webkit-inner-spin-button{
+    opacity:1;
+  }
+  .countdown{
+    position:sticky;
+    top:14px; left:14px;
+    float:left;
+    background:rgba(255,255,255,0.9);
+    color:var(--ink);
+    font-family:'Baloo 2',sans-serif;
+    font-weight:800;
+    font-size:1.1rem;
+    padding:6px 14px;
+    border-radius:12px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.15);
+  }
+  button.race-btn{
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:1.05rem;
+    background:var(--coral);
+    color:white;
+    border:none;
+    border-radius:14px;
+    padding:0 28px;
+    height:64px;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+    box-shadow:0 8px 0 #D95F38;
+  }
+  button.race-btn:active{transform:translateY(6px);box-shadow:0 2px 0 #D95F38;}
+  button.race-btn:disabled{opacity:0.6;cursor:default;}
+  .pond-wrap{
+    position:relative;
+    margin:0 24px 28px;
+    border-radius:20px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    max-height:480px;
+    background:linear-gradient(180deg,var(--water-top),var(--water-bottom));
+  }
+  svg{display:block;width:100%;height:auto;}
+  .finish-flag rect{fill:#fff;}
+  .winner-banner{
+    position:sticky;
+    top:45%;left:50%;
+    transform:translate(-50%,-50%) scale(0.6);
+    background:var(--sun);
+    color:var(--ink);
+    font-family:'Baloo 2',sans-serif;
+    font-weight:800;
+    font-size:1.6rem;
+    padding:18px 34px;
+    border-radius:18px;
+    box-shadow:0 12px 30px rgba(0,0,0,0.25);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .winner-banner.show{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1);
+  }
+  footer{
+    padding:0 32px 28px;
+    text-align:center;
+    color:#7A9497;
+    font-size:0.85rem;
+  }
+</style>
 </head>
 <body>
-
 <div class="app">
-  <aside class="dock">
-    <div class="brand">
-      <div class="display">Homeroom</div>
-      <p>Your classroom's supply drawer of quick tools.</p>
+  <header>
+    <h1>🦆 Duck Race Picker</h1>
+    <p>Type names separated by commas, then start the race.</p>
+  </header>
+  <div class="controls">
+    <textarea id="names">Ava, Liam, Noah, Mia, Ethan, Zoe, Sofia, Lucas, Grace, Owen, Ella, Mason, Chloe, Aiden</textarea>
+    <div class="timer-field">
+      <label for="duration">Race length</label>
+      <div class="timer-input">
+        <input type="number" id="duration" min="2" max="30" value="5" step="1">
+        <span>sec</span>
+      </div>
     </div>
-
-    <div class="class-select">
-      <label for="classPicker">Class</label>
-      <select id="classPicker"></select>
-      <button class="new-class-btn" id="newClassBtn">+ New class</button>
-    </div>
-
-    <nav class="tools" id="toolNav">
-      <button class="tool-btn" data-panel="roster" style="--accent:#8b8d81"><span class="dot" style="background:#8b8d81"></span>Class roster</button>
-      <button class="tool-btn" data-panel="picker" style="--accent:#F0C64C"><span class="dot" style="background:#F0C64C"></span>Name picker</button>
-      <button class="tool-btn" data-panel="groups" style="--accent:#6FA6B4"><span class="dot" style="background:#6FA6B4"></span>Groups</button>
-      <button class="tool-btn" data-panel="seating" style="--accent:#E37A56"><span class="dot" style="background:#E37A56"></span>Seating chart</button>
-      <button class="tool-btn" data-panel="timer" style="--accent:#F0C64C"><span class="dot" style="background:#F0C64C"></span>Timer</button>
-      <button class="tool-btn" data-panel="noise" style="--accent:#6FA6B4"><span class="dot" style="background:#6FA6B4"></span>Noise meter</button>
-      <button class="tool-btn" data-panel="points" style="--accent:#E37A56"><span class="dot" style="background:#E37A56"></span>Points</button>
-    </nav>
-  </aside>
-
-  <main class="stage">
-
-    <!-- ROSTER -->
-    <section class="panel" id="panel-roster" style="--accent:#8b8d81">
-      <div class="panel-head"><h2>Class roster</h2></div>
-      <div class="accent-underline"></div>
-      <p class="subtext">One student per line. This roster feeds the picker, groups, seating chart, and points list for this class.</p>
-      <div class="card">
-        <textarea class="roster-input" id="rosterInput" placeholder="Amara&#10;Diego&#10;Priya&#10;Wes&#10;..."></textarea>
-        <div class="roster-count" id="rosterCount">0 students</div>
-        <div class="row" style="margin-top:14px;">
-          <button class="btn" id="saveRosterBtn">Save roster</button>
-          <button class="btn secondary" id="deleteClassBtn">Delete this class</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- PICKER: PLINKO BALL DROP -->
-    <section class="panel" id="panel-picker" style="--accent:#F0C64C">
-      <div class="panel-head"><h2>Name picker</h2></div>
-      <div class="accent-underline"></div>
-      <p class="subtext">Drop the balls through the pegs — first one past the line gets picked. Every student has an equal shot.</p>
-      <div class="picker-layout">
-        <div class="plinko-card">
-          <canvas id="plinkoCanvas" width="480" height="420"></canvas>
-          <div class="plinko-finish-flag">🏁</div>
-        </div>
-        <div class="picker-side">
-          <button class="btn" id="raceBtn">Drop the balls 🔴</button>
-          <div class="toggle-row">
-            <label class="switch" id="noRepeatSwitch">
-              <input type="checkbox" id="noRepeatCheckbox">
-              <span class="knob"></span>
-            </label>
-            <span>Don't repeat a student until everyone's had a turn</span>
-          </div>
-          <div class="pool-note" id="poolNote"></div>
-          <div class="ball-legend" id="ballLegend"></div>
-          <div class="winner-banner" id="winnerBanner"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- GROUPS -->
-    <section class="panel" id="panel-groups" style="--accent:#6FA6B4">
-      <div class="panel-head"><h2>Groups</h2></div>
-      <div class="accent-underline"></div>
-      <p class="subtext">Shuffle the roster into random groups.</p>
-      <div class="group-controls">
-        <div class="field">
-          <label for="groupMode">Split by</label>
-          <select id="groupMode">
-            <option value="count">Number of groups</option>
-            <option value="size">Students per group</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="groupNumber">Value</label>
-          <input type="number" id="groupNumber" min="1" value="4">
-        </div>
-        <button class="btn" id="makeGroupsBtn">Make groups</button>
-      </div>
-      <div class="groups-grid" id="groupsGrid"></div>
-    </section>
-
-    <!-- SEATING -->
-    <section class="panel" id="panel-seating" style="--accent:#E37A56">
-      <div class="panel-head"><h2>Seating chart</h2></div>
-      <div class="accent-underline"></div>
-      <p class="subtext">Generate a random layout, then click two desks to swap them.</p>
-      <div class="group-controls">
-        <div class="field"><label for="seatRows">Rows</label><input type="number" id="seatRows" min="1" value="4"></div>
-        <div class="field"><label for="seatCols">Columns</label><input type="number" id="seatCols" min="1" value="5"></div>
-        <button class="btn" id="genSeatingBtn">Generate layout</button>
-      </div>
-      <div class="seat-grid" id="seatGrid"></div>
-      <div class="leftover-note" id="leftoverNote"></div>
-    </section>
-
-    <!-- TIMER -->
-    <section class="panel" id="panel-timer" style="--accent:#F0C64C">
-      <div class="panel-head"><h2>Timer</h2></div>
-      <div class="accent-underline"></div>
-      <p class="subtext">Set a countdown for activities, tests, or transitions.</p>
-      <div class="card">
-        <div class="timer-setup">
-          <div class="field"><label for="timerMin">Minutes</label><input type="number" id="timerMin" min="0" value="5"></div>
-          <div class="field"><label for="timerSec">Seconds</label><input type="number" id="timerSec" min="0" max="59" value="0"></div>
-        </div>
-        <div class="timer-display" id="timerDisplay">05:00</div>
-        <div class="timer-buttons">
-          <button class="btn" id="timerStartBtn">Start</button>
-          <button class="btn secondary" id="timerPauseBtn">Pause</button>
-          <button class="btn secondary" id="timerResetBtn">Reset</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- NOISE -->
-    <section class="panel" id="panel-noise" style="--accent:#6FA6B4">
-      <div class="panel-head"><h2>Noise meter</h2></div>
-      <div class="accent-underline"></div>
-      <p class="subtext">Uses your microphone to show classroom volume. Nothing is recorded or saved.</p>
-      <div class="noise-gauge-wrap" id="noiseWrap">
-        <button class="btn" id="noiseToggleBtn">Turn on microphone</button>
-        <div class="noise-bar-track">
-          <div class="noise-bar-fill" id="noiseBarFill"></div>
-          <div class="noise-threshold" id="noiseThresholdMark" style="left:70%;"></div>
-        </div>
-        <div class="row" style="justify-content:center;">
-          <label for="noiseThreshold" style="font-size:12.5px;color:var(--ink-soft);">Quiet-down line</label>
-          <input type="range" id="noiseThreshold" min="10" max="95" value="70">
-        </div>
-        <div class="noise-msg" id="noiseMsg">Mic is off</div>
-      </div>
-    </section>
-
-    <!-- POINTS -->
-    <section class="panel" id="panel-points" style="--accent:#E37A56">
-      <div class="panel-head"><h2>Points</h2></div>
-      <div class="accent-underline"></div>
-      <p class="subtext">Track participation or behavior points per student.</p>
-      <div class="row" style="margin-bottom:6px;">
-        <button class="btn secondary" id="resetPointsBtn">Reset all to 0</button>
-      </div>
-      <div class="points-list" id="pointsList"></div>
-    </section>
-
-  </main>
+    <button class="race-btn" id="startBtn">Start Race</button>
+  </div>
+  <div class="pond-wrap">
+    <svg id="pond" viewBox="0 0 900 340" preserveAspectRatio="xMidYMid meet">
+      <!-- ripples -->
+      <g id="ripples" opacity="0.25" stroke="#fff" fill="none" stroke-width="2"></g>
+      <!-- finish line -->
+      <g class="finish-flag">
+        <rect x="852" y="0" width="10" height="340" fill="#fff" opacity="0.9"/>
+      </g>
+      <g id="lanes"></g>
+    </svg>
+    <div class="winner-banner" id="winnerBanner"></div>
+    <div class="countdown" id="countdown" style="display:none;"></div>
+  </div>
+  <footer>Reshuffle names anytime — same pond, new race.</footer>
 </div>
 
-<script src="script.js"></script>
+<script>
+const namesInput = document.getElementById('names');
+const startBtn = document.getElementById('startBtn');
+const lanesG = document.getElementById('lanes');
+const ripplesG = document.getElementById('ripples');
+const winnerBanner = document.getElementById('winnerBanner');
+const durationInput = document.getElementById('duration');
+const countdownEl = document.getElementById('countdown');
+
+const duckColors = ['#FFC857','#FF7B54','#8FD694','#7FB3E8','#F4A6C6','#C9A0DC','#FFD16A','#6FCF97'];
+
+function duckSVG(color){
+  return `
+    <g class="duck-body">
+      <ellipse cx="0" cy="0" rx="22" ry="15" fill="${color}"/>
+      <circle cx="16" cy="-9" r="10" fill="${color}"/>
+      <path d="M24 -9 L34 -6 L24 -3 Z" fill="#F2A93B"/>
+      <circle cx="19" cy="-12" r="1.6" fill="#1F3A3D"/>
+      <path d="M-6 -16 Q0 -24 8 -16" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"/>
+    </g>
+  `;
+}
+
+function buildRipples(height){
+  const h = height || 340;
+  ripplesG.innerHTML = '';
+  const count = Math.max(8, Math.round(h / 40));
+  for(let i=0;i<count;i++){
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', 60 + Math.random()*780);
+    c.setAttribute('cy', 20 + Math.random()*(h-40));
+    c.setAttribute('r', 6 + Math.random()*10);
+    ripplesG.appendChild(c);
+  }
+}
+
+let ducks = [];
+
+function setupLanes(names){
+  lanesG.innerHTML = '';
+  ducks = [];
+
+  const baseHeight = 340;
+  const minLaneH = 40;
+  let laneH, svgHeight;
+  if(names.length * minLaneH <= baseHeight){
+    laneH = baseHeight / names.length;
+    svgHeight = baseHeight;
+  } else {
+    laneH = minLaneH;
+    svgHeight = names.length * minLaneH;
+  }
+
+  const pond = document.getElementById('pond');
+  pond.setAttribute('viewBox', `0 0 900 ${svgHeight}`);
+  const flag = document.querySelector('.finish-flag rect');
+  flag.setAttribute('height', svgHeight);
+  buildRipples(svgHeight);
+
+  names.forEach((name, i) => {
+    const y = laneH * i + laneH/2;
+    const laneLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+    laneLine.setAttribute('x1', 0); laneLine.setAttribute('x2', 900);
+    laneLine.setAttribute('y1', laneH*i); laneLine.setAttribute('y2', laneH*i);
+    laneLine.setAttribute('stroke','rgba(255,255,255,0.18)');
+    laneLine.setAttribute('stroke-dasharray','6 8');
+    lanesG.appendChild(laneLine);
+
+    const scale = Math.min(1, laneH / 56);
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('transform', `translate(50, ${y}) scale(${scale})`);
+    g.innerHTML = duckSVG(duckColors[i % duckColors.length]);
+    lanesG.appendChild(g);
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', 50);
+    label.setAttribute('y', y - 22);
+    label.setAttribute('text-anchor','middle');
+    label.setAttribute('font-family','Nunito, sans-serif');
+    label.setAttribute('font-weight','700');
+    label.setAttribute('font-size','13');
+    label.setAttribute('fill','#fff');
+    label.textContent = name;
+    lanesG.appendChild(label);
+
+    ducks.push({el:g, label:label, x:50, y:y, name:name, speedSeed: Math.random(), scale:scale});
+  });
+}
+
+function parseNames(){
+  return namesInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+}
+
+setupLanes(parseNames());
+
+let racing = false;
+
+function runRace(){
+  if(racing) return;
+  const names = parseNames();
+  if(names.length < 2){ alert('Add at least 2 names, separated by commas.'); return; }
+  racing = true;
+  startBtn.disabled = true;
+  winnerBanner.classList.remove('show');
+  setupLanes(names);
+
+  const finishX = 840;
+  const startX = 50;
+  const distance = finishX - startX;
+  const chosenSeconds = Math.max(2, Math.min(30, Number(durationInput.value) || 5));
+  const duration = chosenSeconds * 1000;
+  const startTime = performance.now();
+
+  countdownEl.style.display = 'block';
+
+  // pre-decide winner index for guaranteed fairness, then bias its speed curve slightly
+  const winnerIndex = Math.floor(Math.random()*ducks.length);
+
+  const noise = ducks.map(()=> 0.75 + Math.random()*0.5);
+
+  function frame(now){
+    const t = Math.min(1, (now - startTime)/duration);
+    const remaining = Math.max(0, duration - (now - startTime));
+    countdownEl.textContent = `⏱ ${(remaining/1000).toFixed(1)}s`;
+    ducks.forEach((d, i)=>{
+      let progress;
+      if(i === winnerIndex){
+        progress = Math.pow(t, 0.92);
+      } else {
+        const wobble = Math.sin(t*10 + d.speedSeed*10) * 0.03;
+        progress = Math.pow(t, 0.92) * (0.86 + noise[i]*0.12) + wobble;
+      }
+      progress = Math.max(0, Math.min(1, progress));
+      const x = startX + progress * distance * (i===winnerIndex ? 1 : 0.97);
+      const bob = Math.sin(t*22 + i) * 3;
+      d.el.setAttribute('transform', `translate(${x}, ${d.y + bob}) scale(${d.scale})`);
+      d.label.setAttribute('x', x);
+    });
+
+    if(t < 1){
+      requestAnimationFrame(frame);
+    } else {
+      // snap winner to finish
+      const w = ducks[winnerIndex];
+      w.el.setAttribute('transform', `translate(${finishX}, ${w.y}) scale(${w.scale})`);
+      w.label.setAttribute('x', finishX);
+      winnerBanner.textContent = `🏆 ${w.name} wins!`;
+      winnerBanner.classList.add('show');
+      countdownEl.style.display = 'none';
+      racing = false;
+      startBtn.disabled = false;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+startBtn.addEventListener('click', runRace);
+</script>
 </body>
 </html>
