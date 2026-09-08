@@ -30,15 +30,12 @@
     border: var(--border); border-radius: var(--radius);
     background: linear-gradient(180deg, var(--chalk-dim), #dcefe3);
     padding: 16px;
-    min-height: 420px;
     position: relative;
     overflow: hidden;
     transition: transform 0.35s cubic-bezier(.2,.8,.3,1);
   }
   .stage.projector { background: #10261a; }
-  .stage.projector .lane-name { color: #fff; }
-  .stage.projector .track { background: #163521; }
-  .stage.zoom { transform: scale(1.035); }
+  .stage.projector .field { background: transparent; }
   .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 40px rgba(239,185,60,0.55) inset; }
 
   /* drifting cloud/ripple ambiance, purely decorative */
@@ -52,30 +49,17 @@
   .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; position: relative; z-index: 5; }
-  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; transition: transform 0.15s ease; }
-  .lane.leader { transform: scale(1.015); }
-  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s ease; }
-  .lane.leader .lane-name { color: var(--marker); }
-  .track { position: relative; height: 30px; background: #d3e6d9; border-radius: 999px; overflow: hidden; }
-  .track .finish-mark { position: absolute; right: 6px; top: 0; bottom: 0; width: 2px; background: rgba(30,42,69,0.4); }
-  .duck-token {
-    position: absolute; top: 2px; left: 0; width: 26px; height: 26px;
-    will-change: left;
-  }
-  .duck-token svg { width: 100%; height: 100%; animation: wob 0.5s ease-in-out infinite; transform-origin: 50% 80%; }
+  .field { background: rgba(255,255,255,0.35); position: relative; z-index: 5; }
+  .stage.projector .field-token .name-tag { background: rgba(255,255,255,0.15); color: #fff; }
+  .field-token svg { animation: wob 0.5s ease-in-out infinite; transform-origin: 50% 80%; }
   @keyframes wob { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
-  .duck-token.surging svg { animation-duration: 0.28s; }
-  .wake {
+  .field-token.surging svg { animation-duration: 0.28s; }
+  .field-token .wake {
     position: absolute; top: 50%; right: 100%; height: 3px; width: 0;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8));
     border-radius: 999px; transform: translateY(-50%);
+    transition: width 0.1s linear;
   }
-  .splash { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.85); pointer-events: none; }
-
-  .many-names .lane { grid-template-columns: 84px 1fr; }
-  .many-names .track { height: 22px; }
-  .many-names .duck-token { width: 18px; height: 18px; }
 
   .winner-banner {
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
@@ -94,7 +78,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .duck-token, .duck-token svg, .stage, .lane, .ripple-line { animation: none !important; transition: none !important; }
+    .field-token, .field-token svg, .stage, .ripple-line { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -154,7 +138,19 @@ Isla</textarea>
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
-        <div class="track-area" id="trackArea"></div>
+        <div class="field-stage">
+          <div class="field-wrap">
+            <div class="field" id="field">
+              <div class="start-gate"></div>
+              <div class="finish-gate"></div>
+              <div class="field-tokens" id="fieldTokens"></div>
+            </div>
+          </div>
+          <div class="leaderboard-panel">
+            <div class="lb-title">Standings</div>
+            <div class="lb-track" id="leaderboard"></div>
+          </div>
+        </div>
       </div>
       <div class="winner-banner" id="winnerBanner"></div>
       <div class="history" id="historyList"></div>
@@ -164,6 +160,7 @@ Isla</textarea>
 
 <script src="../assets/js/race-engine.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
+<script src="../assets/js/shared-track.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -173,7 +170,9 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
-  const trackArea = document.getElementById("trackArea");
+  const field = document.getElementById("field");
+  const fieldTokens = document.getElementById("fieldTokens");
+  const leaderboard = document.getElementById("leaderboard");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
@@ -188,8 +187,13 @@ Isla</textarea>
   </svg>`;
   const PALETTE = ["#efb93c", "#ffffff", "#35604a", "#d9503f", "#8fb9d8", "#c98fd8"];
 
+  function tokenHTML(entrant, color) {
+    return `<div class="wake"></div>${DUCK_SVG.replace('var(--c,#efb93c)', color)}`;
+  }
+
   let alreadyWon = [];
   let racing = false;
+  let track = null;
 
   for (let i = 0; i < 5; i++) {
     const r = document.createElement("div");
@@ -222,26 +226,9 @@ Isla</textarea>
   }
 
   function buildStage(order) {
-    trackArea.innerHTML = "";
-    trackArea.parentElement.classList.toggle("many-names", order.length > 14);
-    trackArea.classList.toggle("many-names", order.length > 14);
-    stage.classList.toggle("many-names", order.length > 14);
-
-    order.forEach((entrant, i) => {
-      const lane = document.createElement("div");
-      lane.className = "lane";
-      lane.id = `lane-${i}`;
-      const color = PALETTE[i % PALETTE.length];
-      lane.innerHTML = `
-        <div class="lane-name">${escapeHtml(entrant.name)}</div>
-        <div class="track" data-idx="${i}">
-          <div class="finish-mark"></div>
-          <div class="duck-token" id="duck-${i}" style="--c:${color}">
-            <div class="wake" id="wake-${i}"></div>
-            ${DUCK_SVG.replace('var(--c,#efb93c)', color)}
-          </div>
-        </div>`;
-      trackArea.appendChild(lane);
+    track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
+      tokenHTML,
+      palette: PALETTE,
     });
   }
 
@@ -254,7 +241,8 @@ Isla</textarea>
     }
     racing = true;
     winnerBanner.classList.remove("show");
-    stage.classList.remove("finished-glow", "zoom");
+    stage.classList.remove("finished-glow");
+    if (track) track.setZoom(false);
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, {
       duration,
@@ -273,40 +261,19 @@ Isla</textarea>
     statusText.textContent = "Racing…";
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
-    let lastLeaderIdx = -1;
-    let splashed = false;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
       clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
 
-      let leaderIdx = 0, leaderProgress = -1;
-      displayOrder.forEach((entrant, i) => {
-        const el = document.getElementById(`duck-${i}`);
-        if (!el) return;
-        const track = el.parentElement;
-        const trackW = track.clientWidth - el.clientWidth;
-        const prevLeft = parseFloat(el.dataset.prevLeft || "0");
-        const progress = entrant.progressAt(elapsed);
-        const left = progress * trackW;
-        el.style.left = left + "px";
-        el.classList.toggle("surging", left - prevLeft > 2.2);
-        el.dataset.prevLeft = left;
-        const wake = document.getElementById(`wake-${i}`);
-        if (wake) wake.style.width = Math.min(30, left * 0.4) + "px";
-        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
+      const { ranked } = track.update(elapsed);
+      ranked.forEach((r) => {
+        const wake = track.tokens[r.i].el.querySelector(".wake");
+        if (wake) wake.style.width = Math.min(30, track.tokens[r.i].prevLeft * 0.4) + "px";
       });
 
-      if (leaderIdx !== lastLeaderIdx) {
-        document.querySelectorAll(".lane.leader").forEach((l) => l.classList.remove("leader"));
-        const el = document.getElementById(`lane-${leaderIdx}`);
-        if (el) el.classList.add("leader");
-        lastLeaderIdx = leaderIdx;
-      }
-
       const overallProgress = elapsed / maxTime;
-      if (overallProgress > 0.82 && !stage.classList.contains("zoom")) stage.classList.add("zoom");
-      if (overallProgress > 0.88 && !splashed) { splashed = true; }
+      if (overallProgress > 0.82) track.setZoom(true);
 
       if (elapsed < maxTime) {
         requestAnimationFrame(frame);
@@ -319,7 +286,7 @@ Isla</textarea>
 
   function finishRace(result) {
     racing = false;
-    stage.classList.remove("zoom");
+    if (track) track.setZoom(false);
     SuspenseFX.shake(stage, 380);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);

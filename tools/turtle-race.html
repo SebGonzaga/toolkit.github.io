@@ -30,13 +30,11 @@
     border: var(--border); border-radius: var(--radius);
     background: linear-gradient(180deg, #eee3c8, #ded098);
     padding: 16px;
-    min-height: 420px;
     position: relative; overflow: hidden;
   }
   .stage.projector { background: #241d0f; }
-  .stage.projector .lane-name { color: #fff; }
-  .track { background: #cdbb85 !important; }
-  .stage.projector .track { background: #3a2f18 !important; }
+  .stage.projector .field { background: transparent; }
+  .stage.projector .field-token .name-tag { background: rgba(255,255,255,0.15); color: #fff; }
   .stage.finished-glow { box-shadow: 0 0 0 4px var(--chalk), 0 0 40px rgba(53,96,74,0.5) inset; }
 
   .heat-shimmer { position: absolute; inset: 0; pointer-events: none; z-index: 0;
@@ -49,26 +47,13 @@
   .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; position: relative; z-index: 5; }
-  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; transition: transform 0.15s ease; }
-  .lane.leader { transform: scale(1.015); }
-  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s ease; }
-  .lane.leader .lane-name { color: var(--chalk); }
-  .track { position: relative; height: 30px; background: #d3e6d9; border-radius: 999px; overflow: hidden; }
-  .track .finish-mark { position: absolute; right: 6px; top: 0; bottom: 0; width: 2px; background: rgba(30,42,69,0.4); }
-  .duck-token {
-    position: absolute; top: 2px; left: 0; width: 26px; height: 26px;
-    will-change: left;
-  }
-  .duck-token svg { width: 100%; height: 100%; animation: wob 1.4s ease-in-out infinite; transform-origin: 50% 80%; }
+  .field { background: #cdbb85; position: relative; z-index: 5; }
+  .stage.projector .field { background: #3a2f18; }
+  .field-token svg { animation: wob 1.4s ease-in-out infinite; transform-origin: 50% 80%; }
   @keyframes wob { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
-  .duck-token.surging svg { animation-duration: 0.5s; }
-  .duck-token.stalled svg { animation-duration: 3.4s; }
-  .dust { position: absolute; bottom: 2px; left: -2px; width: 5px; height: 5px; border-radius: 50%; background: rgba(90,70,30,0.45); pointer-events: none; }
-
-  .many-names .lane { grid-template-columns: 84px 1fr; }
-  .many-names .track { height: 22px; }
-  .many-names .duck-token { width: 18px; height: 18px; }
+  .field-token.surging svg { animation-duration: 0.5s; }
+  .field-token.stalled svg { animation-duration: 3.4s; }
+  .field-token .dust { position: absolute; bottom: -2px; left: -2px; width: 5px; height: 5px; border-radius: 50%; background: rgba(90,70,30,0.45); pointer-events: none; }
 
   .winner-banner {
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
@@ -87,7 +72,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .duck-token, .duck-token svg, .lane { animation: none !important; transition: none !important; }
+    .field-token, .field-token svg { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -147,7 +132,19 @@ Isla</textarea>
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
-        <div class="track-area" id="trackArea"></div>
+        <div class="field-stage">
+          <div class="field-wrap">
+            <div class="field" id="field">
+              <div class="start-gate"></div>
+              <div class="finish-gate"></div>
+              <div class="field-tokens" id="fieldTokens"></div>
+            </div>
+          </div>
+          <div class="leaderboard-panel">
+            <div class="lb-title">Standings</div>
+            <div class="lb-track" id="leaderboard"></div>
+          </div>
+        </div>
       </div>
       <div class="winner-banner" id="winnerBanner"></div>
       <div class="history" id="historyList"></div>
@@ -157,6 +154,7 @@ Isla</textarea>
 
 <script src="../assets/js/race-engine.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
+<script src="../assets/js/shared-track.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -166,7 +164,8 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
-  const trackArea = document.getElementById("trackArea");
+  const fieldTokens = document.getElementById("fieldTokens");
+  const leaderboard = document.getElementById("leaderboard");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
@@ -185,6 +184,7 @@ Isla</textarea>
 
   let alreadyWon = [];
   let racing = false;
+  let track = null;
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -207,27 +207,14 @@ Isla</textarea>
     return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
-  function buildStage(order) {
-    trackArea.innerHTML = "";
-    trackArea.parentElement.classList.toggle("many-names", order.length > 14);
-    trackArea.classList.toggle("many-names", order.length > 14);
-    stage.classList.toggle("many-names", order.length > 14);
+  function tokenHTML(entrant, color) {
+    return `<div class="dust"></div>${DUCK_SVG}`;
+  }
 
-    order.forEach((entrant, i) => {
-      const lane = document.createElement("div");
-      lane.className = "lane";
-      lane.id = `lane-${i}`;
-      const color = PALETTE[i % PALETTE.length];
-      lane.innerHTML = `
-        <div class="lane-name">${escapeHtml(entrant.name)}</div>
-        <div class="track" data-idx="${i}">
-          <div class="finish-mark"></div>
-          <div class="duck-token" id="duck-${i}" style="--c:${color}">
-            <div class="dust" id="dust-${i}"></div>
-            ${DUCK_SVG.replace('var(--c,#efb93c)', color)}
-          </div>
-        </div>`;
-      trackArea.appendChild(lane);
+  function buildStage(order) {
+    track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
+      tokenHTML,
+      palette: PALETTE,
     });
   }
 
@@ -264,35 +251,12 @@ Isla</textarea>
 
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
-    let lastLeaderIdx = -1;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
       clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
 
-      let leaderIdx = 0, leaderProgress = -1;
-      displayOrder.forEach((entrant, i) => {
-        const el = document.getElementById(`duck-${i}`);
-        if (!el) return;
-        const track = el.parentElement;
-        const trackW = track.clientWidth - el.clientWidth;
-        const prevLeft = parseFloat(el.dataset.prevLeft || "0");
-        const progress = entrant.progressAt(elapsed);
-        const left = progress * trackW;
-        el.style.left = left + "px";
-        const delta = left - prevLeft;
-        el.classList.toggle("surging", delta > 1.4);
-        el.classList.toggle("stalled", delta < 0.05);
-        el.dataset.prevLeft = left;
-        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
-      });
-
-      if (leaderIdx !== lastLeaderIdx) {
-        document.querySelectorAll(".lane.leader").forEach((l) => l.classList.remove("leader"));
-        const el = document.getElementById(`lane-${leaderIdx}`);
-        if (el) el.classList.add("leader");
-        lastLeaderIdx = leaderIdx;
-      }
+      track.update(elapsed);
 
       if (elapsed < maxTime) {
         requestAnimationFrame(frame);

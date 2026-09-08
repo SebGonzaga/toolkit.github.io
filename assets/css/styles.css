@@ -163,3 +163,109 @@ a { color: inherit; }
 /* -- utility ------------------------------------------------------------ */
 
 .eyebrow-free { } /* placeholder — intentionally no tracked-out label class used */
+
+/* ==========================================================================
+   Shared race field — every racer on ONE track (no one-row-per-name list),
+   plus a compact live leaderboard instead of a stacked bar-per-name view.
+   Used by duck-race / turtle-race / rocket-race. Each tool re-skins colors
+   in its own <style> block; this defines the shared structure only.
+   ========================================================================== */
+
+.field-stage {
+  display: grid;
+  grid-template-columns: 1fr 190px;
+  gap: 16px;
+  align-items: start;
+}
+.field-wrap { position: relative; }
+
+.field {
+  position: relative;
+  height: 300px;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.4s ease;
+}
+.field.zoom { transform: scale(1.045); }
+.field.many-names { height: 350px; }
+
+.field .start-gate,
+.field .finish-gate {
+  position: absolute; top: 0; bottom: 0; width: 2px; z-index: 2;
+}
+.field .start-gate { left: 4%; background: rgba(0,0,0,0.15); }
+.field .finish-gate {
+  right: 4%;
+  background-image: repeating-linear-gradient(180deg, rgba(0,0,0,0.55) 0 8px, transparent 8px 16px);
+}
+
+.field-tokens { position: absolute; inset: 0; z-index: 5; }
+
+.field-token {
+  position: absolute; left: 0; width: 34px; height: 34px;
+  transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  will-change: left;
+  animation: field-bob 1.6s ease-in-out infinite;
+}
+.field.many-names .field-token { width: 22px; height: 22px; }
+@keyframes field-bob { 0%, 100% { margin-top: -2px; } 50% { margin-top: 2px; } }
+
+.field-token .token-art { width: 100%; height: 100%; display: block; position: relative; }
+.field-token .token-art svg { width: 100%; height: 100%; display: block; }
+
+.field-token .rank-badge {
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  width: 15px; height: 15px; border-radius: 50%;
+  font-size: 0.62rem; font-weight: 800; line-height: 15px; text-align: center;
+  background: var(--ink); color: #fff; display: none;
+  font-family: var(--font-display); z-index: 2;
+}
+.field-token.rank-1 .rank-badge { display: block; background: var(--pencil); color: var(--ink); }
+.field-token.rank-2 .rank-badge { display: block; background: #cfcfcf; color: var(--ink); }
+.field-token.rank-3 .rank-badge { display: block; background: #d8a06a; color: var(--ink); }
+
+.field-token .name-tag {
+  position: absolute; bottom: -17px; left: 50%; transform: translateX(-50%);
+  font-size: 0.62rem; font-weight: 700; white-space: nowrap; max-width: 90px;
+  overflow: hidden; text-overflow: ellipsis;
+  background: rgba(255,255,255,0.88); color: var(--ink);
+  padding: 1px 6px; border-radius: 999px;
+  opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 3;
+}
+.field-token.always-visible .name-tag { opacity: 1; }
+.field-token.leading .name-tag,
+.field-token:hover .name-tag,
+.field-token:focus-within .name-tag { opacity: 1; }
+.field-token.leading .name-tag { font-weight: 800; }
+
+.leaderboard-panel {
+  border: var(--border); border-radius: var(--radius);
+  background: var(--paper);
+  padding: 10px 12px 12px;
+  max-height: 340px; overflow-y: auto;
+}
+.leaderboard-panel .lb-title {
+  font-family: var(--font-display); font-weight: 700; font-size: 0.75rem;
+  margin-bottom: 8px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.lb-track { position: relative; }
+.lb-row {
+  position: absolute; left: 0; right: 0; height: 26px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.8rem; transition: top 0.22s ease;
+}
+.leaderboard-panel.many-names .lb-row { height: 19px; font-size: 0.72rem; }
+.lb-row .lb-rank { width: 16px; font-weight: 800; font-family: var(--font-display); color: var(--ink-soft); }
+.lb-row.leader .lb-rank { color: var(--marker); }
+.lb-row .lb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--chalk)); flex-shrink: 0; }
+.lb-row .lb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-row.leader .lb-name { font-weight: 700; }
+
+@media (max-width: 860px) {
+  .field-stage { grid-template-columns: 1fr; }
+  .leaderboard-panel { max-height: 170px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .field-token, .field { animation: none !important; transition: none !important; }
+}
