@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Duck Race Name Picker — Pick &amp; Race</title>
-<meta name="description" content="Type or paste a class list, pick a race length, and let the ducks decide who goes first.">
+<title>Turtle Race Name Picker — Pick &amp; Race</title>
+<meta name="description" content="Deliberately, comedically slow — turtles decide who goes first.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
@@ -28,13 +28,14 @@
 
   .stage {
     border: var(--border); border-radius: var(--radius);
-    background: linear-gradient(180deg, var(--chalk-dim), #dcefe3);
+    background: linear-gradient(180deg, #eee3c8, #ded098);
     padding: 16px;
     min-height: 420px;
   }
-  .stage.projector { background: #10261a; }
+  .stage.projector { background: #241d0f; }
   .stage.projector .lane-name { color: #fff; }
-  .stage.projector .track { background: #163521; }
+  .track { background: #cdbb85 !important; }
+  .stage.projector .track { background: #3a2f18 !important; }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
@@ -51,8 +52,8 @@
     position: absolute; top: 2px; left: 0; width: 26px; height: 26px;
     transition: left 0.08s linear;
   }
-  .duck-token svg { width: 100%; height: 100%; animation: wob 0.5s ease-in-out infinite; transform-origin: 50% 80%; }
-  @keyframes wob { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  .duck-token svg { width: 100%; height: 100%; animation: wob 1.4s ease-in-out infinite; transform-origin: 50% 80%; }
+  @keyframes wob { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
 
   .many-names .lane { grid-template-columns: 84px 1fr; }
   .many-names .track { height: 22px; }
@@ -84,8 +85,8 @@
     <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
     <nav>
       <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
       <a href="rocket-race.html">Rocket Race</a>
-      <a href="turtle-race.html">Turtle Race</a>
       <a href="balloon-pop.html">Balloon Pop</a>
       <a href="spinning-wheel.html">Wheel</a>
     </nav>
@@ -93,8 +94,8 @@
 </header>
 
 <main class="wrap">
-  <h1 style="margin-top:28px;">Duck Race Name Picker</h1>
-  <p>Paste your roster, set a race length, and let the ducks pick. Works for 2 names or 40.</p>
+  <h1 style="margin-top:28px;">Turtle Race Name Picker</h1>
+  <p>Same fair pick, delivered as slowly and dramatically as possible. Great for building suspense.</p>
 
   <div class="tool-wrap">
     <div class="panel">
@@ -120,7 +121,7 @@ Isla</textarea>
         <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
       </div>
 
-      <button class="btn marker" id="startBtn">Start the race</button>
+      <button class="btn marker" id="startBtn">Begin the (slow) race</button>
       <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
     </div>
 
@@ -154,13 +155,15 @@ Isla</textarea>
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
 
-  const DUCK_SVG = `<svg viewBox="0 0 60 48" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="26" cy="30" rx="20" ry="14" fill="var(--c,#efb93c)"/>
-    <circle cx="42" cy="16" r="11" fill="var(--c,#efb93c)"/>
-    <path d="M50 14 L60 17 L50 20 Z" fill="#d9503f"/>
-    <circle cx="45" cy="13" r="2" fill="#1e2a45"/>
+  const DUCK_SVG = `<svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="28" cy="22" rx="22" ry="14" fill="var(--c,#35604a)"/>
+    <path d="M28 10 Q34 2 40 10 Q34 14 28 10 Z" fill="var(--c,#35604a)" opacity="0.85"/>
+    <circle cx="50" cy="20" r="7" fill="var(--c,#35604a)"/>
+    <circle cx="54" cy="18" r="1.6" fill="#1e2a45"/>
+    <ellipse cx="10" cy="30" rx="5" ry="3" fill="var(--c,#35604a)"/>
+    <ellipse cx="46" cy="34" rx="5" ry="3" fill="var(--c,#35604a)"/>
   </svg>`;
-  const PALETTE = ["#efb93c", "#ffffff", "#35604a", "#d9503f", "#8fb9d8", "#c98fd8"];
+  const PALETTE = ["#35604a", "#4a7a5e", "#8a6d3b", "#efb93c", "#6b8f71", "#2f4d3a"];
 
   let alreadyWon = [];
   let racing = false;
@@ -227,7 +230,7 @@ Isla</textarea>
     const displayOrder = result.eligiblePool.map((name) => ({ name, finishTime: byName[name] }));
     buildStage(displayOrder);
 
-    statusText.textContent = "Racing…";
+    statusText.textContent = "Plodding along…";
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
 
@@ -255,7 +258,7 @@ Isla</textarea>
     racing = false;
     statusText.textContent = "We have a winner";
     clock.textContent = "🏁";
-    winnerBanner.textContent = `🦆 ${winner} wins the race!`;
+    winnerBanner.textContent = `🐢 ${winner} finally crosses the line!`;
     winnerBanner.classList.add("show");
     if (noRepeatEl.checked) {
       alreadyWon.push(winner);
