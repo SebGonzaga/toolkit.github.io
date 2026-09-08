@@ -278,7 +278,7 @@ Isla</textarea>
       }
 
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
-      clock.textContent = Math.max(0, (duration - displayElapsed)).toFixed(1) + "s";
+      clock.textContent = Math.max(0, (maxTime - displayElapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided (still uses displayElapsed so it stays in sync with slow-mo during a photo finish)
 
       track.update(rawElapsed);
 
