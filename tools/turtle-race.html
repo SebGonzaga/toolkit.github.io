@@ -212,6 +212,7 @@ Isla</textarea>
   }
 
   function buildStage(order) {
+    if (track) track.destroy(); // cancel any in-flight animations before replacing tokens
     track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
       tokenHTML,
       palette: PALETTE,
@@ -249,27 +250,45 @@ Isla</textarea>
       statusText.textContent = COMMENTARY[commentaryIdx];
     }, Math.max(1200, duration * 220));
 
+    track.play(); // actual motion is now driven by each token's own Web Animation
+
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    const slowMo = result.photoFinish;
+    let slowMoApplied = false;
 
-    function frame(now) {
-      const elapsed = (now - start) / 1000;
-      clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
+    // No longer drives position — only reads each token's own animation
+    // clock (via track.update) to keep the leaderboard/clock in sync. Real
+    // slow motion comes from track.setPlaybackRate(), a genuine browser
+    // primitive, not a manual time remap.
+    function rankFrame(now) {
+      if (!racing) return;
+      const rawElapsed = (now - start) / 1000;
 
-      track.update(elapsed);
-
-      if (elapsed < maxTime) {
-        requestAnimationFrame(frame);
-      } else {
+      if (slowMo && !slowMoApplied && rawElapsed > maxTime * 0.85) {
+        slowMoApplied = true;
+        track.setPlaybackRate(0.35);
         clearInterval(commentaryTimer);
-        finishRace(result);
+        statusText.textContent = "Impossibly close… don't blink…";
       }
+
+      const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
+      clock.textContent = Math.max(0, (duration - displayElapsed)).toFixed(1) + "s";
+
+      track.update(rawElapsed);
+
+      requestAnimationFrame(rankFrame);
     }
-    requestAnimationFrame(frame);
+    requestAnimationFrame(rankFrame);
+
+    await track.finished(); // resolves when every racer's real animation completes
+    clearInterval(commentaryTimer);
+    finishRace(result);
   }
 
   function finishRace(result) {
     racing = false;
+    if (track) track.celebrateWinner(result.winner);
     SuspenseFX.shake(stage, 350);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);

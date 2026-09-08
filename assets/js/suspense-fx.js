@@ -135,7 +135,21 @@ const SuspenseFX = (() => {
     }
   }
 
-  return { countdown, shake, flash, photoFinishBanner, burst };
+  /**
+   * Maps real elapsed time to a "virtual" elapsed time that slows down
+   * after a threshold fraction of maxTime — used to stretch out the final
+   * stretch of a photo finish into genuine slow motion instead of letting
+   * a razor-close finish blur past in a fraction of a second.
+   * Does not change who wins — only how the last stretch is paced.
+   */
+  function timeDilation(rawElapsed, maxTime, opts = {}) {
+    const { thresholdFrac = 0.85, rate = 0.35 } = opts;
+    const threshold = maxTime * thresholdFrac;
+    if (rawElapsed <= threshold) return rawElapsed;
+    return threshold + (rawElapsed - threshold) * rate;
+  }
+
+  return { countdown, shake, flash, photoFinishBanner, burst, timeDilation };
 })();
 
 if (typeof module !== "undefined") module.exports = SuspenseFX;

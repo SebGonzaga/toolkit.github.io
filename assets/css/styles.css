@@ -239,6 +239,28 @@ a { color: inherit; }
 .field-token:focus-within .name-tag { opacity: 1; }
 .field-token.leading .name-tag { font-weight: 800; }
 
+/* Overtake flash: brief glow when a token takes the lead mid-race. */
+.field-token.lead-change .token-art { animation: field-lead-flash 0.45s ease; }
+@keyframes field-lead-flash {
+  0% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
+  40% { filter: drop-shadow(0 0 9px rgba(255,255,255,0.95)); }
+  100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
+}
+.lb-row.lead-change { animation: lb-lead-flash 0.6s ease; }
+@keyframes lb-lead-flash {
+  0% { background: transparent; }
+  30% { background: rgba(239,185,60,0.4); }
+  100% { background: transparent; }
+}
+
+/* Winner celebration: victory bounce + glow once a race is decided. */
+.field-token.winner-token { animation: field-winner-bounce 0.55s ease infinite; z-index: 8; }
+.field-token.winner-token .token-art { filter: drop-shadow(0 0 10px rgba(239,185,60,0.95)); }
+@keyframes field-winner-bounce {
+  0%, 100% { margin-top: -6px; }
+  50% { margin-top: 6px; }
+}
+
 .leaderboard-panel {
   border: var(--border); border-radius: var(--radius);
   background: var(--paper);
@@ -267,5 +289,5 @@ a { color: inherit; }
   .leaderboard-panel { max-height: 170px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .field-token, .field { animation: none !important; transition: none !important; }
+  .field-token, .field-token .token-art, .field, .lb-row { animation: none !important; transition: none !important; }
 }
