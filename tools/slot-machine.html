@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Balloon Pop Name Picker — Pick &amp; Race</title>
-<meta name="description" content="Balloons rise toward the ceiling — first one there wins and pops.">
+<title>Slot Machine Name Picker — Pick &amp; Race</title>
+<meta name="description" content="Pull the lever — reels spin and lock in a name.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
@@ -21,44 +21,44 @@
 
   .stage {
     border: var(--border); border-radius: var(--radius);
-    background: linear-gradient(180deg, #cfe6f5, #eaf5fb);
-    padding: 16px;
+    background: linear-gradient(180deg, #f6dfc0, #f1cfa0);
+    padding: 24px;
     min-height: 460px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  .stage.projector { background: #0e1a2b; }
-  .stage.projector .col-name { color: #fff; }
-  .stage.projector .col-track { background: rgba(255,255,255,0.08); }
+  .stage.projector { background: #241407; }
+  .stage.projector .machine { background: #100a05; border-color: #fff; }
+  .stage.projector .status { color: #fff; }
 
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .stage-header { position: absolute; top: 20px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 24px; }
+  .stage { position: relative; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
-  .stage.projector .stage-header .status { color: #fff; }
   .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
-  .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { display: flex; gap: 14px; overflow-x: auto; padding: 8px 4px 4px; align-items: flex-end; }
-  .col { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
-  .col-track {
-    position: relative; width: 46px; height: 340px;
-    background: rgba(255,255,255,0.5); border-radius: 999px; overflow: hidden;
+  .machine {
+    background: var(--ink); border: 4px solid var(--ink); border-radius: 18px;
+    padding: 20px 20px 28px; display: flex; gap: 10px; margin-top: 34px;
   }
-  .col-track .ceiling-mark {
-    position: absolute; top: 6px; left: 0; right: 0; height: 2px;
-    background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px);
+  .reel-window {
+    width: 90px; height: 100px; background: var(--paper); border-radius: 8px; overflow: hidden;
+    position: relative; box-shadow: inset 0 0 0 2px var(--ink);
   }
-  .balloon-token {
-    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 34px; height: 42px;
-    transition: bottom 0.08s linear;
+  .reel-window.name-reel { width: 190px; }
+  .reel-strip { position: absolute; top: 0; left: 0; width: 100%; }
+  .reel-item { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; }
+  .reel-item.name-item { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--ink); text-align: center; padding: 0 8px; }
+  .reel-window::before, .reel-window::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 26px; z-index: 2;
   }
-  .balloon-token svg { width: 100%; height: 100%; animation: sway 1.1s ease-in-out infinite; transform-origin: 50% 100%; }
-  @keyframes sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-  .col-name { font-size: 0.82rem; font-weight: 600; text-align: center; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .reel-window::before { top: 0; background: linear-gradient(180deg, var(--paper), transparent); }
+  .reel-window::after { bottom: 0; background: linear-gradient(0deg, var(--paper), transparent); }
 
-  .many-names .col-track { width: 28px; }
-  .many-names .balloon-token { width: 22px; height: 28px; }
-  .many-names .col-name { font-size: 0.72rem; max-width: 46px; }
+  .lever { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+  .lever .stick { width: 8px; height: 60px; background: var(--marker); border-radius: 4px; transform-origin: bottom center; transition: transform 0.25s ease; }
+  .lever .knob { width: 22px; height: 22px; border-radius: 50%; background: var(--marker); border: 2px solid var(--ink); margin-bottom: -4px; }
+  .lever.pulled .stick { transform: rotate(28deg); }
 
-  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
+  .winner-banner { margin-top: 22px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
   .winner-banner.show { display: block; }
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
@@ -66,9 +66,10 @@
   @media (max-width: 860px) {
     .tool-wrap { grid-template-columns: 1fr; }
     .panel { position: static; }
+    .machine { flex-wrap: wrap; justify-content: center; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .balloon-token, .balloon-token svg { animation: none !important; transition: none !important; }
+    .reel-strip { transition: none !important; }
   }
 </style>
 </head>
@@ -80,17 +81,16 @@
     <nav>
       <a href="../index.html#tools">All tools</a>
       <a href="duck-race.html">Duck Race</a>
-      <a href="rocket-race.html">Rocket Race</a>
-      <a href="turtle-race.html">Turtle Race</a>
-      <a href="slot-machine.html">Slot Machine</a>
+      <a href="ball-drop.html">Ball Drop</a>
+      <a href="balloon-pop.html">Balloon Pop</a>
       <a href="spinning-wheel.html">Wheel</a>
     </nav>
   </div>
 </header>
 
 <main class="wrap">
-  <h1 style="margin-top:28px;">Balloon Pop Name Picker</h1>
-  <p>Balloons rise toward the ceiling. First one to reach it pops and wins. Works for 2 names or 40.</p>
+  <h1 style="margin-top:28px;">Slot Machine Name Picker</h1>
+  <p>Pull the lever. Two decorative reels spin for flavor, the middle reel is the pick.</p>
 
   <div class="tool-wrap">
     <div class="panel">
@@ -104,8 +104,8 @@ Mateo
 Yuki
 Isla</textarea>
 
-      <label for="duration">Race length: <span class="duration-val" id="durationVal">8s</span></label>
-      <input type="range" id="duration" min="2" max="30" value="8">
+      <label for="duration">Spin length: <span class="duration-val" id="durationVal">4s</span></label>
+      <input type="range" id="duration" min="2" max="8" value="4">
 
       <div class="toggle-row">
         <input type="checkbox" id="noRepeat">
@@ -116,7 +116,7 @@ Isla</textarea>
         <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
       </div>
 
-      <button class="btn marker" id="startBtn">Inflate &amp; release</button>
+      <button class="btn marker" id="startBtn">Pull the lever</button>
       <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
     </div>
 
@@ -126,7 +126,12 @@ Isla</textarea>
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
-        <div class="track-area" id="trackArea"></div>
+        <div class="machine">
+          <div class="reel-window"><div class="reel-strip" id="reelLeft"></div></div>
+          <div class="reel-window name-reel"><div class="reel-strip" id="reelName"></div></div>
+          <div class="reel-window"><div class="reel-strip" id="reelRight"></div></div>
+          <div class="lever" id="lever"><div class="stick"></div><div class="knob"></div></div>
+        </div>
       </div>
       <div class="winner-banner" id="winnerBanner"></div>
       <div class="history" id="historyList"></div>
@@ -144,21 +149,19 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
-  const trackArea = document.getElementById("trackArea");
+  const lever = document.getElementById("lever");
+  const reelName = document.getElementById("reelName");
+  const reelLeft = document.getElementById("reelLeft");
+  const reelRight = document.getElementById("reelRight");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
 
-  const BALLOON_SVG = `<svg viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="20" cy="18" rx="16" ry="18" fill="var(--c,#d9503f)"/>
-    <path d="M20 36 L17 40 L23 40 Z" fill="var(--c,#d9503f)"/>
-    <path d="M20 40 Q16 44 20 50" stroke="#4a5674" stroke-width="1.2" fill="none"/>
-  </svg>`;
-  const PALETTE = ["#d9503f", "#efb93c", "#35604a", "#8fb9d8", "#c98fd8", "#ffffff"];
-
+  const ITEM_H = 100;
+  const SYMBOLS = ["⭐", "🍎", "✏️", "📚", "🎓", "🍏"];
   let alreadyWon = [];
-  let racing = false;
+  let spinning = false;
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -167,77 +170,85 @@ Isla</textarea>
   function getNames() {
     return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
   }
-
   function renderHistory() {
     if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
     historyList.innerHTML = "Already won this round: " +
       alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
   }
-
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
-  function buildStage(order) {
-    trackArea.innerHTML = "";
-    trackArea.classList.toggle("many-names", order.length > 14);
+  function buildSymbolStrip(el, loops) {
+    let html = "";
+    for (let i = 0; i < loops; i++) {
+      SYMBOLS.forEach((s) => { html += `<div class="reel-item">${s}</div>`; });
+    }
+    el.innerHTML = html;
+    el.style.transition = "none";
+    el.style.transform = "translateY(0px)";
+  }
 
-    order.forEach((entrant, i) => {
-      const col = document.createElement("div");
-      col.className = "col";
-      const color = PALETTE[i % PALETTE.length];
-      col.innerHTML = `
-        <div class="col-track" data-idx="${i}">
-          <div class="ceiling-mark"></div>
-          <div class="balloon-token" id="balloon-${i}">${BALLOON_SVG.replace(/var\\(--c,#d9503f\\)/g, color)}</div>
-        </div>
-        <div class="col-name">${escapeHtml(entrant.name)}</div>`;
-      trackArea.appendChild(col);
+  function buildNameStrip(names, winner) {
+    // Build a long shuffled strip; force the last item to equal winner so it lands centered.
+    const loops = 6;
+    let strip = [];
+    for (let i = 0; i < loops; i++) strip = strip.concat(RaceEngine.shuffle(names));
+    strip.push(winner);
+    reelName.innerHTML = strip.map((n) => `<div class="reel-item name-item">${escapeHtml(n)}</div>`).join("");
+    reelName.style.transition = "none";
+    reelName.style.transform = "translateY(0px)";
+    return strip.length;
+  }
+
+  function spinTo(el, finalIndex, duration, extraSpins) {
+    const target = -(finalIndex * ITEM_H);
+    requestAnimationFrame(() => {
+      el.style.transition = `transform ${duration}s cubic-bezier(.12,.7,.15,1)`;
+      el.style.transform = `translateY(${target}px)`;
     });
   }
 
-  function runRace() {
-    if (racing) return;
+  function runSpin() {
+    if (spinning) return;
     const roster = getNames();
     if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
-    racing = true;
+    spinning = true;
     winnerBanner.classList.remove("show");
+    lever.classList.add("pulled");
+    setTimeout(() => lever.classList.remove("pulled"), 300);
+
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
 
-    const byName = Object.fromEntries(result.order.map((o) => [o.name, o.finishTime]));
-    const displayOrder = result.eligiblePool.map((name) => ({ name, finishTime: byName[name] }));
-    buildStage(displayOrder);
+    buildSymbolStrip(reelLeft, 8);
+    buildSymbolStrip(reelRight, 8);
+    const stripLen = buildNameStrip(result.eligiblePool, result.winner);
 
-    statusText.textContent = "Rising…";
+    statusText.textContent = "Spinning…";
     const start = performance.now();
-    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    const tick = () => {
+      const elapsed = (performance.now() - start) / 1000;
+      clock.textContent = Math.max(0, duration - elapsed).toFixed(1) + "s";
+      if (elapsed < duration) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
 
-    function frame(now) {
-      const elapsed = (now - start) / 1000;
-      clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
-      displayOrder.forEach((entrant, i) => {
-        const el = document.getElementById(`balloon-${i}`);
-        if (!el) return;
-        const track = el.parentElement;
-        const trackH = track.clientHeight - el.clientHeight;
-        const progress = Math.min(1, elapsed / entrant.finishTime);
-        el.style.bottom = (progress * trackH) + "px";
-      });
-      if (elapsed < maxTime) {
-        requestAnimationFrame(frame);
-      } else {
-        finishRace(result.winner);
-      }
-    }
-    requestAnimationFrame(frame);
+    // Kick off transforms after strips are in the DOM.
+    requestAnimationFrame(() => {
+      spinTo(reelLeft, SYMBOLS.length * 6 + Math.floor(Math.random() * SYMBOLS.length), duration * 0.85);
+      spinTo(reelRight, SYMBOLS.length * 6 + Math.floor(Math.random() * SYMBOLS.length), duration * 0.95);
+      spinTo(reelName, stripLen - 1, duration);
+    });
+
+    setTimeout(() => finishSpin(result.winner), duration * 1000 + 60);
   }
 
-  function finishRace(winner) {
-    racing = false;
-    statusText.textContent = "Pop!";
-    clock.textContent = "🎈";
-    winnerBanner.textContent = `🎈 ${winner}'s balloon pops at the top first!`;
+  function finishSpin(winner) {
+    spinning = false;
+    statusText.textContent = "Locked in!";
+    clock.textContent = "🎰";
+    winnerBanner.textContent = `🎰 The reels lock in ${winner}!`;
     winnerBanner.classList.add("show");
     if (noRepeatEl.checked) { alreadyWon.push(winner); renderHistory(); }
     launchConfetti();
@@ -260,8 +271,10 @@ Isla</textarea>
     }
   }
 
-  startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1 })));
+  startBtn.addEventListener("click", runSpin);
+  buildSymbolStrip(reelLeft, 3);
+  buildSymbolStrip(reelRight, 3);
+  reelName.innerHTML = getNames().map((n) => `<div class="reel-item name-item">${escapeHtml(n)}</div>`).join("");
 </script>
 
 </body>

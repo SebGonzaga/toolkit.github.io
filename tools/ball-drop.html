@@ -3,24 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Turtle Race Name Picker — Pick &amp; Race</title>
-<meta name="description" content="Deliberately, comedically slow — turtles decide who goes first.">
+<title>Ball Drop Name Picker — Pick &amp; Race</title>
+<meta name="description" content="A ball tumbles through a field of pegs and lands in a name slot — Plinko-style random picking.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
 <style>
   .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
-  .panel {
-    border: var(--border); border-radius: var(--radius); background: var(--paper);
-    padding: 20px; position: sticky; top: 20px;
-  }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; position: sticky; top: 20px; }
   .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
   .panel label:first-of-type { margin-top: 0; }
-  textarea {
-    width: 100%; min-height: 140px; border: var(--border); border-radius: 8px;
-    padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical;
-  }
-  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  textarea { width: 100%; min-height: 140px; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical; }
   input[type="range"] { width: 100%; }
   .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; font-size: 0.88rem; }
   .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
@@ -28,14 +21,14 @@
 
   .stage {
     border: var(--border); border-radius: var(--radius);
-    background: linear-gradient(180deg, #eee3c8, #ded098);
+    background: linear-gradient(180deg, #e7e0f2, #f4f0fa);
     padding: 16px;
-    min-height: 420px;
+    min-height: 460px;
   }
-  .stage.projector { background: #241d0f; }
-  .stage.projector .lane-name { color: #fff; }
-  .track { background: #cdbb85 !important; }
-  .stage.projector .track { background: #3a2f18 !important; }
+  .stage.projector { background: #171226; }
+  .stage.projector .slot-name { color: #fff; }
+  .stage.projector .peg { fill: rgba(255,255,255,0.35); }
+  .stage.projector .slot { background: rgba(255,255,255,0.08); }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
@@ -43,29 +36,24 @@
   .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
-  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .track { position: relative; height: 30px; background: #d3e6d9; border-radius: 999px; overflow: hidden; }
-  .track .finish-mark { position: absolute; right: 6px; top: 0; bottom: 0; width: 2px; background: rgba(30,42,69,0.4); }
-  .duck-token {
-    position: absolute; top: 2px; left: 0; width: 26px; height: 26px;
-    transition: left 0.08s linear;
+  .board { position: relative; height: 300px; margin: 0 4px; overflow: hidden; }
+  .pegs { position: absolute; inset: 0; }
+  .peg { fill: rgba(30,42,69,0.35); }
+  .ball {
+    position: absolute; top: 0; width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff, var(--marker) 70%);
+    border: 2px solid var(--ink);
   }
-  .duck-token svg { width: 100%; height: 100%; animation: wob 1.4s ease-in-out infinite; transform-origin: 50% 80%; }
-  @keyframes wob { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
-
-  .many-names .lane { grid-template-columns: 84px 1fr; }
-  .many-names .track { height: 22px; }
-  .many-names .duck-token { width: 18px; height: 18px; }
-
-  .winner-banner {
-    margin-top: 14px; border: var(--border); border-radius: var(--radius);
-    background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display);
-    font-size: 1.15rem; display: none;
+  .slots { display: flex; overflow-x: auto; gap: 2px; padding-top: 6px; }
+  .slot {
+    flex: 1 1 0; min-width: 46px; border: var(--border); border-top: none; border-radius: 0 0 8px 8px;
+    background: var(--paper-dim); padding: 8px 4px 10px; text-align: center; transition: background 0.2s;
   }
+  .slot.landed { background: var(--pencil); }
+  .slot-name { font-size: 0.78rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
   .winner-banner.show { display: block; }
-
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
 
@@ -74,7 +62,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .duck-token, .duck-token svg { animation: none !important; transition: none !important; }
+    .ball { transition: none !important; }
   }
 </style>
 </head>
@@ -87,8 +75,8 @@
       <a href="../index.html#tools">All tools</a>
       <a href="duck-race.html">Duck Race</a>
       <a href="rocket-race.html">Rocket Race</a>
+      <a href="turtle-race.html">Turtle Race</a>
       <a href="balloon-pop.html">Balloon Pop</a>
-      <a href="ball-drop.html">Ball Drop</a>
       <a href="slot-machine.html">Slot Machine</a>
       <a href="spinning-wheel.html">Wheel</a>
     </nav>
@@ -96,8 +84,8 @@
 </header>
 
 <main class="wrap">
-  <h1 style="margin-top:28px;">Turtle Race Name Picker</h1>
-  <p>Same fair pick, delivered as slowly and dramatically as possible. Great for building suspense.</p>
+  <h1 style="margin-top:28px;">Ball Drop Name Picker</h1>
+  <p>One ball, a field of pegs, and a row of name slots. Wherever it lands, that's your pick.</p>
 
   <div class="tool-wrap">
     <div class="panel">
@@ -111,8 +99,8 @@ Mateo
 Yuki
 Isla</textarea>
 
-      <label for="duration">Race length: <span class="duration-val" id="durationVal">8s</span></label>
-      <input type="range" id="duration" min="2" max="30" value="8">
+      <label for="duration">Drop speed: <span class="duration-val" id="durationVal">4s</span></label>
+      <input type="range" id="duration" min="2" max="10" value="4">
 
       <div class="toggle-row">
         <input type="checkbox" id="noRepeat">
@@ -123,7 +111,7 @@ Isla</textarea>
         <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
       </div>
 
-      <button class="btn marker" id="startBtn">Begin the (slow) race</button>
+      <button class="btn marker" id="startBtn">Drop the ball</button>
       <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
     </div>
 
@@ -133,7 +121,11 @@ Isla</textarea>
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
-        <div class="track-area" id="trackArea"></div>
+        <div class="board" id="board">
+          <svg class="pegs" id="pegSvg"></svg>
+          <div class="ball" id="ball" style="display:none;"></div>
+        </div>
+        <div class="slots" id="slots"></div>
       </div>
       <div class="winner-banner" id="winnerBanner"></div>
       <div class="history" id="historyList"></div>
@@ -151,31 +143,22 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
-  const trackArea = document.getElementById("trackArea");
+  const board = document.getElementById("board");
+  const pegSvg = document.getElementById("pegSvg");
+  const ball = document.getElementById("ball");
+  const slotsEl = document.getElementById("slots");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
 
-  const DUCK_SVG = `<svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="28" cy="22" rx="22" ry="14" fill="var(--c,#35604a)"/>
-    <path d="M28 10 Q34 2 40 10 Q34 14 28 10 Z" fill="var(--c,#35604a)" opacity="0.85"/>
-    <circle cx="50" cy="20" r="7" fill="var(--c,#35604a)"/>
-    <circle cx="54" cy="18" r="1.6" fill="#1e2a45"/>
-    <ellipse cx="10" cy="30" rx="5" ry="3" fill="var(--c,#35604a)"/>
-    <ellipse cx="46" cy="34" rx="5" ry="3" fill="var(--c,#35604a)"/>
-  </svg>`;
-  const PALETTE = ["#35604a", "#4a7a5e", "#8a6d3b", "#efb93c", "#6b8f71", "#2f4d3a"];
-
   let alreadyWon = [];
-  let racing = false;
+  let dropping = false;
+  let currentNames = [];
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
-  resetHistoryBtn.addEventListener("click", () => {
-    alreadyWon = [];
-    renderHistory();
-  });
+  resetHistoryBtn.addEventListener("click", () => { alreadyWon = []; renderHistory(); });
 
   function getNames() {
     return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
@@ -186,86 +169,88 @@ Isla</textarea>
     historyList.innerHTML = "Already won this round: " +
       alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
   }
-
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
-  function buildStage(order) {
-    trackArea.innerHTML = "";
-    trackArea.parentElement.classList.toggle("many-names", order.length > 14);
-    trackArea.classList.toggle("many-names", order.length > 14);
-    stage.classList.toggle("many-names", order.length > 14);
+  function buildBoard(names) {
+    currentNames = names;
+    slotsEl.innerHTML = names.map((n) =>
+      `<div class="slot"><div class="slot-name">${escapeHtml(n)}</div></div>`
+    ).join("");
 
-    order.forEach((entrant, i) => {
-      const lane = document.createElement("div");
-      lane.className = "lane";
-      const color = PALETTE[i % PALETTE.length];
-      lane.innerHTML = `
-        <div class="lane-name">${escapeHtml(entrant.name)}</div>
-        <div class="track" data-idx="${i}">
-          <div class="finish-mark"></div>
-          <div class="duck-token" id="duck-${i}" style="--c:${color}">${DUCK_SVG.replace('var(--c,#efb93c)', color)}</div>
-        </div>`;
-      trackArea.appendChild(lane);
-    });
+    // peg field: staggered rows
+    const w = board.clientWidth || 600, h = 300;
+    const rows = 6, cols = Math.max(names.length, 4);
+    let svg = "";
+    for (let r = 0; r < rows; r++) {
+      const offset = (r % 2 === 0) ? 0 : (w / cols) / 2;
+      for (let c = 0; c < cols; c++) {
+        const x = offset + (c + 0.5) * (w / cols);
+        const y = 20 + r * ((h - 40) / rows);
+        if (x > 8 && x < w - 8) svg += `<circle class="peg" cx="${x}" cy="${y}" r="3.5"/>`;
+      }
+    }
+    pegSvg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    pegSvg.innerHTML = svg;
   }
 
-  function runRace() {
-    if (racing) return;
+  function runDrop() {
+    if (dropping) return;
     const roster = getNames();
-    if (roster.length < 2) {
-      statusText.textContent = "Add at least two names first";
-      return;
-    }
-    racing = true;
+    if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
+    dropping = true;
     winnerBanner.classList.remove("show");
+    document.querySelectorAll(".slot").forEach((s) => s.classList.remove("landed"));
+
     const duration = Number(durationEl.value);
-    const result = RaceEngine.run(roster, {
-      duration,
-      noRepeat: noRepeatEl.checked,
-      alreadyWon,
-    });
+    const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
+    buildBoard(result.eligiblePool);
 
-    // Keep display order stable (roster order) but drive progress by finishTime.
-    const byName = Object.fromEntries(result.order.map((o) => [o.name, o.finishTime]));
-    const displayOrder = result.eligiblePool.map((name) => ({ name, finishTime: byName[name] }));
-    buildStage(displayOrder);
+    const winnerIdx = result.eligiblePool.indexOf(result.winner);
+    const boardW = board.clientWidth, boardH = 300;
+    const slotW = boardW / result.eligiblePool.length;
+    const targetX = slotW * (winnerIdx + 0.5) - 11; // center the 22px ball
 
-    statusText.textContent = "Plodding along…";
+    ball.style.display = "block";
+    ball.style.top = "0px";
+    ball.style.left = (boardW / 2 - 11) + "px";
+
+    statusText.textContent = "Dropping…";
     const start = performance.now();
-    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
-      clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
-      displayOrder.forEach((entrant, i) => {
-        const el = document.getElementById(`duck-${i}`);
-        if (!el) return;
-        const track = el.parentElement;
-        const trackW = track.clientWidth - el.clientWidth;
-        const progress = Math.min(1, elapsed / entrant.finishTime);
-        el.style.left = (progress * trackW) + "px";
-      });
-      if (elapsed < maxTime) {
+      const progress = Math.min(1, elapsed / duration);
+      clock.textContent = Math.max(0, duration - elapsed).toFixed(1) + "s";
+
+      const y = progress * (boardH - 22);
+      const wiggleAmp = (1 - progress) * (boardW * 0.16);
+      const wiggle = Math.sin(elapsed * 9) * wiggleAmp;
+      const startX = boardW / 2 - 11;
+      const x = startX + (targetX - startX) * progress + wiggle * (1 - progress);
+
+      ball.style.top = y + "px";
+      ball.style.left = x + "px";
+
+      if (progress < 1) {
         requestAnimationFrame(frame);
       } else {
-        finishRace(result.winner);
+        finishDrop(result.winner, winnerIdx);
       }
     }
     requestAnimationFrame(frame);
   }
 
-  function finishRace(winner) {
-    racing = false;
-    statusText.textContent = "We have a winner";
-    clock.textContent = "🏁";
-    winnerBanner.textContent = `🐢 ${winner} finally crosses the line!`;
+  function finishDrop(winner, idx) {
+    dropping = false;
+    statusText.textContent = "Landed!";
+    clock.textContent = "🔴";
+    const slotEls = document.querySelectorAll(".slot");
+    if (slotEls[idx]) slotEls[idx].classList.add("landed");
+    winnerBanner.textContent = `🔴 The ball lands on ${winner}!`;
     winnerBanner.classList.add("show");
-    if (noRepeatEl.checked) {
-      alreadyWon.push(winner);
-      renderHistory();
-    }
+    if (noRepeatEl.checked) { alreadyWon.push(winner); renderHistory(); }
     launchConfetti();
   }
 
@@ -286,8 +271,9 @@ Isla</textarea>
     }
   }
 
-  startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1 })));
+  startBtn.addEventListener("click", runDrop);
+  buildBoard(getNames());
+  window.addEventListener("resize", () => buildBoard(currentNames));
 </script>
 
 </body>
