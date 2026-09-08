@@ -24,22 +24,28 @@
     background: linear-gradient(180deg, #cfe6f5, #eaf5fb);
     padding: 16px;
     min-height: 460px;
+    position: relative; overflow: hidden;
   }
   .stage.projector { background: #0e1a2b; }
   .stage.projector .col-name { color: #fff; }
   .stage.projector .col-track { background: rgba(255,255,255,0.08); }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--marker), 0 0 40px rgba(217,80,63,0.5) inset; }
 
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .cloud { position: absolute; background: rgba(255,255,255,0.75); border-radius: 999px; filter: blur(1px); animation: drift linear infinite; z-index: 0; }
+  @keyframes drift { from { transform: translateX(-10%); } to { transform: translateX(110%); } }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
   .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { display: flex; gap: 14px; overflow-x: auto; padding: 8px 4px 4px; align-items: flex-end; }
-  .col { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .track-area { display: flex; gap: 14px; overflow-x: auto; padding: 8px 4px 4px; align-items: flex-end; position: relative; z-index: 5; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; transition: transform 0.15s ease; }
+  .col.leader { transform: scale(1.04); }
   .col-track {
     position: relative; width: 46px; height: 340px;
-    background: rgba(255,255,255,0.5); border-radius: 999px; overflow: hidden;
+    background: rgba(255,255,255,0.5); border-radius: 999px; overflow: visible;
   }
   .col-track .ceiling-mark {
     position: absolute; top: 6px; left: 0; right: 0; height: 2px;
@@ -48,17 +54,21 @@
   .balloon-token {
     position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 34px; height: 42px;
-    transition: bottom 0.08s linear;
+    will-change: bottom;
   }
   .balloon-token svg { width: 100%; height: 100%; animation: sway 1.1s ease-in-out infinite; transform-origin: 50% 100%; }
   @keyframes sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-  .col-name { font-size: 0.82rem; font-weight: 600; text-align: center; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .balloon-token.surging svg { animation-duration: 0.5s; }
+  .balloon-token.popped { opacity: 0; transform: translateX(-50%) scale(1.6); transition: opacity 0.15s ease, transform 0.15s ease; }
+  .col-name { font-size: 0.82rem; font-weight: 600; text-align: center; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color 0.2s ease; }
+  .col.leader .col-name { color: var(--marker); }
 
   .many-names .col-track { width: 28px; }
   .many-names .balloon-token { width: 22px; height: 28px; }
   .many-names .col-name { font-size: 0.72rem; max-width: 46px; }
 
-  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
+  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
@@ -68,7 +78,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .balloon-token, .balloon-token svg { animation: none !important; transition: none !important; }
+    .balloon-token, .balloon-token svg, .col, .cloud { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -122,6 +132,7 @@ Isla</textarea>
 
     <div>
       <div class="stage" id="stage">
+        <div id="clouds"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
@@ -135,6 +146,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -149,6 +161,7 @@ Isla</textarea>
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
+  const clouds = document.getElementById("clouds");
 
   const BALLOON_SVG = `<svg viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
     <ellipse cx="20" cy="18" rx="16" ry="18" fill="var(--c,#d9503f)"/>
@@ -159,6 +172,15 @@ Isla</textarea>
 
   let alreadyWon = [];
   let racing = false;
+
+  for (let i = 0; i < 5; i++) {
+    const c = document.createElement("div");
+    c.className = "cloud";
+    const w = 60 + Math.random() * 70;
+    c.style.cssText = `width:${w}px; height:${w*0.5}px; top:${5 + Math.random()*70}%;
+      animation-duration:${22 + Math.random()*18}s; animation-delay:${-Math.random()*20}s;`;
+    clouds.appendChild(c);
+  }
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -185,6 +207,7 @@ Isla</textarea>
     order.forEach((entrant, i) => {
       const col = document.createElement("div");
       col.className = "col";
+      col.id = `col-${i}`;
       const color = PALETTE[i % PALETTE.length];
       col.innerHTML = `
         <div class="col-track" data-idx="${i}">
@@ -196,72 +219,89 @@ Isla</textarea>
     });
   }
 
-  function runRace() {
+  async function runRace() {
     if (racing) return;
     const roster = getNames();
     if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
     racing = true;
     winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
 
-    const byName = Object.fromEntries(result.order.map((o) => [o.name, o.finishTime]));
-    const displayOrder = result.eligiblePool.map((name) => ({ name, finishTime: byName[name] }));
+    const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
+    const displayOrder = result.eligiblePool.map((name) => byName[name]);
     buildStage(displayOrder);
+
+    statusText.textContent = "Inflating…";
+    await SuspenseFX.countdown(stage, ["3", "2", "1", "Release!"]);
 
     statusText.textContent = "Rising…";
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    let lastLeaderIdx = -1;
+    let winnerPopped = false;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
       clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
+
+      let leaderIdx = 0, leaderProgress = -1;
       displayOrder.forEach((entrant, i) => {
         const el = document.getElementById(`balloon-${i}`);
         if (!el) return;
         const track = el.parentElement;
         const trackH = track.clientHeight - el.clientHeight;
-        const progress = Math.min(1, elapsed / entrant.finishTime);
-        el.style.bottom = (progress * trackH) + "px";
+        const prevBottom = parseFloat(el.dataset.prevBottom || "0");
+        const progress = entrant.progressAt(elapsed);
+        const bottom = progress * trackH;
+        el.style.bottom = bottom + "px";
+        el.classList.toggle("surging", bottom - prevBottom > 2.2);
+        el.dataset.prevBottom = bottom;
+        if (progress >= 0.999 && entrant.name === result.winner && !winnerPopped) {
+          winnerPopped = true;
+          el.classList.add("popped");
+        }
+        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
+
+      if (leaderIdx !== lastLeaderIdx) {
+        document.querySelectorAll(".col.leader").forEach((c) => c.classList.remove("leader"));
+        const el = document.getElementById(`col-${leaderIdx}`);
+        if (el) el.classList.add("leader");
+        lastLeaderIdx = leaderIdx;
+      }
+
       if (elapsed < maxTime) {
         requestAnimationFrame(frame);
       } else {
-        finishRace(result.winner);
+        finishRace(result);
       }
     }
     requestAnimationFrame(frame);
   }
 
-  function finishRace(winner) {
+  function finishRace(result) {
     racing = false;
+    SuspenseFX.shake(stage, 300);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "Pop!";
     clock.textContent = "🎈";
-    winnerBanner.textContent = `🎈 ${winner}'s balloon pops at the top first!`;
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🎈 ${result.winner}'s balloon pops at the top first!`;
     winnerBanner.classList.add("show");
-    if (noRepeatEl.checked) { alreadyWon.push(winner); renderHistory(); }
-    launchConfetti();
-  }
-
-  function launchConfetti() {
-    for (let i = 0; i < 24; i++) {
-      const c = document.createElement("div");
-      const colors = ["#efb93c", "#d9503f", "#35604a", "#1e2a45"];
-      c.style.cssText = `position:fixed; top:-10px; left:${Math.random()*100}vw; width:8px; height:8px;
-        background:${colors[i % colors.length]}; z-index:999; pointer-events:none;
-        transform:rotate(${Math.random()*360}deg);`;
-      document.body.appendChild(c);
-      const fall = c.animate(
-        [{ transform: `translateY(0) rotate(0deg)`, opacity: 1 },
-         { transform: `translateY(100vh) rotate(${360 + Math.random()*360}deg)`, opacity: 0 }],
-        { duration: 1400 + Math.random() * 900, easing: "ease-in" }
-      );
-      fall.onfinish = () => c.remove();
-    }
+    if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
+    if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
+    const winnerIdx = result.eligiblePool.indexOf(result.winner);
+    const winnerEl = document.getElementById(`balloon-${winnerIdx}`);
+    const rect = (winnerEl || stage).getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
   }
 
   startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1 })));
+  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
 </script>
 
 </body>

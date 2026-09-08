@@ -31,28 +31,47 @@
     background: linear-gradient(180deg, var(--chalk-dim), #dcefe3);
     padding: 16px;
     min-height: 420px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.35s cubic-bezier(.2,.8,.3,1);
   }
   .stage.projector { background: #10261a; }
   .stage.projector .lane-name { color: #fff; }
   .stage.projector .track { background: #163521; }
+  .stage.zoom { transform: scale(1.035); }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 40px rgba(239,185,60,0.55) inset; }
 
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  /* drifting cloud/ripple ambiance, purely decorative */
+  .pond-ripples { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0.35; z-index: 0; }
+  .ripple-line { position: absolute; left: -20%; width: 140%; height: 2px; background: rgba(255,255,255,0.5); border-radius: 999px; animation: driftRipple linear infinite; }
+  @keyframes driftRipple { 0% { transform: translateX(-6%); opacity: 0; } 15% { opacity: 0.6; } 85% { opacity: 0.6; } 100% { transform: translateX(6%); opacity: 0; } }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
   .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
-  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; position: relative; z-index: 5; }
+  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; transition: transform 0.15s ease; }
+  .lane.leader { transform: scale(1.015); }
+  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s ease; }
+  .lane.leader .lane-name { color: var(--marker); }
   .track { position: relative; height: 30px; background: #d3e6d9; border-radius: 999px; overflow: hidden; }
   .track .finish-mark { position: absolute; right: 6px; top: 0; bottom: 0; width: 2px; background: rgba(30,42,69,0.4); }
   .duck-token {
     position: absolute; top: 2px; left: 0; width: 26px; height: 26px;
-    transition: left 0.08s linear;
+    will-change: left;
   }
   .duck-token svg { width: 100%; height: 100%; animation: wob 0.5s ease-in-out infinite; transform-origin: 50% 80%; }
   @keyframes wob { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  .duck-token.surging svg { animation-duration: 0.28s; }
+  .wake {
+    position: absolute; top: 50%; right: 100%; height: 3px; width: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8));
+    border-radius: 999px; transform: translateY(-50%);
+  }
+  .splash { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.85); pointer-events: none; }
 
   .many-names .lane { grid-template-columns: 84px 1fr; }
   .many-names .track { height: 22px; }
@@ -62,7 +81,9 @@
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
     background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display);
     font-size: 1.15rem; display: none;
+    animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1);
   }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
 
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
@@ -73,7 +94,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .duck-token, .duck-token svg { animation: none !important; transition: none !important; }
+    .duck-token, .duck-token svg, .stage, .lane, .ripple-line { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -128,6 +149,7 @@ Isla</textarea>
 
     <div>
       <div class="stage" id="stage">
+        <div class="pond-ripples" id="ripples"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
@@ -141,6 +163,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -155,6 +178,7 @@ Isla</textarea>
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
+  const ripples = document.getElementById("ripples");
 
   const DUCK_SVG = `<svg viewBox="0 0 60 48" xmlns="http://www.w3.org/2000/svg">
     <ellipse cx="26" cy="30" rx="20" ry="14" fill="var(--c,#efb93c)"/>
@@ -166,6 +190,15 @@ Isla</textarea>
 
   let alreadyWon = [];
   let racing = false;
+
+  for (let i = 0; i < 5; i++) {
+    const r = document.createElement("div");
+    r.className = "ripple-line";
+    r.style.top = (10 + i * 20) + "%";
+    r.style.animationDuration = (7 + Math.random() * 5) + "s";
+    r.style.animationDelay = (Math.random() * 6) + "s";
+    ripples.appendChild(r);
+  }
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -197,18 +230,22 @@ Isla</textarea>
     order.forEach((entrant, i) => {
       const lane = document.createElement("div");
       lane.className = "lane";
+      lane.id = `lane-${i}`;
       const color = PALETTE[i % PALETTE.length];
       lane.innerHTML = `
         <div class="lane-name">${escapeHtml(entrant.name)}</div>
         <div class="track" data-idx="${i}">
           <div class="finish-mark"></div>
-          <div class="duck-token" id="duck-${i}" style="--c:${color}">${DUCK_SVG.replace('var(--c,#efb93c)', color)}</div>
+          <div class="duck-token" id="duck-${i}" style="--c:${color}">
+            <div class="wake" id="wake-${i}"></div>
+            ${DUCK_SVG.replace('var(--c,#efb93c)', color)}
+          </div>
         </div>`;
       trackArea.appendChild(lane);
     });
   }
 
-  function runRace() {
+  async function runRace() {
     if (racing) return;
     const roster = getNames();
     if (roster.length < 2) {
@@ -217,6 +254,7 @@ Isla</textarea>
     }
     racing = true;
     winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow", "zoom");
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, {
       duration,
@@ -224,67 +262,84 @@ Isla</textarea>
       alreadyWon,
     });
 
-    // Keep display order stable (roster order) but drive progress by finishTime.
-    const byName = Object.fromEntries(result.order.map((o) => [o.name, o.finishTime]));
-    const displayOrder = result.eligiblePool.map((name) => ({ name, finishTime: byName[name] }));
+    // Keep display order stable (roster order) but drive progress by curve.
+    const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
+    const displayOrder = result.eligiblePool.map((name) => byName[name]);
     buildStage(displayOrder);
+
+    statusText.textContent = "On your marks…";
+    await SuspenseFX.countdown(stage);
 
     statusText.textContent = "Racing…";
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    let lastLeaderIdx = -1;
+    let splashed = false;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
       clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
+
+      let leaderIdx = 0, leaderProgress = -1;
       displayOrder.forEach((entrant, i) => {
         const el = document.getElementById(`duck-${i}`);
         if (!el) return;
         const track = el.parentElement;
         const trackW = track.clientWidth - el.clientWidth;
-        const progress = Math.min(1, elapsed / entrant.finishTime);
-        el.style.left = (progress * trackW) + "px";
+        const prevLeft = parseFloat(el.dataset.prevLeft || "0");
+        const progress = entrant.progressAt(elapsed);
+        const left = progress * trackW;
+        el.style.left = left + "px";
+        el.classList.toggle("surging", left - prevLeft > 2.2);
+        el.dataset.prevLeft = left;
+        const wake = document.getElementById(`wake-${i}`);
+        if (wake) wake.style.width = Math.min(30, left * 0.4) + "px";
+        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
+
+      if (leaderIdx !== lastLeaderIdx) {
+        document.querySelectorAll(".lane.leader").forEach((l) => l.classList.remove("leader"));
+        const el = document.getElementById(`lane-${leaderIdx}`);
+        if (el) el.classList.add("leader");
+        lastLeaderIdx = leaderIdx;
+      }
+
+      const overallProgress = elapsed / maxTime;
+      if (overallProgress > 0.82 && !stage.classList.contains("zoom")) stage.classList.add("zoom");
+      if (overallProgress > 0.88 && !splashed) { splashed = true; }
+
       if (elapsed < maxTime) {
         requestAnimationFrame(frame);
       } else {
-        finishRace(result.winner);
+        finishRace(result);
       }
     }
     requestAnimationFrame(frame);
   }
 
-  function finishRace(winner) {
+  function finishRace(result) {
     racing = false;
+    stage.classList.remove("zoom");
+    SuspenseFX.shake(stage, 380);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "We have a winner";
     clock.textContent = "🏁";
-    winnerBanner.textContent = `🦆 ${winner} wins the race!`;
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🦆 ${result.winner} wins the race!`;
     winnerBanner.classList.add("show");
+    if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
     if (noRepeatEl.checked) {
-      alreadyWon.push(winner);
+      alreadyWon.push(result.winner);
       renderHistory();
     }
-    launchConfetti();
-  }
-
-  function launchConfetti() {
-    for (let i = 0; i < 24; i++) {
-      const c = document.createElement("div");
-      const colors = ["#efb93c", "#d9503f", "#35604a", "#1e2a45"];
-      c.style.cssText = `position:fixed; top:-10px; left:${Math.random()*100}vw; width:8px; height:8px;
-        background:${colors[i % colors.length]}; z-index:999; pointer-events:none;
-        transform:rotate(${Math.random()*360}deg);`;
-      document.body.appendChild(c);
-      const fall = c.animate(
-        [{ transform: `translateY(0) rotate(0deg)`, opacity: 1 },
-         { transform: `translateY(100vh) rotate(${360 + Math.random()*360}deg)`, opacity: 0 }],
-        { duration: 1400 + Math.random() * 900, easing: "ease-in" }
-      );
-      fall.onfinish = () => c.remove();
-    }
+    const rect = stage.getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1 })));
+  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
 </script>
 
 </body>

@@ -31,6 +31,7 @@
     background: radial-gradient(circle at 80% 20%, #1c2a4d, #0c1226 70%);
     padding: 16px;
     min-height: 420px;
+    position: relative; overflow: hidden;
   }
   .stage .lane-name { color: #eef1fb; }
   .stage.projector { background: #050812; }
@@ -38,21 +39,28 @@
   .track { background: rgba(255,255,255,0.08) !important; }
   .stage.projector .track { background: rgba(255,255,255,0.06) !important; }
   .track .finish-mark { background: rgba(239,185,60,0.6) !important; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px #fff, 0 0 50px rgba(255,255,255,0.6) inset; }
 
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .starfield { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .star { position: absolute; background: #fff; border-radius: 50%; animation: twinkle ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
   .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
-  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; position: relative; z-index: 5; }
+  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; transition: transform 0.15s ease; }
+  .lane.leader { transform: scale(1.015); }
+  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s ease; }
+  .lane.leader .lane-name { color: var(--pencil); }
   .track { position: relative; height: 30px; background: #d3e6d9; border-radius: 999px; overflow: hidden; }
   .track .finish-mark { position: absolute; right: 6px; top: 0; bottom: 0; width: 2px; background: rgba(30,42,69,0.4); }
   .duck-token {
     position: absolute; top: 2px; left: 0; width: 26px; height: 26px;
-    transition: left 0.08s linear;
+    will-change: left;
   }
   .duck-token svg { width: 100%; height: 100%; }
   .duck-token::before {
@@ -60,7 +68,9 @@
     width: 34px; height: 6px;
     background: linear-gradient(90deg, transparent, rgba(239,185,60,0.85));
     border-radius: 4px;
+    transition: width 0.1s ease, opacity 0.1s ease;
   }
+  .duck-token.surging::before { width: 54px; opacity: 1; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95)); }
 
   .many-names .lane { grid-template-columns: 84px 1fr; }
   .many-names .track { height: 22px; }
@@ -70,7 +80,9 @@
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
     background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display);
     font-size: 1.15rem; display: none;
+    animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1);
   }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
 
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
@@ -81,7 +93,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .duck-token, .duck-token svg { animation: none !important; transition: none !important; }
+    .duck-token, .duck-token svg, .lane, .star { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -135,6 +147,7 @@ Isla</textarea>
 
     <div>
       <div class="stage" id="stage">
+        <div class="starfield" id="starfield"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
@@ -148,6 +161,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -162,6 +176,7 @@ Isla</textarea>
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
+  const starfield = document.getElementById("starfield");
 
   const DUCK_SVG = `<svg viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
     <path d="M4 15 L44 6 Q58 15 44 24 Z" fill="var(--c,#d9503f)"/>
@@ -173,6 +188,15 @@ Isla</textarea>
 
   let alreadyWon = [];
   let racing = false;
+
+  for (let i = 0; i < 60; i++) {
+    const s = document.createElement("div");
+    s.className = "star";
+    const size = Math.random() < 0.85 ? 1 + Math.random() : 2 + Math.random();
+    s.style.cssText = `left:${Math.random()*100}%; top:${Math.random()*100}%; width:${size}px; height:${size}px;
+      animation-duration:${1.5 + Math.random()*3}s; animation-delay:${Math.random()*3}s;`;
+    starfield.appendChild(s);
+  }
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -204,6 +228,7 @@ Isla</textarea>
     order.forEach((entrant, i) => {
       const lane = document.createElement("div");
       lane.className = "lane";
+      lane.id = `lane-${i}`;
       const color = PALETTE[i % PALETTE.length];
       lane.innerHTML = `
         <div class="lane-name">${escapeHtml(entrant.name)}</div>
@@ -215,7 +240,7 @@ Isla</textarea>
     });
   }
 
-  function runRace() {
+  async function runRace() {
     if (racing) return;
     const roster = getNames();
     if (roster.length < 2) {
@@ -224,6 +249,7 @@ Isla</textarea>
     }
     racing = true;
     winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, {
       duration,
@@ -231,67 +257,76 @@ Isla</textarea>
       alreadyWon,
     });
 
-    // Keep display order stable (roster order) but drive progress by finishTime.
-    const byName = Object.fromEntries(result.order.map((o) => [o.name, o.finishTime]));
-    const displayOrder = result.eligiblePool.map((name) => ({ name, finishTime: byName[name] }));
+    const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
+    const displayOrder = result.eligiblePool.map((name) => byName[name]);
     buildStage(displayOrder);
+
+    statusText.textContent = "Ignition sequence…";
+    await SuspenseFX.countdown(stage, ["3", "2", "1", "LIFTOFF!"]);
+    SuspenseFX.shake(stage, 420);
 
     statusText.textContent = "3, 2, 1… liftoff!";
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    let lastLeaderIdx = -1;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
       clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
+
+      let leaderIdx = 0, leaderProgress = -1;
       displayOrder.forEach((entrant, i) => {
         const el = document.getElementById(`duck-${i}`);
         if (!el) return;
         const track = el.parentElement;
         const trackW = track.clientWidth - el.clientWidth;
-        const progress = Math.min(1, elapsed / entrant.finishTime);
-        el.style.left = (progress * trackW) + "px";
+        const prevLeft = parseFloat(el.dataset.prevLeft || "0");
+        const progress = entrant.progressAt(elapsed);
+        const left = progress * trackW;
+        el.style.left = left + "px";
+        el.classList.toggle("surging", left - prevLeft > 2.2);
+        el.dataset.prevLeft = left;
+        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
+
+      if (leaderIdx !== lastLeaderIdx) {
+        document.querySelectorAll(".lane.leader").forEach((l) => l.classList.remove("leader"));
+        const el = document.getElementById(`lane-${leaderIdx}`);
+        if (el) el.classList.add("leader");
+        lastLeaderIdx = leaderIdx;
+      }
+
       if (elapsed < maxTime) {
         requestAnimationFrame(frame);
       } else {
-        finishRace(result.winner);
+        finishRace(result);
       }
     }
     requestAnimationFrame(frame);
   }
 
-  function finishRace(winner) {
+  function finishRace(result) {
     racing = false;
+    SuspenseFX.flash(stage, 500);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "We have a winner";
     clock.textContent = "🏁";
-    winnerBanner.textContent = `🚀 ${winner} blasts across the line first!`;
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🚀 ${result.winner} blasts across the line first!`;
     winnerBanner.classList.add("show");
+    if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
     if (noRepeatEl.checked) {
-      alreadyWon.push(winner);
+      alreadyWon.push(result.winner);
       renderHistory();
     }
-    launchConfetti();
-  }
-
-  function launchConfetti() {
-    for (let i = 0; i < 24; i++) {
-      const c = document.createElement("div");
-      const colors = ["#efb93c", "#d9503f", "#35604a", "#1e2a45"];
-      c.style.cssText = `position:fixed; top:-10px; left:${Math.random()*100}vw; width:8px; height:8px;
-        background:${colors[i % colors.length]}; z-index:999; pointer-events:none;
-        transform:rotate(${Math.random()*360}deg);`;
-      document.body.appendChild(c);
-      const fall = c.animate(
-        [{ transform: `translateY(0) rotate(0deg)`, opacity: 1 },
-         { transform: `translateY(100vh) rotate(${360 + Math.random()*360}deg)`, opacity: 0 }],
-        { duration: 1400 + Math.random() * 900, easing: "ease-in" }
-      );
-      fall.onfinish = () => c.remove();
-    }
+    const rect = stage.getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1 })));
+  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
 </script>
 
 </body>

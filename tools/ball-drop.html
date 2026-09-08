@@ -24,35 +24,44 @@
     background: linear-gradient(180deg, #e7e0f2, #f4f0fa);
     padding: 16px;
     min-height: 460px;
+    position: relative;
+    transition: transform 0.3s ease;
   }
   .stage.projector { background: #171226; }
   .stage.projector .slot-name { color: #fff; }
   .stage.projector .peg { fill: rgba(255,255,255,0.35); }
   .stage.projector .slot { background: rgba(255,255,255,0.08); }
+  .stage.zoom { transform: scale(1.02); }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--marker), 0 0 40px rgba(217,80,63,0.5) inset; }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
   .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
   .board { position: relative; height: 300px; margin: 0 4px; overflow: hidden; }
   .pegs { position: absolute; inset: 0; }
-  .peg { fill: rgba(30,42,69,0.35); }
+  .peg { fill: rgba(30,42,69,0.35); transition: fill 0.12s ease, r 0.12s ease; transform-origin: center; transform-box: fill-box; }
+  .peg.hit { fill: var(--marker); r: 5; }
   .ball {
     position: absolute; top: 0; width: 22px; height: 22px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #fff, var(--marker) 70%);
     border: 2px solid var(--ink);
+    box-shadow: 0 0 0 rgba(217,80,63,0);
   }
+  .ball-trail { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--marker); opacity: 0.35; pointer-events: none; }
   .slots { display: flex; overflow-x: auto; gap: 2px; padding-top: 6px; }
   .slot {
     flex: 1 1 0; min-width: 46px; border: var(--border); border-top: none; border-radius: 0 0 8px 8px;
-    background: var(--paper-dim); padding: 8px 4px 10px; text-align: center; transition: background 0.2s;
+    background: var(--paper-dim); padding: 8px 4px 10px; text-align: center; transition: background 0.2s, transform 0.2s;
   }
-  .slot.landed { background: var(--pencil); }
+  .slot.armed { background: rgba(217,80,63,0.18); }
+  .slot.landed { background: var(--pencil); transform: scale(1.06); }
   .slot-name { font-size: 0.78rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
+  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
@@ -62,7 +71,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ball { transition: none !important; }
+    .ball, .stage, .peg, .slot { transition: none !important; }
   }
 </style>
 </head>
@@ -134,6 +143,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -155,6 +165,7 @@ Isla</textarea>
   let alreadyWon = [];
   let dropping = false;
   let currentNames = [];
+  let pegRows = 0;
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -182,26 +193,45 @@ Isla</textarea>
     // peg field: staggered rows
     const w = board.clientWidth || 600, h = 300;
     const rows = 6, cols = Math.max(names.length, 4);
+    pegRows = rows;
     let svg = "";
     for (let r = 0; r < rows; r++) {
       const offset = (r % 2 === 0) ? 0 : (w / cols) / 2;
       for (let c = 0; c < cols; c++) {
         const x = offset + (c + 0.5) * (w / cols);
         const y = 20 + r * ((h - 40) / rows);
-        if (x > 8 && x < w - 8) svg += `<circle class="peg" cx="${x}" cy="${y}" r="3.5"/>`;
+        if (x > 8 && x < w - 8) svg += `<circle class="peg" data-row="${r}" cx="${x}" cy="${y}" r="3.5"/>`;
       }
     }
     pegSvg.setAttribute("viewBox", `0 0 ${w} ${h}`);
     pegSvg.innerHTML = svg;
   }
 
-  function runDrop() {
+  function spawnTrail(x, y) {
+    const t = document.createElement("div");
+    t.className = "ball-trail";
+    t.style.left = x + "px";
+    t.style.top = y + "px";
+    board.appendChild(t);
+    const anim = t.animate([{ opacity: 0.35, transform: "scale(1)" }, { opacity: 0, transform: "scale(0.4)" }], { duration: 380, easing: "ease-out" });
+    anim.onfinish = () => t.remove();
+  }
+
+  function hitRow(row) {
+    pegSvg.querySelectorAll(`[data-row="${row}"]`).forEach((p) => {
+      p.classList.add("hit");
+      setTimeout(() => p.classList.remove("hit"), 160);
+    });
+  }
+
+  async function runDrop() {
     if (dropping) return;
     const roster = getNames();
     if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
     dropping = true;
     winnerBanner.classList.remove("show");
-    document.querySelectorAll(".slot").forEach((s) => s.classList.remove("landed"));
+    stage.classList.remove("zoom", "finished-glow");
+    document.querySelectorAll(".slot").forEach((s) => s.classList.remove("landed", "armed"));
 
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
@@ -216,8 +246,15 @@ Isla</textarea>
     ball.style.top = "0px";
     ball.style.left = (boardW / 2 - 11) + "px";
 
+    statusText.textContent = "Loading the ball…";
+    await SuspenseFX.countdown(stage, ["3", "2", "1", "Drop!"]);
+    const slotEls = document.querySelectorAll(".slot");
+    if (slotEls[winnerIdx]) slotEls[winnerIdx].classList.add("armed");
+
     statusText.textContent = "Dropping…";
     const start = performance.now();
+    let lastRow = -1;
+    let trailTick = 0;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
@@ -233,42 +270,39 @@ Isla</textarea>
       ball.style.top = y + "px";
       ball.style.left = x + "px";
 
+      const row = Math.min(pegRows - 1, Math.floor((y / (boardH - 22)) * pegRows));
+      if (row !== lastRow && row >= 0) { hitRow(row); lastRow = row; }
+      trailTick++;
+      if (trailTick % 3 === 0) spawnTrail(x + 9, y + 9);
+
+      if (progress > 0.8 && !stage.classList.contains("zoom")) stage.classList.add("zoom");
+
       if (progress < 1) {
         requestAnimationFrame(frame);
       } else {
-        finishDrop(result.winner, winnerIdx);
+        finishDrop(result, winnerIdx);
       }
     }
     requestAnimationFrame(frame);
   }
 
-  function finishDrop(winner, idx) {
+  function finishDrop(result, idx) {
     dropping = false;
+    stage.classList.remove("zoom");
+    SuspenseFX.shake(stage, 350);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "Landed!";
     clock.textContent = "🔴";
     const slotEls = document.querySelectorAll(".slot");
-    if (slotEls[idx]) slotEls[idx].classList.add("landed");
-    winnerBanner.textContent = `🔴 The ball lands on ${winner}!`;
+    if (slotEls[idx]) { slotEls[idx].classList.remove("armed"); slotEls[idx].classList.add("landed"); }
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🔴 The ball lands on ${result.winner}!`;
     winnerBanner.classList.add("show");
-    if (noRepeatEl.checked) { alreadyWon.push(winner); renderHistory(); }
-    launchConfetti();
-  }
-
-  function launchConfetti() {
-    for (let i = 0; i < 24; i++) {
-      const c = document.createElement("div");
-      const colors = ["#efb93c", "#d9503f", "#35604a", "#1e2a45"];
-      c.style.cssText = `position:fixed; top:-10px; left:${Math.random()*100}vw; width:8px; height:8px;
-        background:${colors[i % colors.length]}; z-index:999; pointer-events:none;
-        transform:rotate(${Math.random()*360}deg);`;
-      document.body.appendChild(c);
-      const fall = c.animate(
-        [{ transform: `translateY(0) rotate(0deg)`, opacity: 1 },
-         { transform: `translateY(100vh) rotate(${360 + Math.random()*360}deg)`, opacity: 0 }],
-        { duration: 1400 + Math.random() * 900, easing: "ease-in" }
-      );
-      fall.onfinish = () => c.remove();
-    }
+    if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
+    const rect = (slotEls[idx] || stage).getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
   }
 
   startBtn.addEventListener("click", runDrop);

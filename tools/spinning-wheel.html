@@ -15,14 +15,29 @@
   textarea { width: 100%; min-height: 140px; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical; }
   .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
 
-  .stage { border: var(--border); border-radius: var(--radius); background: var(--chalk-dim); padding: 24px; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .stage { border: var(--border); border-radius: var(--radius); background: var(--chalk-dim); padding: 24px; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 44px rgba(239,185,60,0.6) inset; }
   .wheel-wrap { position: relative; width: 320px; height: 320px; }
-  .pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 20px solid var(--ink); z-index: 2; }
-  svg#wheel { width: 100%; height: 100%; transition: transform 4.5s cubic-bezier(.2,.7,.15,1); border-radius: 50%; border: var(--border); }
-  .winner-banner { margin-top: 20px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
+  .wheel-glow {
+    position: absolute; inset: -10px; border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(239,185,60,0.5);
+    transition: box-shadow 0.15s ease;
+  }
+  .wheel-glow.pulse { box-shadow: 0 0 0 10px rgba(239,185,60,0.28); }
+  .pointer {
+    position: absolute; top: -6px; left: 50%; transform: translateX(-50%) rotate(0deg); width: 0; height: 0;
+    border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 20px solid var(--ink); z-index: 2;
+    transform-origin: 50% 0%; transition: transform 0.08s ease;
+  }
+  .pointer.tick { transform: translateX(-50%) rotate(14deg); }
+  svg#wheel { width: 100%; height: 100%; border-radius: 50%; border: var(--border); position: relative; z-index: 1; }
+  .sparkle { position: absolute; width: 6px; height: 6px; background: #fff; border-radius: 50%; pointer-events: none; }
+  .winner-banner { margin-top: 20px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
 
   @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { .pointer, .wheel-glow { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -55,9 +70,10 @@ Mateo</textarea>
       <button class="btn marker" id="spinBtn">Spin the wheel</button>
     </div>
     <div>
-      <div class="stage">
+      <div class="stage" id="stage">
         <div class="wheel-wrap">
-          <div class="pointer"></div>
+          <div class="wheel-glow" id="wheelGlow"></div>
+          <div class="pointer" id="pointer"></div>
           <svg id="wheel" viewBox="0 0 200 200"></svg>
         </div>
       </div>
@@ -67,9 +83,14 @@ Mateo</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const wheel = document.getElementById("wheel");
+  const wheelWrap = document.querySelector(".wheel-wrap");
+  const wheelGlow = document.getElementById("wheelGlow");
+  const pointer = document.getElementById("pointer");
+  const stage = document.getElementById("stage");
   const spinBtn = document.getElementById("spinBtn");
   const winnerBanner = document.getElementById("winnerBanner");
   const COLORS = ["#efb93c", "#d9503f", "#35604a", "#1e2a45", "#8fb9d8", "#c98fd8", "#fbf7ee"];
@@ -103,29 +124,85 @@ Mateo</textarea>
   }
   function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 
-  function spin() {
+  function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
+
+  function sparkleBurst() {
+    const rect = wheelWrap.getBoundingClientRect();
+    for (let i = 0; i < 10; i++) {
+      const s = document.createElement("div");
+      s.className = "sparkle";
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 40 + Math.random() * 60;
+      s.style.left = (rect.width / 2 + Math.cos(angle) * 10) + "px";
+      s.style.top = (rect.height / 2 + Math.sin(angle) * 10) + "px";
+      wheelWrap.appendChild(s);
+      const anim = s.animate(
+        [{ transform: "translate(0,0)", opacity: 1 },
+         { transform: `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`, opacity: 0 }],
+        { duration: 500 + Math.random() * 300, easing: "ease-out" }
+      );
+      anim.onfinish = () => s.remove();
+    }
+  }
+
+  async function spin() {
     if (spinning) return;
     const names = getNames();
     if (names.length < 2) return;
     spinning = true;
     winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
     drawWheel(names);
 
     const result = RaceEngine.run(names, { duration: 1 }); // engine just decides the winner
     const winnerIdx = names.indexOf(result.winner);
     const slice = 360 / names.length;
     const targetMid = winnerIdx * slice + slice / 2;
-    // Rotate so the winning slice lands under the top pointer, plus extra full spins.
-    const extraSpins = 5;
-    const finalRotation = currentRotation + extraSpins * 360 + (360 - targetMid);
-    wheel.style.transform = `rotate(${finalRotation}deg)`;
-    currentRotation = finalRotation % 360;
+    const extraSpins = 6 + Math.floor(Math.random() * 3); // suspense: unpredictable number of laps
+    const totalDelta = extraSpins * 360 + (360 - targetMid) - (currentRotation % 360);
+    const spinDuration = 5200 + Math.random() * 1200;
+    const startRotation = currentRotation;
 
-    setTimeout(() => {
-      spinning = false;
-      winnerBanner.textContent = `🎉 ${result.winner} wins the spin!`;
-      winnerBanner.classList.add("show");
-    }, 4600);
+    const start = performance.now();
+    let lastTickSlice = -1;
+
+    function frame(now) {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / spinDuration);
+      const eased = easeOutQuint(t);
+      const rotation = startRotation + totalDelta * eased;
+      wheel.style.transform = `rotate(${rotation}deg)`;
+
+      const tickSlice = Math.floor(rotation / slice);
+      if (tickSlice !== lastTickSlice) {
+        lastTickSlice = tickSlice;
+        pointer.classList.add("tick");
+        wheelGlow.classList.add("pulse");
+        setTimeout(() => { pointer.classList.remove("tick"); wheelGlow.classList.remove("pulse"); }, 90);
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        currentRotation = rotation % 360;
+        finishSpin(result);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function finishSpin(result) {
+    spinning = false;
+    SuspenseFX.shake(wheelWrap, 260);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    sparkleBurst();
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🎉 ${result.winner} wins the spin!`;
+    winnerBanner.classList.add("show");
+    const rect = wheelWrap.getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   spinBtn.addEventListener("click", spin);

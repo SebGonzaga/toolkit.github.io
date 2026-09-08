@@ -31,29 +31,40 @@
     background: linear-gradient(180deg, #eee3c8, #ded098);
     padding: 16px;
     min-height: 420px;
+    position: relative; overflow: hidden;
   }
   .stage.projector { background: #241d0f; }
   .stage.projector .lane-name { color: #fff; }
   .track { background: #cdbb85 !important; }
   .stage.projector .track { background: #3a2f18 !important; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--chalk), 0 0 40px rgba(53,96,74,0.5) inset; }
 
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .heat-shimmer { position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 3px, transparent 3px 7px);
+    opacity: 0.4; }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
   .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
-  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-area { max-height: 62vh; overflow-y: auto; padding-right: 4px; position: relative; z-index: 5; }
+  .lane { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; margin-bottom: 8px; transition: transform 0.15s ease; }
+  .lane.leader { transform: scale(1.015); }
+  .lane-name { font-size: 0.85rem; font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s ease; }
+  .lane.leader .lane-name { color: var(--chalk); }
   .track { position: relative; height: 30px; background: #d3e6d9; border-radius: 999px; overflow: hidden; }
   .track .finish-mark { position: absolute; right: 6px; top: 0; bottom: 0; width: 2px; background: rgba(30,42,69,0.4); }
   .duck-token {
     position: absolute; top: 2px; left: 0; width: 26px; height: 26px;
-    transition: left 0.08s linear;
+    will-change: left;
   }
   .duck-token svg { width: 100%; height: 100%; animation: wob 1.4s ease-in-out infinite; transform-origin: 50% 80%; }
   @keyframes wob { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+  .duck-token.surging svg { animation-duration: 0.5s; }
+  .duck-token.stalled svg { animation-duration: 3.4s; }
+  .dust { position: absolute; bottom: 2px; left: -2px; width: 5px; height: 5px; border-radius: 50%; background: rgba(90,70,30,0.45); pointer-events: none; }
 
   .many-names .lane { grid-template-columns: 84px 1fr; }
   .many-names .track { height: 22px; }
@@ -63,7 +74,9 @@
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
     background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display);
     font-size: 1.15rem; display: none;
+    animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1);
   }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
 
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
@@ -74,7 +87,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .duck-token, .duck-token svg { animation: none !important; transition: none !important; }
+    .duck-token, .duck-token svg, .lane { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -129,6 +142,7 @@ Isla</textarea>
 
     <div>
       <div class="stage" id="stage">
+        <div class="heat-shimmer"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
@@ -142,6 +156,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -166,6 +181,7 @@ Isla</textarea>
     <ellipse cx="46" cy="34" rx="5" ry="3" fill="var(--c,#35604a)"/>
   </svg>`;
   const PALETTE = ["#35604a", "#4a7a5e", "#8a6d3b", "#efb93c", "#6b8f71", "#2f4d3a"];
+  const COMMENTARY = ["Plodding along…", "Still plodding…", "Unbelievably slow progress…", "Someone yawned.", "The suspense is agonizing…", "Any minute now…"];
 
   let alreadyWon = [];
   let racing = false;
@@ -200,18 +216,22 @@ Isla</textarea>
     order.forEach((entrant, i) => {
       const lane = document.createElement("div");
       lane.className = "lane";
+      lane.id = `lane-${i}`;
       const color = PALETTE[i % PALETTE.length];
       lane.innerHTML = `
         <div class="lane-name">${escapeHtml(entrant.name)}</div>
         <div class="track" data-idx="${i}">
           <div class="finish-mark"></div>
-          <div class="duck-token" id="duck-${i}" style="--c:${color}">${DUCK_SVG.replace('var(--c,#efb93c)', color)}</div>
+          <div class="duck-token" id="duck-${i}" style="--c:${color}">
+            <div class="dust" id="dust-${i}"></div>
+            ${DUCK_SVG.replace('var(--c,#efb93c)', color)}
+          </div>
         </div>`;
       trackArea.appendChild(lane);
     });
   }
 
-  function runRace() {
+  async function runRace() {
     if (racing) return;
     const roster = getNames();
     if (roster.length < 2) {
@@ -220,6 +240,7 @@ Isla</textarea>
     }
     racing = true;
     winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, {
       duration,
@@ -227,67 +248,84 @@ Isla</textarea>
       alreadyWon,
     });
 
-    // Keep display order stable (roster order) but drive progress by finishTime.
-    const byName = Object.fromEntries(result.order.map((o) => [o.name, o.finishTime]));
-    const displayOrder = result.eligiblePool.map((name) => ({ name, finishTime: byName[name] }));
+    const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
+    const displayOrder = result.eligiblePool.map((name) => byName[name]);
     buildStage(displayOrder);
 
-    statusText.textContent = "Plodding along…";
+    statusText.textContent = "Ready… whenever they feel like it…";
+    await SuspenseFX.countdown(stage, ["3", "2", "1", "GO! (eventually)"]);
+
+    let commentaryIdx = 0;
+    statusText.textContent = COMMENTARY[0];
+    const commentaryTimer = setInterval(() => {
+      commentaryIdx = (commentaryIdx + 1) % COMMENTARY.length;
+      statusText.textContent = COMMENTARY[commentaryIdx];
+    }, Math.max(1200, duration * 220));
+
     const start = performance.now();
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    let lastLeaderIdx = -1;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
       clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
+
+      let leaderIdx = 0, leaderProgress = -1;
       displayOrder.forEach((entrant, i) => {
         const el = document.getElementById(`duck-${i}`);
         if (!el) return;
         const track = el.parentElement;
         const trackW = track.clientWidth - el.clientWidth;
-        const progress = Math.min(1, elapsed / entrant.finishTime);
-        el.style.left = (progress * trackW) + "px";
+        const prevLeft = parseFloat(el.dataset.prevLeft || "0");
+        const progress = entrant.progressAt(elapsed);
+        const left = progress * trackW;
+        el.style.left = left + "px";
+        const delta = left - prevLeft;
+        el.classList.toggle("surging", delta > 1.4);
+        el.classList.toggle("stalled", delta < 0.05);
+        el.dataset.prevLeft = left;
+        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
+
+      if (leaderIdx !== lastLeaderIdx) {
+        document.querySelectorAll(".lane.leader").forEach((l) => l.classList.remove("leader"));
+        const el = document.getElementById(`lane-${leaderIdx}`);
+        if (el) el.classList.add("leader");
+        lastLeaderIdx = leaderIdx;
+      }
+
       if (elapsed < maxTime) {
         requestAnimationFrame(frame);
       } else {
-        finishRace(result.winner);
+        clearInterval(commentaryTimer);
+        finishRace(result);
       }
     }
     requestAnimationFrame(frame);
   }
 
-  function finishRace(winner) {
+  function finishRace(result) {
     racing = false;
-    statusText.textContent = "We have a winner";
+    SuspenseFX.shake(stage, 350);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    statusText.textContent = "We have a winner (finally)";
     clock.textContent = "🏁";
-    winnerBanner.textContent = `🐢 ${winner} finally crosses the line!`;
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🐢 ${result.winner} finally crosses the line!`;
     winnerBanner.classList.add("show");
+    if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Impossibly close finish!");
     if (noRepeatEl.checked) {
-      alreadyWon.push(winner);
+      alreadyWon.push(result.winner);
       renderHistory();
     }
-    launchConfetti();
-  }
-
-  function launchConfetti() {
-    for (let i = 0; i < 24; i++) {
-      const c = document.createElement("div");
-      const colors = ["#efb93c", "#d9503f", "#35604a", "#1e2a45"];
-      c.style.cssText = `position:fixed; top:-10px; left:${Math.random()*100}vw; width:8px; height:8px;
-        background:${colors[i % colors.length]}; z-index:999; pointer-events:none;
-        transform:rotate(${Math.random()*360}deg);`;
-      document.body.appendChild(c);
-      const fall = c.animate(
-        [{ transform: `translateY(0) rotate(0deg)`, opacity: 1 },
-         { transform: `translateY(100vh) rotate(${360 + Math.random()*360}deg)`, opacity: 0 }],
-        { duration: 1400 + Math.random() * 900, easing: "ease-in" }
-      );
-      fall.onfinish = () => c.remove();
-    }
+    const rect = stage.getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1 })));
+  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
 </script>
 
 </body>

@@ -25,25 +25,36 @@
     padding: 24px;
     min-height: 460px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
   }
   .stage.projector { background: #241407; }
   .stage.projector .machine { background: #100a05; border-color: #fff; }
   .stage.projector .status { color: #fff; }
+  .stage.finished-glow .machine { box-shadow: 0 0 0 4px var(--pencil), 0 0 44px rgba(239,185,60,0.65); }
 
-  .stage-header { position: absolute; top: 20px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 24px; }
+  .stage-header { position: absolute; top: 20px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 24px; z-index: 5; }
   .stage { position: relative; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+
+  .marquee { position: absolute; inset: 16px; pointer-events: none; z-index: 0; }
+  .bulb { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--pencil); opacity: 0.35; animation: bulbFlicker 1.6s ease-in-out infinite; }
+  .bulb.excited { animation-duration: 0.35s; opacity: 0.9; }
+  @keyframes bulbFlicker { 0%,100% { opacity: 0.25; } 50% { opacity: 0.9; } }
 
   .machine {
     background: var(--ink); border: 4px solid var(--ink); border-radius: 18px;
     padding: 20px 20px 28px; display: flex; gap: 10px; margin-top: 34px;
+    position: relative; z-index: 5; transition: box-shadow 0.3s ease;
   }
   .reel-window {
     width: 90px; height: 100px; background: var(--paper); border-radius: 8px; overflow: hidden;
     position: relative; box-shadow: inset 0 0 0 2px var(--ink);
   }
   .reel-window.name-reel { width: 190px; }
+  .reel-window.spinning .reel-strip { filter: blur(3px); }
+  .reel-window.locking { animation: reelLock 0.3s ease; }
+  @keyframes reelLock { 0% { transform: scale(1); } 40% { transform: scale(1.05); } 100% { transform: scale(1); } }
   .reel-strip { position: absolute; top: 0; left: 0; width: 100%; }
   .reel-item { height: 100px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; }
   .reel-item.name-item { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--ink); text-align: center; padding: 0 8px; }
@@ -58,7 +69,8 @@
   .lever .knob { width: 22px; height: 22px; border-radius: 50%; background: var(--marker); border: 2px solid var(--ink); margin-bottom: -4px; }
   .lever.pulled .stick { transform: rotate(28deg); }
 
-  .winner-banner { margin-top: 22px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
+  .winner-banner { margin-top: 22px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); position: relative; z-index: 5; }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
@@ -69,7 +81,7 @@
     .machine { flex-wrap: wrap; justify-content: center; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .reel-strip { transition: none !important; }
+    .reel-strip, .bulb, .reel-window { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
@@ -122,14 +134,15 @@ Isla</textarea>
 
     <div>
       <div class="stage" id="stage">
+        <div class="marquee" id="marquee"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
-        <div class="machine">
-          <div class="reel-window"><div class="reel-strip" id="reelLeft"></div></div>
-          <div class="reel-window name-reel"><div class="reel-strip" id="reelName"></div></div>
-          <div class="reel-window"><div class="reel-strip" id="reelRight"></div></div>
+        <div class="machine" id="machine">
+          <div class="reel-window" id="reelWinLeft"><div class="reel-strip" id="reelLeft"></div></div>
+          <div class="reel-window name-reel" id="reelWinName"><div class="reel-strip" id="reelName"></div></div>
+          <div class="reel-window" id="reelWinRight"><div class="reel-strip" id="reelRight"></div></div>
           <div class="lever" id="lever"><div class="stick"></div><div class="knob"></div></div>
         </div>
       </div>
@@ -140,6 +153,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -149,7 +163,11 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
+  const machine = document.getElementById("machine");
   const lever = document.getElementById("lever");
+  const reelWinLeft = document.getElementById("reelWinLeft");
+  const reelWinName = document.getElementById("reelWinName");
+  const reelWinRight = document.getElementById("reelWinRight");
   const reelName = document.getElementById("reelName");
   const reelLeft = document.getElementById("reelLeft");
   const reelRight = document.getElementById("reelRight");
@@ -157,11 +175,25 @@ Isla</textarea>
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
+  const marquee = document.getElementById("marquee");
 
   const ITEM_H = 100;
   const SYMBOLS = ["⭐", "🍎", "✏️", "📚", "🎓", "🍏"];
   let alreadyWon = [];
   let spinning = false;
+  let bulbs = [];
+
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement("div");
+    b.className = "bulb";
+    const angle = (i / 18) * Math.PI * 2;
+    const rx = 48, ry = 48;
+    b.style.left = `calc(50% + ${Math.cos(angle) * rx}% - 4px)`;
+    b.style.top = `calc(50% + ${Math.sin(angle) * ry}% - 4px)`;
+    b.style.animationDelay = (Math.random() * 1.5) + "s";
+    marquee.appendChild(b);
+    bulbs.push(b);
+  }
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -201,7 +233,7 @@ Isla</textarea>
     return strip.length;
   }
 
-  function spinTo(el, finalIndex, duration, extraSpins) {
+  function spinTo(el, finalIndex, duration) {
     const target = -(finalIndex * ITEM_H);
     requestAnimationFrame(() => {
       el.style.transition = `transform ${duration}s cubic-bezier(.12,.7,.15,1)`;
@@ -209,14 +241,16 @@ Isla</textarea>
     });
   }
 
-  function runSpin() {
+  async function runSpin() {
     if (spinning) return;
     const roster = getNames();
     if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
     spinning = true;
     winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
     lever.classList.add("pulled");
     setTimeout(() => lever.classList.remove("pulled"), 300);
+    SuspenseFX.shake(machine, 300);
 
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
@@ -224,6 +258,9 @@ Isla</textarea>
     buildSymbolStrip(reelLeft, 8);
     buildSymbolStrip(reelRight, 8);
     const stripLen = buildNameStrip(result.eligiblePool, result.winner);
+
+    [reelWinLeft, reelWinName, reelWinRight].forEach((w) => w.classList.add("spinning"));
+    bulbs.forEach((b) => b.classList.add("excited"));
 
     statusText.textContent = "Spinning…";
     const start = performance.now();
@@ -234,41 +271,42 @@ Isla</textarea>
     };
     requestAnimationFrame(tick);
 
-    // Kick off transforms after strips are in the DOM.
+    const dLeft = duration * 0.7;
+    const dRight = duration * 0.85;
+    const dName = duration;
+
     requestAnimationFrame(() => {
-      spinTo(reelLeft, SYMBOLS.length * 6 + Math.floor(Math.random() * SYMBOLS.length), duration * 0.85);
-      spinTo(reelRight, SYMBOLS.length * 6 + Math.floor(Math.random() * SYMBOLS.length), duration * 0.95);
-      spinTo(reelName, stripLen - 1, duration);
+      spinTo(reelLeft, SYMBOLS.length * 6 + Math.floor(Math.random() * SYMBOLS.length), dLeft);
+      spinTo(reelRight, SYMBOLS.length * 6 + Math.floor(Math.random() * SYMBOLS.length), dRight);
+      spinTo(reelName, stripLen - 1, dName);
     });
 
-    setTimeout(() => finishSpin(result.winner), duration * 1000 + 60);
+    setTimeout(() => { reelWinLeft.classList.remove("spinning"); reelWinLeft.classList.add("locking"); SuspenseFX.flash(reelWinLeft, 300); }, dLeft * 1000);
+    setTimeout(() => { reelWinRight.classList.remove("spinning"); reelWinRight.classList.add("locking"); SuspenseFX.flash(reelWinRight, 300); }, dRight * 1000);
+    // Beat of suspense: hush right before the name reel locks.
+    setTimeout(() => { statusText.textContent = "Almost there…"; }, dName * 1000 - 550);
+
+    setTimeout(() => finishSpin(result), dName * 1000 + 80);
   }
 
-  function finishSpin(winner) {
+  function finishSpin(result) {
     spinning = false;
+    reelWinName.classList.remove("spinning");
+    reelWinName.classList.add("locking");
+    SuspenseFX.flash(reelWinName, 450);
+    SuspenseFX.shake(machine, 300);
+    bulbs.forEach((b) => b.classList.remove("excited"));
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1500);
     statusText.textContent = "Locked in!";
     clock.textContent = "🎰";
-    winnerBanner.textContent = `🎰 The reels lock in ${winner}!`;
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🎰 The reels lock in ${result.winner}!`;
     winnerBanner.classList.add("show");
-    if (noRepeatEl.checked) { alreadyWon.push(winner); renderHistory(); }
-    launchConfetti();
-  }
-
-  function launchConfetti() {
-    for (let i = 0; i < 24; i++) {
-      const c = document.createElement("div");
-      const colors = ["#efb93c", "#d9503f", "#35604a", "#1e2a45"];
-      c.style.cssText = `position:fixed; top:-10px; left:${Math.random()*100}vw; width:8px; height:8px;
-        background:${colors[i % colors.length]}; z-index:999; pointer-events:none;
-        transform:rotate(${Math.random()*360}deg);`;
-      document.body.appendChild(c);
-      const fall = c.animate(
-        [{ transform: `translateY(0) rotate(0deg)`, opacity: 1 },
-         { transform: `translateY(100vh) rotate(${360 + Math.random()*360}deg)`, opacity: 0 }],
-        { duration: 1400 + Math.random() * 900, easing: "ease-in" }
-      );
-      fall.onfinish = () => c.remove();
-    }
+    if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
+    const rect = machine.getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   startBtn.addEventListener("click", runSpin);
