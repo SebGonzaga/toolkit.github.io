@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spinning Wheel Name Picker — Pick &amp; Race</title>
+<meta name="description" content="Spin a wheel of names — powered by the same fair engine as the duck race.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; }
+  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
+  textarea { width: 100%; min-height: 140px; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical; }
+  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+
+  .stage { border: var(--border); border-radius: var(--radius); background: var(--chalk-dim); padding: 24px; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .wheel-wrap { position: relative; width: 320px; height: 320px; }
+  .pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 20px solid var(--ink); z-index: 2; }
+  svg#wheel { width: 100%; height: 100%; transition: transform 4.5s cubic-bezier(.2,.7,.15,1); border-radius: 50%; border: var(--border); }
+  .winner-banner { margin-top: 20px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; }
+  .winner-banner.show { display: block; }
+
+  @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin-top:28px;">Spinning Wheel Name Picker</h1>
+  <p>Same fair engine as the duck race, wearing a different skin.</p>
+
+  <div class="tool-wrap">
+    <div class="panel">
+      <label for="names">Names (one per line)</label>
+      <textarea id="names">Ava
+Liam
+Noor
+Diego
+Priya
+Mateo</textarea>
+      <button class="btn marker" id="spinBtn">Spin the wheel</button>
+    </div>
+    <div>
+      <div class="stage">
+        <div class="wheel-wrap">
+          <div class="pointer"></div>
+          <svg id="wheel" viewBox="0 0 200 200"></svg>
+        </div>
+      </div>
+      <div class="winner-banner" id="winnerBanner"></div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/race-engine.js"></script>
+<script>
+  const namesEl = document.getElementById("names");
+  const wheel = document.getElementById("wheel");
+  const spinBtn = document.getElementById("spinBtn");
+  const winnerBanner = document.getElementById("winnerBanner");
+  const COLORS = ["#efb93c", "#d9503f", "#35604a", "#1e2a45", "#8fb9d8", "#c98fd8", "#fbf7ee"];
+  let spinning = false, currentRotation = 0;
+
+  function getNames() {
+    return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function drawWheel(names) {
+    const n = names.length;
+    const slice = 360 / n;
+    const cx = 100, cy = 100, r = 96;
+    let svg = "";
+    names.forEach((name, i) => {
+      const start = i * slice, end = start + slice;
+      const [x1, y1] = point(cx, cy, r, start);
+      const [x2, y2] = point(cx, cy, r, end);
+      const large = slice > 180 ? 1 : 0;
+      svg += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${COLORS[i % COLORS.length]}" stroke="#1e2a45" stroke-width="1"/>`;
+      const mid = start + slice / 2;
+      const [tx, ty] = point(cx, cy, r * 0.62, mid);
+      svg += `<text x="${tx}" y="${ty}" font-size="9" font-family="Inter, sans-serif" font-weight="600" fill="#1e2a45" text-anchor="middle" transform="rotate(${mid + (mid>90&&mid<270?180:0)}, ${tx}, ${ty})">${escapeHtml(name).slice(0,10)}</text>`;
+    });
+    wheel.innerHTML = svg;
+  }
+
+  function point(cx, cy, r, angleDeg) {
+    const a = (angleDeg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  }
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+  function spin() {
+    if (spinning) return;
+    const names = getNames();
+    if (names.length < 2) return;
+    spinning = true;
+    winnerBanner.classList.remove("show");
+    drawWheel(names);
+
+    const result = RaceEngine.run(names, { duration: 1 }); // engine just decides the winner
+    const winnerIdx = names.indexOf(result.winner);
+    const slice = 360 / names.length;
+    const targetMid = winnerIdx * slice + slice / 2;
+    // Rotate so the winning slice lands under the top pointer, plus extra full spins.
+    const extraSpins = 5;
+    const finalRotation = currentRotation + extraSpins * 360 + (360 - targetMid);
+    wheel.style.transform = `rotate(${finalRotation}deg)`;
+    currentRotation = finalRotation % 360;
+
+    setTimeout(() => {
+      spinning = false;
+      winnerBanner.textContent = `🎉 ${result.winner} wins the spin!`;
+      winnerBanner.classList.add("show");
+    }, 4600);
+  }
+
+  spinBtn.addEventListener("click", spin);
+  drawWheel(getNames());
+</script>
+
+</body>
+</html>

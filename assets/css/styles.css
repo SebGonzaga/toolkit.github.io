@@ -1,0 +1,165 @@
+/* ==========================================================================
+   Pick & Race — shared design system
+   ========================================================================== */
+
+:root {
+  --paper: #fbf7ee;
+  --paper-dim: #efe7d3;
+  --ink: #1e2a45;
+  --ink-soft: #4a5674;
+  --chalk: #35604a;
+  --chalk-dim: #eaf1ec;
+  --marker: #d9503f;
+  --marker-dim: #fbe7e3;
+  --pencil: #efb93c;
+  --pencil-dim: #fdf3dc;
+  --border: 2px solid var(--ink);
+  --radius: 10px;
+  --font-display: "Baloo 2", "Segoe UI Rounded", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  color: var(--ink);
+  margin: 0 0 0.4em;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+p { margin: 0 0 1em; max-width: 62ch; color: var(--ink-soft); }
+
+a { color: inherit; }
+
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* -- top nav -------------------------------------------------------- */
+
+.site-nav {
+  border-bottom: var(--border);
+  background: var(--paper);
+}
+.site-nav .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+}
+.brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand .mark {
+  width: 30px; height: 30px;
+  background: var(--chalk);
+  border: var(--border);
+  border-radius: 50%;
+  display: inline-block;
+}
+.site-nav nav a {
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-left: 24px;
+  font-size: 0.95rem;
+}
+.site-nav nav a:hover { color: var(--ink); }
+
+/* -- buttons ---------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 12px 22px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+.btn:active { transform: translate(0,0); box-shadow: 2px 2px 0 var(--ink); }
+.btn.marker { background: var(--marker); box-shadow: 4px 4px 0 var(--ink); }
+.btn.ghost { background: var(--paper); color: var(--ink); }
+.btn.small { padding: 8px 14px; font-size: 0.85rem; box-shadow: 3px 3px 0 var(--ink); }
+
+/* -- tool card grid ----------------------------------------------------- */
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 20px;
+  margin: 32px 0 64px;
+}
+.tool-card {
+  position: relative;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  padding: 20px 18px 18px;
+  text-decoration: none;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+.tool-card .tab {
+  position: absolute;
+  top: 0; right: 0;
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-bottom-left-radius: 8px;
+  border-left: var(--border);
+  border-bottom: var(--border);
+}
+.tool-card .tab.race { background: var(--chalk-dim); color: var(--chalk); }
+.tool-card .tab.spin { background: var(--pencil-dim); color: #8a6300; }
+.tool-card .tab.mix  { background: var(--marker-dim); color: var(--marker); }
+.tool-card .icon { font-size: 2rem; line-height: 1; margin-bottom: 4px; }
+.tool-card h3 { font-size: 1.05rem; margin-bottom: 2px; }
+.tool-card p { font-size: 0.88rem; margin-bottom: 0; }
+.tool-card.disabled { opacity: 0.55; }
+.tool-card:not(.disabled):hover { background: var(--chalk-dim); }
+
+/* -- footer ------------------------------------------------------------ */
+
+.site-footer {
+  border-top: var(--border);
+  padding: 28px 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+/* -- utility ------------------------------------------------------------ */
+
+.eyebrow-free { } /* placeholder — intentionally no tracked-out label class used */
