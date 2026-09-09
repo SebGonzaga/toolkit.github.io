@@ -9,57 +9,234 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
 <style>
-  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
-  .panel {
+  /* ---------------------------------------------------------------------
+     Layout: a slim control bar up top + one big, edge-to-edge pond below,
+     instead of a fixed sidebar eating a third of the screen.
+  --------------------------------------------------------------------- */
+  main.wide-stage { max-width: 1360px; }
+  .tool-wrap { display: flex; flex-direction: column; gap: 16px; padding: 22px 0 64px; }
+
+  .control-bar {
     border: var(--border); border-radius: var(--radius); background: var(--paper);
-    padding: 20px; position: sticky; top: 20px;
+    padding: 14px 18px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 22px;
   }
-  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
-  .panel label:first-of-type { margin-top: 0; }
-  textarea {
-    width: 100%; min-height: 140px; border: var(--border); border-radius: 8px;
-    padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical;
+  .control-bar .grp { display: flex; flex-direction: column; gap: 5px; }
+  .control-bar .grp.grow { flex: 1 1 260px; min-width: 220px; }
+  .control-bar label { font-weight: 600; font-size: 0.8rem; white-space: nowrap; }
+  .control-bar textarea {
+    width: 100%; min-height: 46px; max-height: 140px; border: var(--border); border-radius: 8px;
+    padding: 8px 10px; font-family: var(--font-body); font-size: 0.88rem; resize: vertical;
+    transition: min-height 0.2s ease;
   }
-  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  input[type="range"] { width: 100%; }
-  .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; font-size: 0.88rem; }
-  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+  .control-bar textarea:focus { min-height: 100px; }
+  .control-bar input[type="range"] { width: 150px; }
+  .control-bar .toggle { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; white-space: nowrap; }
+  .control-bar .btns { display: flex; gap: 8px; margin-left: auto; }
   .duration-val { font-family: var(--font-display); font-weight: 700; }
 
+  /* ---------------------------------------------------------------------
+     Stage — bird's-eye pond, full width, tall, animated at every layer.
+  --------------------------------------------------------------------- */
   .stage {
     border: var(--border); border-radius: var(--radius);
-    background: linear-gradient(180deg, var(--chalk-dim), #dcefe3);
-    padding: 16px;
-    position: relative;
-    overflow: hidden;
+    padding: 14px; position: relative; overflow: hidden; background: var(--paper);
     transition: transform 0.35s cubic-bezier(.2,.8,.3,1);
   }
-  .stage.projector { background: #10261a; }
-  .stage.projector .field { background: transparent; }
   .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 40px rgba(239,185,60,0.55) inset; }
-
-  /* drifting cloud/ripple ambiance, purely decorative */
-  .pond-ripples { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0.35; z-index: 0; }
-  .ripple-line { position: absolute; left: -20%; width: 140%; height: 2px; background: rgba(255,255,255,0.5); border-radius: 999px; animation: driftRipple linear infinite; }
-  @keyframes driftRipple { 0% { transform: translateX(-6%); opacity: 0; } 15% { opacity: 0.6; } 85% { opacity: 0.6; } 100% { transform: translateX(6%); opacity: 0; } }
-
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
-  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
-  .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .stage.projector { background: #10261a; }
+  .stage.projector .pond-bg { filter: brightness(0.6) saturate(1.25); }
+  .stage.projector .stage-header .status,
+  .stage.projector .stage-header .clock { color: #fff; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
+  .stage.projector .leaderboard-panel { background: rgba(10,24,20,0.6); color: #fff; }
+  .stage.projector .leaderboard-panel .lb-title { color: rgba(255,255,255,0.7); }
+  .stage.projector .field-token .name-tag { background: rgba(0,0,0,0.55); color: #fff; }
 
-  .field { background: rgba(255,255,255,0.35); position: relative; z-index: 5; }
-  .stage.projector .field-token .name-tag { background: rgba(255,255,255,0.15); color: #fff; }
-  .field-token svg { animation: wob 0.5s ease-in-out infinite; transform-origin: 50% 80%; }
-  @keyframes wob { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
-  .field-token.surging svg { animation-duration: 0.28s; }
-  .field-token .wake {
-    position: absolute; top: 50%; right: 100%; height: 3px; width: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8));
-    border-radius: 999px; transform: translateY(-50%);
-    transition: width 0.1s linear;
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; position: relative; z-index: 12; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+
+  .field-wrap { position: relative; transition: transform 0.25s ease-out; will-change: transform; }
+
+  .field {
+    position: relative;
+    width: 100%;
+    height: clamp(400px, 60vh, 660px);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.4s ease;
+    isolation: isolate;
   }
+  .field.zoom { transform: scale(1.03); }
+
+  /* -- animated pond background (sky glow, drifting sun, two wave bands) - */
+  .pond-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(120% 90% at 12% -10%, rgba(255,255,255,0.55), transparent 55%),
+      linear-gradient(180deg, #e3f7f2 0%, #b3e6dd 20%, #67c2b7 52%, #2c8f8a 100%);
+  }
+  .sun-glare {
+    position: absolute; top: -8%; left: 6%; width: 26%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,251,224,0.95), transparent 68%);
+    filter: blur(3px); z-index: 1; animation: glare-drift 13s ease-in-out infinite;
+  }
+  @keyframes glare-drift { 0%,100% { transform: translate(0,0); } 50% { transform: translate(6%,4%); } }
+
+  .wave-layer {
+    position: absolute; inset: -2px -40% -2px -40%; z-index: 1; opacity: 0.5;
+    background-image: repeating-linear-gradient(98deg, rgba(255,255,255,0.28) 0 12px, transparent 12px 86px);
+    background-size: 260% 100%;
+    animation: wave-drift 8s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .wave-layer.layer2 {
+    opacity: 0.28; animation-duration: 14s; animation-direction: reverse;
+    background-image: repeating-linear-gradient(94deg, rgba(255,255,255,0.22) 0 8px, transparent 8px 64px);
+  }
+  @keyframes wave-drift { from { background-position-x: 0; } to { background-position-x: -520px; } }
+
+  .lilypad { position: absolute; z-index: 2; animation: pad-bob 4.4s ease-in-out infinite; pointer-events: none; }
+  .lilypad svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.18)); }
+  @keyframes pad-bob { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(3px,-4px) rotate(3deg); } }
+
+  .reed-strip {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 22px; z-index: 2;
+    background: linear-gradient(0deg, rgba(53,96,74,0.55), transparent);
+  }
+
+  .stage-header .status, .stage-header .clock { color: var(--ink); }
+
+  /* -- track furniture -------------------------------------------------- */
+  .field .start-gate, .field .finish-gate { position: absolute; top: 0; bottom: 0; width: 3px; z-index: 3; }
+  .field .start-gate { left: 4%; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.7) 0 6px, rgba(30,42,69,0.4) 6px 12px); }
+  .field .finish-gate { right: 4%; background-image: repeating-linear-gradient(180deg, rgba(20,20,20,0.65) 0 8px, rgba(255,255,255,0.75) 8px 16px); }
+  .field .finish-gate::after {
+    content: "🏁"; position: absolute; top: -4px; right: -9px; font-size: 18px;
+    animation: flag-wave 1.1s ease-in-out infinite;
+  }
+  @keyframes flag-wave { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+
+  .splash-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+  .splash-pop { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; }
+  .splash-pop::before, .splash-pop::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.9);
+    animation: splash-ring 0.65s cubic-bezier(.2,.7,.4,1) forwards;
+  }
+  .splash-pop::after { animation-delay: 0.08s; border-color: rgba(200,235,255,0.75); inset: 3px; }
+  .splash-pop.big { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+  @keyframes splash-ring { 0% { transform: scale(0.2); opacity: 1; } 100% { transform: scale(1.9); opacity: 0; } }
+
+  .field-tokens { position: absolute; inset: 0; z-index: 5; }
+
+  /* -- the ducks themselves: perspective + layered SVG for a pseudo-3D feel */
+  .field { perspective: 700px; }
+  .field-token {
+    position: absolute; left: 0; width: 46px; height: 46px;
+    transform: translateY(-50%);
+    display: flex; align-items: center; justify-content: center;
+    will-change: left;
+  }
+  .field.many-names .field-token { width: 30px; height: 30px; }
+
+  .field-token .token-art { width: 100%; height: 100%; display: block; position: relative; }
+
+  .duck-shadow {
+    position: absolute; left: 50%; bottom: 6%; width: 60%; height: 18%; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0,0,0,0.38), transparent 72%);
+    transform: translateX(-50%);
+    animation: duck-shadow-pulse 1.15s ease-in-out infinite; z-index: 1;
+  }
+  @keyframes duck-shadow-pulse { 0%,100% { transform: translateX(-50%) scale(1); opacity: 0.55; } 50% { transform: translateX(-50%) scale(0.72); opacity: 0.3; } }
+
+  .paddle-ripple {
+    position: absolute; left: 46%; bottom: 4%; width: 22%; height: 22%;
+    border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
+    transform: translate(-50%,0) scale(0.3); opacity: 0;
+    animation: ripple-out 1.3s ease-out infinite; z-index: 1;
+  }
+  .paddle-ripple.r2 { animation-delay: 0.5s; }
+  @keyframes ripple-out { 0% { transform: translate(-50%,0) scale(0.25); opacity: 0.6; } 100% { transform: translate(-50%,0) scale(2.6); opacity: 0; } }
+
+  .duck3d {
+    position: relative; width: 100%; height: 100%; z-index: 2;
+    transform-style: preserve-3d; transform-origin: 50% 82%;
+    animation: duck-swim-3d 1.15s ease-in-out infinite;
+  }
+  .duck3d svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25)); }
+  @keyframes duck-swim-3d {
+    0%, 100% { transform: rotateX(6deg) rotateY(-9deg) translateY(0) translateZ(0); }
+    50%      { transform: rotateX(-4deg) rotateY(9deg) translateY(-3px) translateZ(5px); }
+  }
+  .d-tail { animation: tail-wag 0.42s ease-in-out infinite; transform-box: fill-box; transform-origin: 100% 50%; }
+  @keyframes tail-wag { 0%,100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+
+  .field-token.surging .duck3d, .field-token.surging .duck-shadow, .field-token.surging .paddle-ripple {
+    animation-duration: 0.5s;
+  }
+  .field-token.stalled .duck3d { animation-duration: 1.8s; filter: saturate(0.85); }
+
+  .field-token .rank-badge {
+    position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+    width: 16px; height: 16px; border-radius: 50%;
+    font-size: 0.64rem; font-weight: 800; line-height: 16px; text-align: center;
+    background: var(--ink); color: #fff; display: none;
+    font-family: var(--font-display); z-index: 6;
+  }
+  .field-token.rank-1 .rank-badge { display: block; background: var(--pencil); color: var(--ink); }
+  .field-token.rank-2 .rank-badge { display: block; background: #e7e7e7; color: var(--ink); }
+  .field-token.rank-3 .rank-badge { display: block; background: #d8a06a; color: var(--ink); }
+
+  .field-token .name-tag {
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 0.64rem; font-weight: 700; white-space: nowrap; max-width: 96px;
+    overflow: hidden; text-overflow: ellipsis;
+    background: rgba(255,255,255,0.92); color: var(--ink);
+    padding: 1px 7px; border-radius: 999px;
+    opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 6;
+  }
+  .field-token.always-visible .name-tag { opacity: 1; }
+  .field-token.leading .name-tag, .field-token:hover .name-tag, .field-token:focus-within .name-tag { opacity: 1; }
+  .field-token.leading .name-tag { font-weight: 800; }
+
+  .field-token.lead-change .duck3d { animation-name: duck-swim-3d, field-lead-flash; animation-duration: 0.5s, 0.5s; }
+  @keyframes field-lead-flash {
+    0% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
+    40% { filter: drop-shadow(0 0 11px rgba(255,255,255,0.95)); }
+    100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
+  }
+  .lb-row.lead-change { animation: lb-lead-flash 0.6s ease; }
+  @keyframes lb-lead-flash { 0% { background: transparent; } 30% { background: rgba(239,185,60,0.4); } 100% { background: transparent; } }
+
+  .field-token.winner-token { z-index: 8; }
+  .field-token.winner-token .duck3d { animation: field-winner-bounce-3d 0.5s ease infinite; }
+  .field-token.winner-token .duck3d svg { filter: drop-shadow(0 0 12px rgba(239,185,60,0.95)); }
+  @keyframes field-winner-bounce-3d {
+    0%,100% { transform: rotateX(6deg) rotateY(-10deg) translateY(-2px) translateZ(0); }
+    50%     { transform: rotateX(-6deg) rotateY(10deg) translateY(-10px) translateZ(8px); }
+  }
+
+  /* -- floating glass leaderboard, overlaid instead of a side column ---- */
+  .leaderboard-panel {
+    position: absolute; top: 14px; right: 14px; width: 180px; max-height: 62%;
+    background: rgba(255,255,255,0.62); backdrop-filter: blur(8px) saturate(1.3);
+    -webkit-backdrop-filter: blur(8px) saturate(1.3);
+    border: var(--border); border-radius: var(--radius);
+    padding: 10px 12px 12px; overflow-y: auto; z-index: 9;
+  }
+  .leaderboard-panel .lb-title {
+    font-family: var(--font-display); font-weight: 700; font-size: 0.72rem;
+    margin-bottom: 8px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .lb-track { position: relative; }
+  .lb-row { position: absolute; left: 0; right: 0; height: 26px; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; transition: top 0.22s ease; }
+  .leaderboard-panel.many-names .lb-row { height: 19px; font-size: 0.72rem; }
+  .lb-row .lb-rank { width: 16px; font-weight: 800; font-family: var(--font-display); color: var(--ink-soft); }
+  .lb-row.leader .lb-rank { color: var(--marker); }
+  .lb-row .lb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--chalk)); flex-shrink: 0; }
+  .lb-row .lb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-row.leader .lb-name { font-weight: 700; }
 
   .winner-banner {
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
@@ -70,15 +247,20 @@
   @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
 
-  .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
+  .history { margin-top: 12px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
 
   @media (max-width: 860px) {
-    .tool-wrap { grid-template-columns: 1fr; }
-    .panel { position: static; }
+    .field { height: clamp(320px, 52vh, 480px); }
+    .leaderboard-panel { position: static; width: 100%; max-height: 170px; margin-top: 10px; }
+    .control-bar .btns { margin-left: 0; width: 100%; }
+    .control-bar .btns .btn { flex: 1; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .field-token, .field-token svg, .stage, .ripple-line { animation: none !important; transition: none !important; }
+    .field-token, .duck3d, .duck-shadow, .paddle-ripple, .wave-layer, .sun-glare, .lilypad,
+    .stage, .field, .field-wrap, .finish-gate::after, .splash-pop::before, .splash-pop::after {
+      animation: none !important; transition: none !important; transform: none !important;
+    }
   }
 </style>
 </head>
@@ -99,14 +281,15 @@
   </div>
 </header>
 
-<main class="wrap">
+<main class="wrap wide-stage">
   <h1 style="margin-top:28px;">Duck Race Name Picker</h1>
   <p>Paste your roster, set a race length, and let the ducks pick. Works for 2 names or 40.</p>
 
   <div class="tool-wrap">
-    <div class="panel">
-      <label for="names">Names (one per line)</label>
-      <textarea id="names">Ava
+    <div class="control-bar">
+      <div class="grp grow">
+        <label for="names">Names (one per line)</label>
+        <textarea id="names">Ava
 Liam
 Noor
 Diego
@@ -114,41 +297,43 @@ Priya
 Mateo
 Yuki
 Isla</textarea>
-
-      <label for="duration">Race length: <span class="duration-val" id="durationVal">8s</span></label>
-      <input type="range" id="duration" min="2" max="30" value="8">
-
-      <div class="toggle-row">
-        <input type="checkbox" id="noRepeat">
-        <label for="noRepeat" style="margin:0;">No repeats until everyone's had a turn</label>
       </div>
-      <div class="toggle-row">
-        <input type="checkbox" id="projector">
-        <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
+      <div class="grp">
+        <label for="duration">Race length: <span class="duration-val" id="durationVal">8s</span></label>
+        <input type="range" id="duration" min="2" max="30" value="8">
       </div>
-
-      <button class="btn marker" id="startBtn">Start the race</button>
-      <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
+      <div class="grp">
+        <span class="toggle"><input type="checkbox" id="noRepeat"><label for="noRepeat" style="margin:0;">No repeats</label></span>
+        <span class="toggle"><input type="checkbox" id="projector"><label for="projector" style="margin:0;">Projector mode</label></span>
+      </div>
+      <div class="btns">
+        <button class="btn ghost small" id="resetHistory">Reset history</button>
+        <button class="btn marker" id="startBtn">Start the race</button>
+      </div>
     </div>
 
     <div>
       <div class="stage" id="stage">
-        <div class="pond-ripples" id="ripples"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
-        <div class="field-stage">
-          <div class="field-wrap">
-            <div class="field" id="field">
-              <div class="start-gate"></div>
-              <div class="finish-gate"></div>
-              <div class="field-tokens" id="fieldTokens"></div>
+        <div class="field-wrap" id="fieldWrap">
+          <div class="field" id="field">
+            <div class="pond-bg"></div>
+            <div class="sun-glare"></div>
+            <div class="wave-layer"></div>
+            <div class="wave-layer layer2"></div>
+            <div class="lilypads" id="lilypads"></div>
+            <div class="reed-strip"></div>
+            <div class="start-gate"></div>
+            <div class="finish-gate"></div>
+            <div class="splash-layer" id="splashLayer"></div>
+            <div class="field-tokens" id="fieldTokens"></div>
+            <div class="leaderboard-panel">
+              <div class="lb-title">Standings</div>
+              <div class="lb-track" id="leaderboard"></div>
             </div>
-          </div>
-          <div class="leaderboard-panel">
-            <div class="lb-title">Standings</div>
-            <div class="lb-track" id="leaderboard"></div>
           </div>
         </div>
       </div>
@@ -171,37 +356,102 @@ Isla</textarea>
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
   const field = document.getElementById("field");
+  const fieldWrap = document.getElementById("fieldWrap");
   const fieldTokens = document.getElementById("fieldTokens");
   const leaderboard = document.getElementById("leaderboard");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
-  const ripples = document.getElementById("ripples");
+  const lilypads = document.getElementById("lilypads");
+  const splashLayer = document.getElementById("splashLayer");
+  const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const DUCK_SVG = `<svg viewBox="0 0 60 48" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="26" cy="30" rx="20" ry="14" fill="var(--c,#efb93c)"/>
-    <circle cx="42" cy="16" r="11" fill="var(--c,#efb93c)"/>
-    <path d="M50 14 L60 17 L50 20 Z" fill="#d9503f"/>
-    <circle cx="45" cy="13" r="2" fill="#1e2a45"/>
-  </svg>`;
   const PALETTE = ["#efb93c", "#ffffff", "#35604a", "#d9503f", "#8fb9d8", "#c98fd8"];
 
-  function tokenHTML(entrant, color) {
-    return `<div class="wake"></div>${DUCK_SVG.replace('var(--c,#efb93c)', color)}`;
+  // Layered, gradient-shaded duck built from a few SVG shapes rather than
+  // one flat silhouette, plus a shadow + paddle ripples baked into the same
+  // markup so every racer carries its own "3D" swim + splash effects.
+  function tokenHTML(entrant, color, idx) {
+    const gid = `duckGrad${idx}`;
+    return `
+      <div class="duck-shadow"></div>
+      <div class="paddle-ripple"></div>
+      <div class="paddle-ripple r2"></div>
+      <div class="wake"></div>
+      <div class="duck3d">
+        <svg viewBox="0 0 60 48" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${color}" stop-opacity="1"/>
+              <stop offset="100%" stop-color="${color}" stop-opacity="0.7"/>
+            </linearGradient>
+          </defs>
+          <ellipse class="d-tail" cx="9" cy="28" rx="6.5" ry="5" fill="url(#${gid})"/>
+          <ellipse class="d-body" cx="26" cy="30" rx="20" ry="14" fill="url(#${gid})"/>
+          <ellipse class="d-wing" cx="21" cy="27" rx="9" ry="6.5" fill="rgba(0,0,0,0.14)"/>
+          <circle class="d-head" cx="42" cy="16" r="11" fill="url(#${gid})"/>
+          <ellipse cx="45" cy="19" rx="3.2" ry="2.2" fill="#fff" opacity="0.35"/>
+          <path d="M50 14 L61 17 L50 20 Z" fill="#d9503f"/>
+          <circle cx="45.5" cy="13" r="2" fill="#1e2a45"/>
+          <circle cx="46.2" cy="12.3" r="0.6" fill="#fff"/>
+        </svg>
+      </div>`;
   }
 
   let alreadyWon = [];
   let racing = false;
   let track = null;
+  let lastSplashCheck = 0;
+  let prevLeaderIdx = -1;
 
+  // Scatter a handful of lily pads once; they drift gently via CSS only.
+  const PAD_SVG = `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 3 A17 17 0 1 1 19.9 3 L20 20 Z" fill="#3f7a55"/>
+    <circle cx="14" cy="14" r="1.6" fill="#e7b8dd"/>
+  </svg>`;
   for (let i = 0; i < 5; i++) {
-    const r = document.createElement("div");
-    r.className = "ripple-line";
-    r.style.top = (10 + i * 20) + "%";
-    r.style.animationDuration = (7 + Math.random() * 5) + "s";
-    r.style.animationDelay = (Math.random() * 6) + "s";
-    ripples.appendChild(r);
+    const p = document.createElement("div");
+    p.className = "lilypad";
+    const size = 24 + Math.random() * 26;
+    p.style.width = size + "px";
+    p.style.height = size + "px";
+    p.style.left = (4 + Math.random() * 88) + "%";
+    p.style.top = (8 + Math.random() * 78) + "%";
+    p.style.opacity = 0.55 + Math.random() * 0.3;
+    p.style.animationDuration = (3.6 + Math.random() * 3) + "s";
+    p.style.animationDelay = (Math.random() * 3) + "s";
+    p.innerHTML = PAD_SVG;
+    lilypads.appendChild(p);
+  }
+
+  function spawnSplash(xPx, yPx, big) {
+    if (prefersReducedMotion) return;
+    if (splashLayer.childElementCount > 30) return; // keep it cheap on huge rosters
+    const s = document.createElement("div");
+    s.className = "splash-pop" + (big ? " big" : "");
+    s.style.left = xPx + "px";
+    s.style.top = yPx + "px";
+    splashLayer.appendChild(s);
+    setTimeout(() => s.remove(), 700);
+  }
+
+  function splashAtToken(tokEl, big) {
+    const tRect = tokEl.getBoundingClientRect();
+    const fRect = field.getBoundingClientRect();
+    spawnSplash(tRect.left - fRect.left + tRect.width * 0.5, tRect.top - fRect.top + tRect.height * 0.82, big);
+  }
+
+  // Subtle pointer-driven tilt on the pond for a bit of extra depth —
+  // desktop only, and skipped entirely under reduced-motion.
+  if (!prefersReducedMotion && matchMedia("(hover: hover)").matches) {
+    fieldWrap.addEventListener("mousemove", (e) => {
+      const r = fieldWrap.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      fieldWrap.style.transform = `rotateX(${(-py * 3.5).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg)`;
+    });
+    fieldWrap.addEventListener("mouseleave", () => { fieldWrap.style.transform = ""; });
   }
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
@@ -231,6 +481,7 @@ Isla</textarea>
       tokenHTML,
       palette: PALETTE,
     });
+    prevLeaderIdx = -1;
   }
 
   async function runRace() {
@@ -259,6 +510,11 @@ Isla</textarea>
     statusText.textContent = "On your marks…";
     await SuspenseFX.countdown(stage);
 
+    // A little splash-fest right at the starting line as everyone dives in.
+    track.tokens.forEach((tok, i) => {
+      setTimeout(() => splashAtToken(tok.el, i % 3 === 0), i * 35);
+    });
+
     statusText.textContent = "Racing…";
     track.play(); // actual motion is now driven by each token's own Web Animation
 
@@ -269,9 +525,9 @@ Isla</textarea>
 
     // This loop no longer drives position — it only reads each token's own
     // animation clock (via track.update) to keep the leaderboard, wake
-    // trails, zoom, and clock text in sync. Real slow motion comes from
-    // track.setPlaybackRate(), a genuine browser primitive, not a manual
-    // time remap.
+    // trails, zoom, splashes, and clock text in sync. Real slow motion comes
+    // from track.setPlaybackRate(), a genuine browser primitive, not a
+    // manual time remap.
     function rankFrame(now) {
       if (!racing) return;
       const rawElapsed = (now - start) / 1000;
@@ -286,11 +542,26 @@ Isla</textarea>
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
       clock.textContent = Math.max(0, (maxTime - displayElapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided (still uses displayElapsed so it stays in sync with slow-mo during a photo finish)
 
-      const { ranked } = track.update(rawElapsed);
+      const { leaderIdx, ranked } = track.update(rawElapsed);
       ranked.forEach((r) => {
         const wake = track.tokens[r.i].el.querySelector(".wake");
         if (wake) wake.style.width = Math.min(30, track.tokens[r.i].prevLeft * 0.4) + "px";
       });
+
+      // Throttled splash check: a burst wherever a duck newly starts surging,
+      // plus one whenever the lead changes hands.
+      if (now - lastSplashCheck > 130) {
+        lastSplashCheck = now;
+        track.tokens.forEach((tok) => {
+          const isSurging = tok.el.classList.contains("surging");
+          if (isSurging && tok.el.dataset.wasSurging !== "1") splashAtToken(tok.el, false);
+          tok.el.dataset.wasSurging = isSurging ? "1" : "0";
+        });
+        if (leaderIdx !== prevLeaderIdx) {
+          if (prevLeaderIdx !== -1) splashAtToken(track.tokens[leaderIdx].el, true);
+          prevLeaderIdx = leaderIdx;
+        }
+      }
 
       const overallProgress = displayElapsed / maxTime;
       if (overallProgress > 0.82) track.setZoom(true);
@@ -308,6 +579,8 @@ Isla</textarea>
     if (track) {
       track.setZoom(false);
       track.celebrateWinner(result.winner);
+      const winTok = track.tokens.find((t) => t.entrant.name === result.winner);
+      if (winTok) splashAtToken(winTok.el, true);
     }
     SuspenseFX.shake(stage, 380);
     stage.classList.add("finished-glow");
