@@ -120,7 +120,7 @@ const RaceEngine = (() => {
     const margin = n > 1 ? sorted[1].finishTime - sorted[0].finishTime : 999;
     const photoFinish = n > 1 && margin <= Math.max(0.35, duration * 0.06);
 
-    return { order, winner: order[0].name, eligiblePool: pool, photoFinish, margin };
+    return { order, winner: sorted[0].name, eligiblePool: pool, photoFinish, margin };
   }
 
   return { run, shuffle, buildCurve, evalCurve };

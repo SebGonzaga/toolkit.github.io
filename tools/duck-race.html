@@ -134,9 +134,9 @@
   .field { perspective: 700px; }
   .field-token {
     position: absolute; left: 0; width: 46px; height: 46px;
-    transform: translateY(-50%);
+    transform: translateY(-50%) translateX(0);
     display: flex; align-items: center; justify-content: center;
-    will-change: left;
+    will-change: transform;
   }
   .field.many-names .field-token { width: 30px; height: 30px; }
 
@@ -305,6 +305,7 @@ Isla</textarea>
       <div class="grp">
         <span class="toggle"><input type="checkbox" id="noRepeat"><label for="noRepeat" style="margin:0;">No repeats</label></span>
         <span class="toggle"><input type="checkbox" id="projector"><label for="projector" style="margin:0;">Projector mode</label></span>
+        <span class="toggle"><input type="checkbox" id="soundToggle" checked><label for="soundToggle" style="margin:0;">Sound</label></span>
       </div>
       <div class="btns">
         <button class="btn ghost small" id="resetHistory">Reset history</button>
@@ -346,12 +347,16 @@ Isla</textarea>
 <script src="../assets/js/race-engine.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script src="../assets/js/shared-track.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
   const durationVal = document.getElementById("durationVal");
   const noRepeatEl = document.getElementById("noRepeat");
   const projectorEl = document.getElementById("projector");
+  const soundToggleEl = document.getElementById("soundToggle");
+  soundToggleEl.checked = !SoundFX.isMuted();
+  soundToggleEl.addEventListener("change", () => SoundFX.setMuted(!soundToggleEl.checked));
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
@@ -426,6 +431,7 @@ Isla</textarea>
   }
 
   function spawnSplash(xPx, yPx, big) {
+    SoundFX.splash(big);
     if (prefersReducedMotion) return;
     if (splashLayer.childElementCount > 30) return; // keep it cheap on huge rosters
     const s = document.createElement("div");
@@ -492,6 +498,7 @@ Isla</textarea>
       return;
     }
     racing = true;
+    SoundFX.unlock(); // must happen inside this click-triggered handler for autoplay policies
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
     if (track) track.setZoom(false);
@@ -508,7 +515,7 @@ Isla</textarea>
     buildStage(displayOrder);
 
     statusText.textContent = "On your marks…";
-    await SuspenseFX.countdown(stage);
+    await SuspenseFX.countdown(stage, ["3", "2", "1", "GO!"], (label) => SoundFX.beep(label === "GO!" ? "go" : "tick"));
 
     // A little splash-fest right at the starting line as everyone dives in.
     track.tokens.forEach((tok, i) => {
@@ -522,6 +529,7 @@ Isla</textarea>
     const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
     const slowMo = result.photoFinish;
     let slowMoApplied = false;
+    let crowdSwellStarted = false;
 
     // This loop no longer drives position — it only reads each token's own
     // animation clock (via track.update) to keep the leaderboard, wake
@@ -564,7 +572,10 @@ Isla</textarea>
       }
 
       const overallProgress = displayElapsed / maxTime;
-      if (overallProgress > 0.82) track.setZoom(true);
+      if (overallProgress > 0.82) {
+        track.setZoom(true);
+        if (!crowdSwellStarted) { crowdSwellStarted = true; SoundFX.crowdSwell(Math.max(1.2, maxTime * 0.2)); }
+      }
 
       requestAnimationFrame(rankFrame);
     }
@@ -583,6 +594,7 @@ Isla</textarea>
       if (winTok) splashAtToken(winTok.el, true);
     }
     SuspenseFX.shake(stage, 380);
+    SoundFX.fanfare();
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "We have a winner";

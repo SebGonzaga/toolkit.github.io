@@ -66,9 +66,17 @@ const SharedTrack = (() => {
       const curve = entrant.curve;
       if (!curve || !entrant.finishTime) return null;
       const tokenWidth = el.offsetWidth || 34;
-      const usablePct = trackW > 0 ? ((trackW - tokenWidth) / trackW) * 100 : 100;
+      // Drive motion via `transform: translateX(px)` instead of `left: %`.
+      // `left` is a layout property — the browser has to reflow every frame
+      // it changes, which is fine for 8 racers but janks on low-end hardware
+      // once you're at 50-100. `transform` is compositor-only (GPU, no
+      // layout/paint), so this scales to a full classroom roster smoothly.
+      // Vertical centering (`translateY(-50%)`) is baked into the same CSS
+      // `transform`, so every keyframe must restate it — WAAPI replaces the
+      // whole transform value per keyframe rather than merging with CSS.
+      const usablePx = Math.max(trackW - tokenWidth, 0);
       const keyframes = curve.times.map((t, idx) => ({
-        left: `${(curve.progresses[idx] * usablePct).toFixed(3)}%`,
+        transform: `translateY(-50%) translateX(${(curve.progresses[idx] * usablePx).toFixed(2)}px)`,
         offset: idx === 0 ? 0 : idx === curve.times.length - 1 ? 1 : Math.min(1, t / entrant.finishTime),
         easing: "ease-in-out",
       }));

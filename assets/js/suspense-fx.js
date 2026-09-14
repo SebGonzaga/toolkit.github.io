@@ -60,7 +60,7 @@ const SuspenseFX = (() => {
    * Runs a 3-2-1-GO overlay inside `container` (needs position:relative).
    * Returns a Promise that resolves once it's done.
    */
-  function countdown(container, labels = ["3", "2", "1", "GO!"]) {
+  function countdown(container, labels = ["3", "2", "1", "GO!"], onStep = null) {
     injectStyles();
     return new Promise((resolve) => {
       const overlay = document.createElement("div");
@@ -69,6 +69,7 @@ const SuspenseFX = (() => {
       let i = 0;
       const step = () => {
         overlay.innerHTML = `<span class="fx-countdown-num">${labels[i]}</span>`;
+        if (onStep) onStep(labels[i], i);
         i++;
         if (i < labels.length) {
           setTimeout(step, i === labels.length - 1 ? 550 : 600);
