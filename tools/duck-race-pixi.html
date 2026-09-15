@@ -71,7 +71,7 @@
   .finish-gate::after { content: "🏁"; position: absolute; top: -4px; right: -9px; font-size: 18px; }
 
   .name-tag {
-    position: absolute; transform: translate(-50%, 0); font-size: 0.66rem; font-weight: 700;
+    position: absolute; left: 0; top: 0; will-change: transform; font-size: 0.66rem; font-weight: 700;
     white-space: nowrap; max-width: 96px; overflow: hidden; text-overflow: ellipsis;
     background: rgba(255,255,255,0.92); color: var(--ink); padding: 1px 7px; border-radius: 999px;
     pointer-events: none; z-index: 6; opacity: 0; transition: opacity 0.15s ease;
@@ -79,7 +79,7 @@
   .name-tag.always-visible, .name-tag.leading { opacity: 1; }
   .name-tag.leading { font-weight: 800; }
   .rank-badge {
-    position: absolute; transform: translate(-50%, 0); width: 16px; height: 16px; border-radius: 50%;
+    position: absolute; left: 0; top: 0; will-change: transform; width: 16px; height: 16px; border-radius: 50%;
     font-size: 0.64rem; font-weight: 800; line-height: 16px; text-align: center;
     background: var(--ink); color: #fff; display: none; font-family: var(--font-display); z-index: 6;
   }
@@ -114,7 +114,10 @@
     margin-bottom: 8px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em;
   }
   .lb-track { position: relative; }
-  .lb-row { position: absolute; left: 0; right: 0; height: 26px; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+  .lb-row {
+    position: absolute; left: 0; right: 0; height: 26px; display: flex; align-items: center; gap: 6px; font-size: 0.8rem;
+    transition: top 0.22s ease;
+  }
   .lb-row .lb-rank { width: 16px; font-weight: 800; font-family: var(--font-display); color: var(--ink-soft); }
   .lb-row.leader .lb-rank { color: var(--marker); }
   .lb-row .lb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--chalk)); flex-shrink: 0; }
@@ -526,7 +529,6 @@ const DuckSprites = (() => {
   let racing = false;
   let ducks = []; // { container, entrant, laneY, prevProgress, nameTag, badge }
   let alreadyWon = [];
-  let raceReq = null;
 
   function getNames() {
     return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
@@ -583,7 +585,7 @@ const DuckSprites = (() => {
       badge.className = "rank-badge";
       overlayLayer.appendChild(badge);
 
-      return { container, entrant, laneY: container.y, prevProgress: 0, nameTag, badge, color, wasSurging: false };
+      return { container, entrant, laneY: container.y, prevProgress: 0, smoothSpeed: 0, nameTag, badge, color, wasSurging: false };
     });
 
     const rowH = many ? 19 : 26;
@@ -599,15 +601,13 @@ const DuckSprites = (() => {
     });
   }
 
+  // Transform-only positioning: no `left`/`top` writes here, so this never
+  // forces a synchronous layout reflow no matter how many ducks are on
+  // screen or how often it runs.
   function layoutOverlay() {
-    const usableW = Math.max(app.renderer.width - DuckSprites.TILE * 0.7, 0);
     ducks.forEach((d) => {
-      const gx = d.container.x + app.view.getBoundingClientRect().left - field.getBoundingClientRect().left;
-      const gy = d.container.y - 26;
-      d.nameTag.style.left = `${d.container.x}px`;
-      d.nameTag.style.top = `${d.container.y + 20}px`;
-      d.badge.style.left = `${d.container.x}px`;
-      d.badge.style.top = `${d.container.y - 34}px`;
+      d.nameTag.style.transform = `translate(${(d.container.x - 48).toFixed(1)}px, ${(d.container.y + 20).toFixed(1)}px)`;
+      d.badge.style.transform = `translate(${(d.container.x - 8).toFixed(1)}px, ${(d.container.y - 34).toFixed(1)}px)`;
     });
   }
 
@@ -660,11 +660,17 @@ const DuckSprites = (() => {
     let virtualT = 0;
     let prevLeaderIdx = -1;
     let lastSplashCheck = 0;
+    let lastLbSort = 0;
     const usableW = () => Math.max(app.renderer.width - DuckSprites.TILE * 0.7, 0);
+    const rowH = ducks.length > 14 ? 19 : 26;
 
-    function frame() {
-      if (!racing) return;
-      const dtSec = (app.ticker.deltaMS / 1000) * speed;
+    // Single game loop, driven by Pixi's own ticker (not a second parallel
+    // rAF chain) — this is the "game loop" row from the stack table. dt is
+    // clamped so one slow/blocked frame can't be misread as the race
+    // suddenly leaping forward; Pixi's ticker already caps deltaMS at 100ms,
+    // this just tightens that further for this specific animation.
+    function raceTick() {
+      const dtSec = Math.min(app.ticker.deltaMS / 1000, 1 / 30) * speed;
       virtualT += dtSec;
 
       if (slowMo && !slowMoApplied && virtualT > maxTime * 0.85) {
@@ -679,11 +685,15 @@ const DuckSprites = (() => {
       const ranked = ducks.map((d, i) => {
         const progress = d.entrant.progressAt(virtualT);
         d.container.x = 24 + progress * usableW();
-        const delta = progress - d.prevProgress;
+        // Smoothed surge detector (exponential moving average of per-second
+        // speed) instead of a raw single-frame delta, so the swim-cycle
+        // speed doesn't flicker between two states every frame.
+        const instSpeed = (progress - d.prevProgress) / Math.max(dtSec, 0.0001);
+        d.smoothSpeed = d.smoothSpeed * 0.85 + instSpeed * 0.15;
         d.prevProgress = progress;
-        const surging = delta > 0.006;
-        d.container.duckBody.tint = d.color; // keep tint stable (surge feedback via speed below)
-        d.container.children.forEach((s) => { s.animationSpeed = surging ? 0.22 : 0.08; });
+        const surging = d.smoothSpeed > 0.35;
+        const targetAnimSpeed = surging ? 0.2 : 0.09;
+        d.container.children.forEach((s) => { s.animationSpeed += (targetAnimSpeed - s.animationSpeed) * 0.2; });
         if (surging && !d.wasSurging) spawnSplashFx(d.container.x, d.container.y, false);
         d.wasSurging = surging;
         if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
@@ -697,8 +707,9 @@ const DuckSprites = (() => {
       });
       ducks[leaderIdx].nameTag.classList.add("leading");
 
-      if (performance.now() - lastSplashCheck > 130) {
-        lastSplashCheck = performance.now();
+      const now = performance.now();
+      if (now - lastSplashCheck > 130) {
+        lastSplashCheck = now;
         if (leaderIdx !== prevLeaderIdx) {
           if (prevLeaderIdx !== -1) {
             spawnSplashFx(ducks[leaderIdx].container.x, ducks[leaderIdx].container.y, true);
@@ -708,11 +719,16 @@ const DuckSprites = (() => {
         }
       }
 
-      const rowH = ducks.length > 14 ? 19 : 26;
-      ranked.forEach((r, rank) => {
-        gsap.to(r.d.lbRow, { top: rank * rowH, duration: 0.22, ease: "power1.out", overwrite: true });
-        r.d.lbRow.classList.toggle("leader", rank === 0);
-      });
+      // Throttled leaderboard re-sort: just write `top` (a CSS transition
+      // on .lb-row handles the smooth slide) a few times a second instead
+      // of spinning up a new GSAP tween per row on every single frame.
+      if (now - lastLbSort > 140) {
+        lastLbSort = now;
+        ranked.forEach((r, rank) => {
+          r.d.lbRow.style.top = `${rank * rowH}px`;
+          r.d.lbRow.classList.toggle("leader", rank === 0);
+        });
+      }
 
       layoutOverlay();
 
@@ -722,13 +738,12 @@ const DuckSprites = (() => {
         if (!crowdStarted) { crowdStarted = true; SoundKit.crowdSwell(); }
       }
 
-      if (virtualT < maxTime) {
-        raceReq = requestAnimationFrame(frame);
-      } else {
+      if (virtualT >= maxTime) {
+        app.ticker.remove(raceTick);
         finishRace(result);
       }
     }
-    raceReq = requestAnimationFrame(frame);
+    app.ticker.add(raceTick);
   }
 
   function finishRace(result) {
@@ -763,7 +778,6 @@ const DuckSprites = (() => {
     }
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
 
-    const rect = field.getBoundingClientRect();
     confettiBurst(winner ? winner.container.x : app.renderer.width / 2, winner ? winner.container.y : app.renderer.height / 2);
   }
 
