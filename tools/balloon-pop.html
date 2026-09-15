@@ -244,7 +244,7 @@ Isla</textarea>
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
-      clock.textContent = Math.max(0, (duration - elapsed)).toFixed(1) + "s";
+      clock.textContent = Math.max(0, (maxTime - elapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided
 
       let leaderIdx = 0, leaderProgress = -1;
       displayOrder.forEach((entrant, i) => {

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duck Race (PixiJS Edition) — Pick &amp; Race</title>
+<meta name="description" content="Same duck race, rebuilt on PixiJS + GSAP + Howler.js instead of DOM/CSS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+
+<!-- The three libraries from the stack: WebGL renderer, tween/timeline engine, audio manager -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+
+<style>
+  main.wide-stage { max-width: 1360px; }
+  .tool-wrap { display: flex; flex-direction: column; gap: 16px; padding: 22px 0 64px; }
+
+  .stack-note {
+    border: var(--border); border-radius: var(--radius); background: var(--chalk-dim);
+    padding: 10px 16px; font-size: 0.85rem; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+  }
+  .stack-note a { font-weight: 700; text-decoration: underline; }
+  .stack-note code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 5px; }
+
+  .control-bar {
+    border: var(--border); border-radius: var(--radius); background: var(--paper);
+    padding: 14px 18px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 22px;
+  }
+  .control-bar .grp { display: flex; flex-direction: column; gap: 5px; }
+  .control-bar .grp.grow { flex: 1 1 260px; min-width: 220px; }
+  .control-bar label { font-weight: 600; font-size: 0.8rem; white-space: nowrap; }
+  .control-bar textarea {
+    width: 100%; min-height: 46px; max-height: 140px; border: var(--border); border-radius: 8px;
+    padding: 8px 10px; font-family: var(--font-body); font-size: 0.88rem; resize: vertical;
+  }
+  .control-bar input[type="range"] { width: 150px; }
+  .control-bar .toggle { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; white-space: nowrap; }
+  .control-bar .btns { display: flex; gap: 8px; margin-left: auto; }
+  .duration-val { font-family: var(--font-display); font-weight: 700; }
+
+  .stage {
+    border: var(--border); border-radius: var(--radius);
+    padding: 14px; position: relative; overflow: hidden; background: var(--paper);
+  }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 40px rgba(239,185,60,0.55) inset; }
+  .stage.projector { background: #10261a; }
+  .stage.projector .stage-header .status,
+  .stage.projector .stage-header .clock { color: #fff; }
+  .stage.projector .stage-header .clock { color: var(--pencil); }
+  .stage.projector .leaderboard-panel { background: rgba(10,24,20,0.6); color: #fff; }
+  .stage.projector .leaderboard-panel .lb-title { color: rgba(255,255,255,0.7); }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; position: relative; z-index: 12; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+
+  .field {
+    position: relative; width: 100%; height: clamp(400px, 60vh, 660px);
+    border-radius: 12px; overflow: hidden;
+    background: linear-gradient(180deg, #e3f7f2 0%, #b3e6dd 20%, #67c2b7 52%, #2c8f8a 100%);
+  }
+  #pixiHost { position: absolute; inset: 0; z-index: 3; }
+  #pixiHost canvas { display: block; width: 100%; height: 100%; }
+
+  .start-gate, .finish-gate { position: absolute; top: 0; bottom: 0; width: 3px; z-index: 2; }
+  .start-gate { left: 4%; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.7) 0 6px, rgba(30,42,69,0.4) 6px 12px); }
+  .finish-gate { right: 4%; background-image: repeating-linear-gradient(180deg, rgba(20,20,20,0.65) 0 8px, rgba(255,255,255,0.75) 8px 16px); }
+  .finish-gate::after { content: "🏁"; position: absolute; top: -4px; right: -9px; font-size: 18px; }
+
+  .name-tag {
+    position: absolute; transform: translate(-50%, 0); font-size: 0.66rem; font-weight: 700;
+    white-space: nowrap; max-width: 96px; overflow: hidden; text-overflow: ellipsis;
+    background: rgba(255,255,255,0.92); color: var(--ink); padding: 1px 7px; border-radius: 999px;
+    pointer-events: none; z-index: 6; opacity: 0; transition: opacity 0.15s ease;
+  }
+  .name-tag.always-visible, .name-tag.leading { opacity: 1; }
+  .name-tag.leading { font-weight: 800; }
+  .rank-badge {
+    position: absolute; transform: translate(-50%, 0); width: 16px; height: 16px; border-radius: 50%;
+    font-size: 0.64rem; font-weight: 800; line-height: 16px; text-align: center;
+    background: var(--ink); color: #fff; display: none; font-family: var(--font-display); z-index: 6;
+  }
+  .rank-badge.rank-1 { display: block; background: var(--pencil); color: var(--ink); }
+  .rank-badge.rank-2 { display: block; background: #e7e7e7; color: var(--ink); }
+  .rank-badge.rank-3 { display: block; background: #d8a06a; color: var(--ink); }
+
+  .fx-countdown {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    z-index: 40; pointer-events: none; background: rgba(10,12,20,0.28); border-radius: inherit;
+  }
+  .fx-countdown-num {
+    font-family: var(--font-display); font-weight: 800; color: #fff;
+    font-size: clamp(3.2rem, 10vw, 6rem);
+    text-shadow: 0 4px 0 rgba(0,0,0,0.35), 0 0 30px rgba(255,255,255,0.35);
+  }
+  .fx-photo-banner {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; font-family: var(--font-display); font-weight: 700;
+    font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 14px;
+    border-radius: 999px; z-index: 30;
+  }
+
+  .leaderboard-panel {
+    position: absolute; top: 14px; right: 14px; width: 180px; max-height: 62%;
+    background: rgba(255,255,255,0.62); backdrop-filter: blur(8px) saturate(1.3);
+    -webkit-backdrop-filter: blur(8px) saturate(1.3);
+    border: var(--border); border-radius: var(--radius); padding: 10px 12px 12px; overflow-y: auto; z-index: 9;
+  }
+  .leaderboard-panel .lb-title {
+    font-family: var(--font-display); font-weight: 700; font-size: 0.72rem;
+    margin-bottom: 8px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .lb-track { position: relative; }
+  .lb-row { position: absolute; left: 0; right: 0; height: 26px; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+  .lb-row .lb-rank { width: 16px; font-weight: 800; font-family: var(--font-display); color: var(--ink-soft); }
+  .lb-row.leader .lb-rank { color: var(--marker); }
+  .lb-row .lb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--chalk)); flex-shrink: 0; }
+  .lb-row .lb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-row.leader .lb-name { font-weight: 700; }
+
+  .winner-banner {
+    margin-top: 14px; border: var(--border); border-radius: var(--radius);
+    background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display);
+    font-size: 1.15rem; display: none;
+  }
+  .winner-banner.show { display: block; }
+  .history { margin-top: 12px; font-size: 0.82rem; color: var(--ink-soft); }
+  .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
+
+  @media (max-width: 860px) {
+    .field { height: clamp(320px, 52vh, 480px); }
+    .leaderboard-panel { position: static; width: 100%; max-height: 170px; margin-top: 10px; }
+    .control-bar .btns { margin-left: 0; width: 100%; }
+    .control-bar .btns .btn { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="rocket-race.html">Rocket Race</a>
+      <a href="turtle-race.html">Turtle Race</a>
+      <a href="balloon-pop.html">Balloon Pop</a>
+      <a href="ball-drop.html">Ball Drop</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap wide-stage">
+  <h1 style="margin-top:28px;">Duck Race Name Picker — PixiJS Edition</h1>
+  <p>Identical race logic and rules as the original, rebuilt on the PixiJS / GSAP / Howler.js stack.</p>
+
+  <div class="tool-wrap">
+    <div class="stack-note">
+      <span>⚙️ Rendering: <code>PixiJS</code> WebGL sprites</span>
+      <span>🎬 Timing/FX: <code>GSAP</code></span>
+      <span>🔊 Audio: <code>Howler.js</code> (playing synthesized WAVs, so no audio files to host)</span>
+      <a href="duck-race.html">← Back to the original CSS/SVG version</a>
+    </div>
+
+    <div class="control-bar">
+      <div class="grp grow">
+        <label for="names">Names (one per line)</label>
+        <textarea id="names">Ava
+Liam
+Noor
+Diego
+Priya
+Mateo
+Yuki
+Isla</textarea>
+      </div>
+      <div class="grp">
+        <label for="duration">Race length: <span class="duration-val" id="durationVal">8s</span></label>
+        <input type="range" id="duration" min="2" max="30" value="8">
+      </div>
+      <div class="grp">
+        <span class="toggle"><input type="checkbox" id="noRepeat"><label for="noRepeat" style="margin:0;">No repeats</label></span>
+        <span class="toggle"><input type="checkbox" id="projector"><label for="projector" style="margin:0;">Projector mode</label></span>
+        <span class="toggle"><input type="checkbox" id="soundToggle" checked><label for="soundToggle" style="margin:0;">Sound</label></span>
+      </div>
+      <div class="btns">
+        <button class="btn ghost small" id="resetHistory">Reset history</button>
+        <button class="btn marker" id="startBtn">Start the race</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="stage" id="stage">
+        <div class="stage-header">
+          <span class="status" id="statusText">Loading renderer…</span>
+          <span class="clock" id="clock">–</span>
+        </div>
+        <div class="field" id="field">
+          <div id="pixiHost"></div>
+          <div class="start-gate"></div>
+          <div class="finish-gate"></div>
+          <div class="leaderboard-panel">
+            <div class="lb-title">Standings</div>
+            <div class="lb-track" id="leaderboard"></div>
+          </div>
+        </div>
+      </div>
+      <div class="winner-banner" id="winnerBanner"></div>
+      <div class="history" id="historyList"></div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/race-engine.js"></script>
+<script>
+/* ============================================================================
+ * SoundKit — Howler.js playing procedurally-synthesized WAVs.
+ * Howler itself only ever plays *files*; since we don't want to ship or host
+ * any audio assets, each effect is rendered once at load time with an
+ * OfflineAudioContext (same synthesis approach as the original sound-fx.js),
+ * encoded to a WAV Blob, and handed to Howler as its "file". Howler then owns
+ * playback, pooling, volume, and mute — same job it'd do with real samples.
+ * ========================================================================== */
+const SoundKit = (() => {
+  let muted = false;
+  try { muted = localStorage.getItem("sfx-muted-pixi") === "1"; } catch (e) {}
+  const howls = {};
+  let ready = false;
+
+  function encodeWav(buffer) {
+    const numCh = buffer.numberOfChannels;
+    const len = buffer.length * numCh * 2 + 44;
+    const ab = new ArrayBuffer(len);
+    const view = new DataView(ab);
+    const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+    writeStr(0, "RIFF"); view.setUint32(4, len - 8, true); writeStr(8, "WAVE");
+    writeStr(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+    view.setUint16(22, numCh, true); view.setUint32(24, buffer.sampleRate, true);
+    view.setUint32(28, buffer.sampleRate * numCh * 2, true); view.setUint16(32, numCh * 2, true);
+    view.setUint16(34, 16, true); writeStr(36, "data"); view.setUint32(40, len - 44, true);
+    let offset = 44;
+    const chans = Array.from({ length: numCh }, (_, c) => buffer.getChannelData(c));
+    for (let i = 0; i < buffer.length; i++) {
+      for (let c = 0; c < numCh; c++) {
+        const s = Math.max(-1, Math.min(1, chans[c][i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+        offset += 2;
+      }
+    }
+    return URL.createObjectURL(new Blob([ab], { type: "audio/wav" }));
+  }
+
+  async function render(durationSec, build) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const ctx = new OAC(1, Math.ceil(44100 * durationSec), 44100);
+    build(ctx, ctx.destination);
+    const buf = await ctx.startRendering();
+    return encodeWav(buf);
+  }
+
+  function tone(ctx, dest, freq, dur, opts = {}) {
+    const { type = "sine", gain = 0.25, glideTo = null, delay = 0 } = opts;
+    const osc = ctx.createOscillator(); const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, delay);
+    if (glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(glideTo, 1), delay + dur);
+    g.gain.setValueAtTime(0.0001, delay);
+    g.gain.linearRampToValueAtTime(gain, delay + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, delay + dur);
+    osc.connect(g).connect(dest);
+    osc.start(delay); osc.stop(delay + dur + 0.03);
+  }
+
+  function noise(ctx, dest, dur, opts = {}) {
+    const { filterType = "bandpass", filterFreq = 1200, gain = 0.15, fadeIn = 0, delay = 0 } = opts;
+    const size = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buffer;
+    const filt = ctx.createBiquadFilter(); filt.type = filterType; filt.frequency.value = filterFreq;
+    const g = ctx.createGain();
+    if (fadeIn > 0) {
+      g.gain.setValueAtTime(0, delay);
+      g.gain.linearRampToValueAtTime(gain, delay + fadeIn);
+      g.gain.linearRampToValueAtTime(0, delay + dur);
+    } else {
+      g.gain.setValueAtTime(gain, delay);
+      g.gain.exponentialRampToValueAtTime(0.0001, delay + dur);
+    }
+    src.connect(filt).connect(g).connect(dest);
+    src.start(delay); src.stop(delay + dur + 0.05);
+  }
+
+  async function init() {
+    const [quackUrl, splashUrl, splashBigUrl, tickUrl, goUrl, fanfareUrl, crowdUrl] = await Promise.all([
+      render(0.15, (c, d) => tone(c, d, 300, 0.09, { type: "sawtooth", gain: 0.5, glideTo: 160 })),
+      render(0.15, (c, d) => noise(c, d, 0.12, { filterFreq: 1400, gain: 0.6 })),
+      render(0.3, (c, d) => noise(c, d, 0.22, { filterFreq: 900, gain: 0.7 })),
+      render(0.2, (c, d) => tone(c, d, 440, 0.15, { type: "square", gain: 0.5 })),
+      render(0.2, (c, d) => tone(c, d, 880, 0.15, { type: "square", gain: 0.5 })),
+      render(1.3, (c, d) => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(c, d, f, 0.28, { type: "triangle", gain: 0.5, delay: i * 0.11 }))),
+      render(2.6, (c, d) => noise(c, d, 2.5, { filterType: "lowpass", filterFreq: 900, gain: 0.35, fadeIn: 1.4 })),
+    ]);
+    howls.quack = new Howl({ src: [quackUrl], format: ["wav"], volume: 0.7 });
+    howls.splash = new Howl({ src: [splashUrl], format: ["wav"], volume: 0.7 });
+    howls.splashBig = new Howl({ src: [splashBigUrl], format: ["wav"], volume: 0.8 });
+    howls.tick = new Howl({ src: [tickUrl], format: ["wav"], volume: 0.7 });
+    howls.go = new Howl({ src: [goUrl], format: ["wav"], volume: 0.7 });
+    howls.fanfare = new Howl({ src: [fanfareUrl], format: ["wav"], volume: 0.8 });
+    howls.crowd = new Howl({ src: [crowdUrl], format: ["wav"], volume: 0.6 });
+    Howler.mute(muted);
+    ready = true;
+  }
+
+  const lastPlayed = {};
+  function allowed(key, minGapMs) {
+    const now = performance.now();
+    if (lastPlayed[key] && now - lastPlayed[key] < minGapMs) return false;
+    lastPlayed[key] = now;
+    return true;
+  }
+
+  return {
+    init,
+    isReady: () => ready,
+    isMuted: () => muted,
+    setMuted(m) {
+      muted = !!m;
+      try { localStorage.setItem("sfx-muted-pixi", muted ? "1" : "0"); } catch (e) {}
+      Howler.mute(muted);
+    },
+    quack(v = 1) { if (ready && allowed("quack", 90)) { const id = howls.quack.play(); howls.quack.rate(v, id); } },
+    splash(big) { if (ready && allowed("splash", big ? 0 : 100)) (big ? howls.splashBig : howls.splash).play(); },
+    beep(step) { if (ready) (step === "go" ? howls.go : howls.tick).play(); },
+    fanfare() { if (ready) howls.fanfare.play(); },
+    crowdSwell() { if (ready) return howls.crowd.play(), { stop: () => howls.crowd.stop() }; return { stop() {} }; },
+  };
+})();
+
+/* ============================================================================
+ * DuckSprites — builds one small runtime "sprite sheet" (a handful of swim-
+ * cycle frames baked onto an offscreen canvas) instead of a DOM/SVG node per
+ * duck. Every racer reuses the SAME textures; only Pixi's cheap per-instance
+ * `tint` differs, so 60 ducks cost barely more GPU time than 6.
+ * ========================================================================== */
+const DuckSprites = (() => {
+  const FRAMES = 6;
+  const TILE = 64;
+  let bodyTextures = null; // tinted per-racer
+  let faceTextures = null; // fixed colors (eye/beak), drawn once, never tinted
+
+  function drawDuck(ctx, cx, cy, phase, faceLayer) {
+    const tailWag = Math.sin(phase) * 12;
+    const bob = Math.sin(phase) * 1.5;
+    ctx.save();
+    ctx.translate(cx, cy + bob);
+    if (!faceLayer) {
+      // tail
+      ctx.save();
+      ctx.translate(-17, 2);
+      ctx.rotate((tailWag * Math.PI) / 180);
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath(); ctx.ellipse(0, 0, 7, 5.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      // body
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.ellipse(2, 4, 20, 14.5, 0, 0, Math.PI * 2); ctx.fill();
+      // wing shade
+      ctx.fillStyle = "rgba(0,0,0,0.16)";
+      ctx.beginPath(); ctx.ellipse(-3, 1, 9.5, 6.6, 0, 0, Math.PI * 2); ctx.fill();
+      // head
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(18, -10, 11, 0, Math.PI * 2); ctx.fill();
+      // cheek highlight
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.beginPath(); ctx.ellipse(21, -7, 3.2, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // beak
+      ctx.fillStyle = "#d9503f";
+      ctx.beginPath(); ctx.moveTo(26, -12); ctx.lineTo(38, -9); ctx.lineTo(26, -6); ctx.closePath(); ctx.fill();
+      // eye
+      ctx.fillStyle = "#1e2a45";
+      ctx.beginPath(); ctx.arc(21.5, -13, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(22.2, -13.7, 0.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function buildSheet(faceLayer) {
+    const canvas = document.createElement("canvas");
+    canvas.width = TILE * FRAMES;
+    canvas.height = TILE;
+    const ctx = canvas.getContext("2d");
+    for (let i = 0; i < FRAMES; i++) {
+      const phase = (i / FRAMES) * Math.PI * 2;
+      drawDuck(ctx, i * TILE + TILE * 0.55, TILE * 0.58, phase, faceLayer);
+    }
+    const base = PIXI.BaseTexture.from(canvas);
+    base.scaleMode = PIXI.SCALE_MODES.LINEAR;
+    return Array.from({ length: FRAMES }, (_, i) =>
+      new PIXI.Texture(base, new PIXI.Rectangle(i * TILE, 0, TILE, TILE))
+    );
+  }
+
+  function ensureBuilt() {
+    if (bodyTextures) return;
+    bodyTextures = buildSheet(false);
+    faceTextures = buildSheet(true);
+  }
+
+  /** Returns a Container with a tinted body AnimatedSprite + fixed-color face AnimatedSprite. */
+  function createDuck(color) {
+    ensureBuilt();
+    const container = new PIXI.Container();
+    const body = new PIXI.AnimatedSprite(bodyTextures);
+    body.tint = color;
+    const face = new PIXI.AnimatedSprite(faceTextures);
+    [body, face].forEach((s) => {
+      s.anchor.set(0.5);
+      s.animationSpeed = 0.12;
+      s.play();
+    });
+    container.addChild(body, face);
+    container.duckBody = body;
+    return container;
+  }
+
+  return { createDuck, TILE };
+})();
+
+/* ============================================================================
+ * Main race controller — same rules/UI as the original, driven by PixiJS
+ * ticker + GSAP tweens instead of DOM/WAAPI.
+ * ========================================================================== */
+(async () => {
+  const namesEl = document.getElementById("names");
+  const durationEl = document.getElementById("duration");
+  const durationVal = document.getElementById("durationVal");
+  const noRepeatEl = document.getElementById("noRepeat");
+  const projectorEl = document.getElementById("projector");
+  const soundToggleEl = document.getElementById("soundToggle");
+  const startBtn = document.getElementById("startBtn");
+  const resetHistoryBtn = document.getElementById("resetHistory");
+  const stage = document.getElementById("stage");
+  const field = document.getElementById("field");
+  const pixiHost = document.getElementById("pixiHost");
+  const leaderboard = document.getElementById("leaderboard");
+  const statusText = document.getElementById("statusText");
+  const clockEl = document.getElementById("clock");
+  const winnerBanner = document.getElementById("winnerBanner");
+  const historyList = document.getElementById("historyList");
+
+  const PALETTE = [0xefb93c, 0xffffff, 0x6fae8c, 0xe07a68, 0x8fb9d8, 0xc98fd8, 0xf2d16b, 0xd9a06a];
+
+  const app = new PIXI.Application({
+    resizeTo: field,
+    backgroundAlpha: 0,
+    antialias: true,
+  });
+  pixiHost.appendChild(app.view);
+
+  const world = new PIXI.Container();
+  app.stage.addChild(world);
+
+  // -- lightweight decorative water layer, drawn once, cheap to keep in Pixi too
+  const waterFx = new PIXI.Graphics();
+  world.addChildAt(waterFx, 0);
+  function drawWater() {
+    waterFx.clear();
+    const w = app.renderer.width, h = app.renderer.height;
+    for (let i = 0; i < 5; i++) {
+      waterFx.beginFill(0xffffff, 0.05 - i * 0.006);
+      waterFx.drawEllipse(w * 0.15, h * (0.15 + i * 0.05), w * 0.5, 18);
+      waterFx.endFill();
+    }
+  }
+  drawWater();
+  app.renderer.on("resize", drawWater);
+
+  const splashLayer = new PIXI.Container();
+  world.addChild(splashLayer);
+  const duckLayer = new PIXI.Container();
+  world.addChild(duckLayer);
+
+  function spawnSplashFx(x, y, big) {
+    SoundKit.splash(big);
+    const g = new PIXI.Graphics();
+    g.lineStyle(2, 0xffffff, 0.9);
+    g.drawCircle(0, 0, big ? 4 : 3);
+    g.position.set(x, y);
+    g.alpha = 1;
+    splashLayer.addChild(g);
+    gsap.to(g.scale, { x: big ? 5.5 : 3.4, y: big ? 5.5 : 3.4, duration: 0.65, ease: "power2.out" });
+    gsap.to(g, { alpha: 0, duration: 0.65, ease: "power2.out", onComplete: () => { splashLayer.removeChild(g); g.destroy(); } });
+  }
+
+  function confettiBurst(x, y) {
+    const colors = [0xefb93c, 0xd9503f, 0x35604a, 0x1e2a45, 0x8fb9d8, 0xc98fd8];
+    for (let i = 0; i < 40; i++) {
+      const g = new PIXI.Graphics();
+      const c = colors[i % colors.length];
+      const isCircle = Math.random() > 0.5;
+      g.beginFill(c);
+      if (isCircle) g.drawCircle(0, 0, 3 + Math.random() * 3);
+      else g.drawRect(-3, -3, 6 + Math.random() * 3, 6 + Math.random() * 3);
+      g.endFill();
+      g.position.set(x, y);
+      world.addChild(g);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 160;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 80 - Math.random() * 80;
+      const tl = gsap.timeline({ onComplete: () => { world.removeChild(g); g.destroy(); } });
+      tl.to(g, { x: `+=${dx}`, y: `+=${dy}`, rotation: Math.random() * 6, duration: 0.55, ease: "power2.out" }, 0)
+        .to(g, { y: `+=${260 + Math.random() * 160}`, alpha: 0, duration: 0.7, ease: "power1.in" }, 0.55);
+    }
+  }
+
+  const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let racing = false;
+  let ducks = []; // { container, entrant, laneY, prevProgress, nameTag, badge }
+  let alreadyWon = [];
+  let raceReq = null;
+
+  function getNames() {
+    return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function renderHistory() {
+    if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
+    historyList.innerHTML = "Already won this round: " +
+      alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
+  }
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  function assignLanes(n) {
+    const slots = shuffle(Array.from({ length: n }, (_, i) => i));
+    return slots.map((slot) => (slot + 0.5) / n);
+  }
+
+  // Overlay DOM elements (name tags, rank badges) synced to each duck's screen
+  // position every frame — text stays crisp at any zoom without a WebGL text pass.
+  const overlayLayer = document.createElement("div");
+  overlayLayer.style.cssText = "position:absolute; inset:0; z-index:6; pointer-events:none;";
+  field.appendChild(overlayLayer);
+
+  function buildStage(order) {
+    duckLayer.removeChildren();
+    overlayLayer.innerHTML = "";
+    const n = order.length;
+    const many = n > 14;
+    const showNamesAlways = n <= 10;
+    const laneYs = assignLanes(n);
+
+    ducks = order.map((entrant, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      const container = DuckSprites.createDuck(color);
+      const scale = many ? 0.55 : 0.85;
+      container.scale.set(scale);
+      container.y = laneYs[i] * app.renderer.height;
+      container.x = 24;
+      duckLayer.addChild(container);
+
+      const nameTag = document.createElement("div");
+      nameTag.className = "name-tag" + (showNamesAlways ? " always-visible" : "");
+      nameTag.textContent = entrant.name;
+      overlayLayer.appendChild(nameTag);
+
+      const badge = document.createElement("div");
+      badge.className = "rank-badge";
+      overlayLayer.appendChild(badge);
+
+      return { container, entrant, laneY: container.y, prevProgress: 0, nameTag, badge, color, wasSurging: false };
+    });
+
+    const rowH = many ? 19 : 26;
+    leaderboard.innerHTML = "";
+    leaderboard.style.height = `${n * rowH}px`;
+    ducks.forEach((d, i) => {
+      const row = document.createElement("div");
+      row.className = "lb-row";
+      row.style.top = `${i * rowH}px`;
+      row.innerHTML = `<span class="lb-rank">${i + 1}</span><span class="lb-dot" style="--c:#${d.color.toString(16).padStart(6, "0")}"></span><span class="lb-name">${escapeHtml(d.entrant.name)}</span>`;
+      leaderboard.appendChild(row);
+      d.lbRow = row;
+    });
+  }
+
+  function layoutOverlay() {
+    const usableW = Math.max(app.renderer.width - DuckSprites.TILE * 0.7, 0);
+    ducks.forEach((d) => {
+      const gx = d.container.x + app.view.getBoundingClientRect().left - field.getBoundingClientRect().left;
+      const gy = d.container.y - 26;
+      d.nameTag.style.left = `${d.container.x}px`;
+      d.nameTag.style.top = `${d.container.y + 20}px`;
+      d.badge.style.left = `${d.container.x}px`;
+      d.badge.style.top = `${d.container.y - 34}px`;
+    });
+  }
+
+  async function countdown() {
+    const overlay = document.createElement("div");
+    overlay.className = "fx-countdown";
+    stage.appendChild(overlay);
+    const labels = ["3", "2", "1", "GO!"];
+    for (const label of labels) {
+      overlay.innerHTML = `<span class="fx-countdown-num">${label}</span>`;
+      SoundKit.beep(label === "GO!" ? "go" : "tick");
+      const num = overlay.firstElementChild;
+      await new Promise((resolve) => {
+        gsap.fromTo(num, { scale: 0.3, opacity: 0 }, {
+          scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.4)",
+          onComplete: () => setTimeout(resolve, label === "GO!" ? 350 : 280),
+        });
+      });
+    }
+    overlay.remove();
+  }
+
+  async function runRace() {
+    if (racing) return;
+    const roster = getNames();
+    if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
+    racing = true;
+    winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
+
+    const duration = Number(durationEl.value);
+    const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
+    const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
+    const displayOrder = result.eligiblePool.map((name) => byName[name]);
+    buildStage(displayOrder);
+
+    statusText.textContent = "On your marks…";
+    await countdown();
+
+    ducks.forEach((d, i) => {
+      setTimeout(() => spawnSplashFx(d.container.x, d.container.y, i % 3 === 0), i * 35);
+    });
+
+    statusText.textContent = "Racing…";
+    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    const slowMo = result.photoFinish;
+    let speed = 1;
+    let slowMoApplied = false;
+    let crowdStarted = false;
+    let virtualT = 0;
+    let prevLeaderIdx = -1;
+    let lastSplashCheck = 0;
+    const usableW = () => Math.max(app.renderer.width - DuckSprites.TILE * 0.7, 0);
+
+    function frame() {
+      if (!racing) return;
+      const dtSec = (app.ticker.deltaMS / 1000) * speed;
+      virtualT += dtSec;
+
+      if (slowMo && !slowMoApplied && virtualT > maxTime * 0.85) {
+        slowMoApplied = true;
+        speed = 0.35;
+        statusText.textContent = "Photo finish incoming…";
+      }
+
+      clockEl.textContent = Math.max(0, maxTime - virtualT).toFixed(1) + "s";
+
+      let leaderIdx = 0, leaderProgress = -1;
+      const ranked = ducks.map((d, i) => {
+        const progress = d.entrant.progressAt(virtualT);
+        d.container.x = 24 + progress * usableW();
+        const delta = progress - d.prevProgress;
+        d.prevProgress = progress;
+        const surging = delta > 0.006;
+        d.container.duckBody.tint = d.color; // keep tint stable (surge feedback via speed below)
+        d.container.children.forEach((s) => { s.animationSpeed = surging ? 0.22 : 0.08; });
+        if (surging && !d.wasSurging) spawnSplashFx(d.container.x, d.container.y, false);
+        d.wasSurging = surging;
+        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
+        return { d, progress, i };
+      }).sort((a, b) => b.progress - a.progress);
+
+      ducks.forEach((d) => { d.badge.className = "rank-badge"; d.badge.textContent = ""; d.nameTag.classList.toggle("leading", false); });
+      ranked.slice(0, 3).forEach((r, rank) => {
+        r.d.badge.classList.add(`rank-${rank + 1}`);
+        r.d.badge.textContent = String(rank + 1);
+      });
+      ducks[leaderIdx].nameTag.classList.add("leading");
+
+      if (performance.now() - lastSplashCheck > 130) {
+        lastSplashCheck = performance.now();
+        if (leaderIdx !== prevLeaderIdx) {
+          if (prevLeaderIdx !== -1) {
+            spawnSplashFx(ducks[leaderIdx].container.x, ducks[leaderIdx].container.y, true);
+            gsap.fromTo(ducks[leaderIdx].container.duckBody, { tint: 0xffffff }, { tint: ducks[leaderIdx].color, duration: 0.4 });
+          }
+          prevLeaderIdx = leaderIdx;
+        }
+      }
+
+      const rowH = ducks.length > 14 ? 19 : 26;
+      ranked.forEach((r, rank) => {
+        gsap.to(r.d.lbRow, { top: rank * rowH, duration: 0.22, ease: "power1.out", overwrite: true });
+        r.d.lbRow.classList.toggle("leader", rank === 0);
+      });
+
+      layoutOverlay();
+
+      if (virtualT / maxTime > 0.82) {
+        gsap.to(world.scale, { x: 1.05, y: 1.05, duration: 0.4, overwrite: true });
+        gsap.to(world, { x: -app.renderer.width * 0.025, y: -app.renderer.height * 0.025, duration: 0.4, overwrite: true });
+        if (!crowdStarted) { crowdStarted = true; SoundKit.crowdSwell(); }
+      }
+
+      if (virtualT < maxTime) {
+        raceReq = requestAnimationFrame(frame);
+      } else {
+        finishRace(result);
+      }
+    }
+    raceReq = requestAnimationFrame(frame);
+  }
+
+  function finishRace(result) {
+    racing = false;
+    gsap.to(world.scale, { x: 1, y: 1, duration: 0.4 });
+    gsap.to(world, { x: 0, y: 0, duration: 0.4 });
+
+    const winner = ducks.find((d) => d.entrant.name === result.winner);
+    if (winner) {
+      spawnSplashFx(winner.container.x, winner.container.y, true);
+      gsap.to(winner.container.scale, { x: "+=0.15", y: "+=0.15", duration: 0.22, yoyo: true, repeat: 5, ease: "sine.inOut" });
+    }
+    gsap.fromTo(stage, { x: -6 }, { x: 0, duration: 0.38, ease: "elastic.out(1, 0.3)" });
+    SoundKit.fanfare();
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    statusText.textContent = "We have a winner";
+    clockEl.textContent = "🏁";
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.textContent = `🦆 ${result.winner} wins the race!`;
+    winnerBanner.classList.add("show");
+    gsap.fromTo(winnerBanner, { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.6)" });
+
+    if (result.photoFinish) {
+      const b = document.createElement("div");
+      b.className = "fx-photo-banner";
+      b.textContent = "Photo finish!";
+      stage.appendChild(b);
+      gsap.fromTo(b, { y: -14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35 });
+      setTimeout(() => b.remove(), 3200);
+    }
+    if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
+
+    const rect = field.getBoundingClientRect();
+    confettiBurst(winner ? winner.container.x : app.renderer.width / 2, winner ? winner.container.y : app.renderer.height / 2);
+  }
+
+  app.ticker.add(() => { if (!racing) layoutOverlay(); });
+
+  durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
+  projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
+  resetHistoryBtn.addEventListener("click", () => { alreadyWon = []; renderHistory(); });
+  soundToggleEl.addEventListener("change", () => SoundKit.setMuted(!soundToggleEl.checked));
+  startBtn.addEventListener("click", () => { Howler.ctx && Howler.ctx.resume && Howler.ctx.resume(); runRace(); });
+
+  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
+  statusText.textContent = "Loading sound engine…";
+  await SoundKit.init();
+  soundToggleEl.checked = !SoundKit.isMuted();
+  statusText.textContent = "Ready when you are";
+})();
+</script>
+
+</body>
+</html>
