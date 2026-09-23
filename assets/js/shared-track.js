@@ -38,7 +38,7 @@ const SharedTrack = (() => {
    * @returns {{ tokens, update(elapsed), setZoom(bool) }}
    */
   function buildField(tokensEl, leaderboardEl, entrants, opts = {}) {
-    const { tokenHTML, palette = ["#35604a"], manyThreshold = 14 } = opts;
+    const { tokenHTML, palette = ["#35604a"], manyThreshold = 14, onCross = null } = opts;
     const n = entrants.length;
     const many = n > manyThreshold;
     const fieldEl = tokensEl.closest(".field") || tokensEl;
@@ -98,12 +98,13 @@ const SharedTrack = (() => {
       el.style.animationDelay = `-${(Math.random() * 2).toFixed(2)}s`;
       el.innerHTML = `
         <span class="rank-badge"></span>
+        <span class="speed-trail"></span>
         <span class="token-art">${tokenHTML(entrant, color, i)}</span>
         <span class="name-tag">${escapeHtml(entrant.name)}</span>
       `;
       tokensEl.appendChild(el);
       const anim = buildAnim(el, entrant);
-      return { el, entrant, prevLeft: 0, badgeEl: el.querySelector(".rank-badge"), anim };
+      return { el, entrant, prevLeft: 0, crossed: false, badgeEl: el.querySelector(".rank-badge"), anim };
     });
 
     const rows = [];
@@ -134,7 +135,7 @@ const SharedTrack = (() => {
     // time-remapping math required on our end.
     function update(elapsed) {
       const liveTrackW = fieldEl.clientWidth;
-      let leaderIdx = 0, leaderProgress = -1, maxProgress = 0;
+      let leaderIdx = 0, leaderProgress = -1, maxProgress = 0, surgingCount = 0;
 
       const ranked = tokens
         .map((tok, i) => {
@@ -147,13 +148,24 @@ const SharedTrack = (() => {
           const usable = Math.max(liveTrackW - tok.el.offsetWidth, 0);
           const left = progress * usable;
           const delta = left - tok.prevLeft;
-          tok.el.classList.toggle("surging", delta > 1.6);
+          const surging = delta > 1.6;
+          tok.el.classList.toggle("surging", surging);
           tok.el.classList.toggle("stalled", delta < 0.05);
+          if (surging) surgingCount++;
           tok.prevLeft = left;
+          if (onCross && !tok.crossed && progress >= 0.985) {
+            tok.crossed = true;
+            onCross(tok.entrant, tok);
+          }
           if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
           return { i, progress };
         })
         .sort((a, b) => b.progress - a.progress);
+
+      // True when a meaningful chunk of the field surges at once — a good
+      // cue for a camera micro-shake, distinct from any single racer's own
+      // surge animation.
+      const groupSurge = tokens.length >= 3 && surgingCount / tokens.length >= 0.35;
 
       tokens.forEach((tok, i) => {
         tok.el.classList.remove("rank-1", "rank-2", "rank-3");
@@ -194,11 +206,19 @@ const SharedTrack = (() => {
         });
       }
 
-      return { leaderIdx, maxProgress, ranked };
+      return { leaderIdx, maxProgress, ranked, groupSurge };
     }
 
     function setZoom(on) {
       fieldEl.classList.toggle("zoom", !!on);
+    }
+
+    // A smaller, earlier zoom step than setZoom()'s near-finish punch-in —
+    // meant to be toggled on gradually as the race heats up (e.g. past the
+    // halfway mark, or whenever a group surge is detected) so the camera
+    // feels progressively more engaged rather than snapping in once at 82%.
+    function setZoomMild(on) {
+      fieldEl.classList.toggle("zoom-mild", !!on);
     }
 
     // Marks the winning token so it can celebrate (bounce + glow) while the
@@ -234,6 +254,16 @@ const SharedTrack = (() => {
       return Promise.all(promises).catch(() => {});
     }
 
+    // Resolves once ONE specific entrant's animation finishes — use this
+    // (with the winner's name) instead of finished() to end a race the
+    // moment the winner actually crosses the line, rather than waiting for
+    // the slowest racer in the field to also finish.
+    function finishedByName(name) {
+      const tok = tokens.find((t) => t.entrant.name === name);
+      if (tok && tok.anim) return tok.anim.finished.catch(() => {});
+      return Promise.resolve();
+    }
+
     // Cancels any in-flight animations from this field before it's torn down
     // (e.g. when a new race is built) so old tokens don't keep animating
     // detached from the DOM.
@@ -241,7 +271,7 @@ const SharedTrack = (() => {
       tokens.forEach((tok) => tok.anim && tok.anim.cancel());
     }
 
-    return { tokens, rows, update, setZoom, celebrateWinner, play, setPlaybackRate, finished, destroy };
+    return { tokens, rows, update, setZoom, setZoomMild, celebrateWinner, play, setPlaybackRate, finished, finishedByName, destroy };
   }
 
   return { assignLanes, buildField, shuffle };

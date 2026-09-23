@@ -108,14 +108,10 @@
   .stage-header .status, .stage-header .clock { color: var(--ink); }
 
   /* -- track furniture -------------------------------------------------- */
-  .field .start-gate, .field .finish-gate { position: absolute; top: 0; bottom: 0; width: 3px; z-index: 3; }
-  .field .start-gate { left: 4%; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.7) 0 6px, rgba(30,42,69,0.4) 6px 12px); }
-  .field .finish-gate { right: 4%; background-image: repeating-linear-gradient(180deg, rgba(20,20,20,0.65) 0 8px, rgba(255,255,255,0.75) 8px 16px); }
-  .field .finish-gate::after {
-    content: "🏁"; position: absolute; top: -4px; right: -9px; font-size: 18px;
-    animation: flag-wave 1.1s ease-in-out infinite;
-  }
-  @keyframes flag-wave { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+  .field .start-gate { left: 4%; width: 3px; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.7) 0 6px, rgba(30,42,69,0.4) 6px 12px); }
+  /* Retint the shared checkered finish arch to match the pond palette
+     instead of redefining its shape. */
+  .field .finish-gate { --fc-a: rgba(20,42,38,0.85); --fc-b: rgba(255,255,255,0.92); --finish-glow: rgba(239,185,60,0.6); }
 
   .splash-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
   .splash-pop { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; }
@@ -132,6 +128,8 @@
 
   /* -- the ducks themselves: perspective + layered SVG for a pseudo-3D feel */
   .field { perspective: 700px; }
+  .field.zoom-mild { transform: scale(1.016); }
+  .field.zoom-mild.zoom { transform: scale(1.045); }
   .field-token {
     position: absolute; left: 0; width: 46px; height: 46px;
     transform: translateY(-50%) translateX(0);
@@ -487,6 +485,14 @@ Isla</textarea>
     track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
       tokenHTML,
       palette: PALETTE,
+      // Small celebratory splash + a few confetti bits for EVERY duck that
+      // crosses the line, not just the winner — the finish gate should feel
+      // like an event each time, not just once at the very end.
+      onCross: (entrant, tok) => {
+        splashAtToken(tok.el, false);
+        const r = tok.el.getBoundingClientRect();
+        SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, { count: 10, spread: 0.35 });
+      },
     });
     prevLeaderIdx = -1;
   }
@@ -516,7 +522,7 @@ Isla</textarea>
     buildStage(displayOrder);
 
     statusText.textContent = "On your marks…";
-    await SuspenseFX.countdown(stage, ["3", "2", "1", "GO!"], (label) => SoundFX.beep(label === "GO!" ? "go" : "tick"));
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "GO!"], (label) => SoundFX.beep(label === "GO!" ? "go" : "tick"), fieldWrap);
 
     // A little splash-fest right at the starting line as everyone dives in.
     track.tokens.forEach((tok, i) => {
@@ -527,10 +533,17 @@ Isla</textarea>
     track.play(); // actual motion is now driven by each token's own Web Animation
 
     const start = performance.now();
-    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    // The clock (and every camera/slow-mo cue) is timed to the WINNER's own
+    // finish — not the slowest racer's — so the countdown reaches ~0 right
+    // as the winner crosses the line instead of the line being crossed
+    // while several seconds are still showing on the clock.
+    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
+    const maxTime = winnerTime + 0.3;
     const slowMo = result.photoFinish;
     let slowMoApplied = false;
     let crowdSwellStarted = false;
+    let zoomMildOn = false;
+    let lastGroupShake = 0;
 
     // This loop no longer drives position — it only reads each token's own
     // animation clock (via track.update) to keep the leaderboard, wake
@@ -551,7 +564,18 @@ Isla</textarea>
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
       clock.textContent = Math.max(0, (maxTime - displayElapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided (still uses displayElapsed so it stays in sync with slow-mo during a photo finish)
 
-      const { leaderIdx, ranked } = track.update(rawElapsed);
+      const { leaderIdx, ranked, groupSurge } = track.update(rawElapsed);
+
+      // Camera comes alive progressively: a mild push-in past the halfway
+      // mark, plus a quick shake whenever a big chunk of the field surges
+      // together (throttled so it can't fire every frame).
+      const overallProgress0 = displayElapsed / maxTime;
+      if (overallProgress0 > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }
+      if (groupSurge && now - lastGroupShake > 900) {
+        lastGroupShake = now;
+        SuspenseFX.microShake(stage);
+      }
+
       ranked.forEach((r) => {
         const wake = track.tokens[r.i].el.querySelector(".wake");
         if (wake) wake.style.width = Math.min(30, track.tokens[r.i].prevLeft * 0.4) + "px";
@@ -582,7 +606,11 @@ Isla</textarea>
     }
     requestAnimationFrame(rankFrame);
 
-    await track.finished(); // resolves when every racer's real animation completes
+    // End the race the instant the winner's own animation completes, not
+    // when every racer (including the slowest) has finished — that's what
+    // was letting the winner visibly cross the line while the clock still
+    // had time left on it.
+    await track.finishedByName(result.winner);
     finishRace(result);
   }
 
@@ -590,11 +618,13 @@ Isla</textarea>
     racing = false;
     if (track) {
       track.setZoom(false);
+      track.setZoomMild(false);
       track.celebrateWinner(result.winner);
       const winTok = track.tokens.find((t) => t.entrant.name === result.winner);
       if (winTok) splashAtToken(winTok.el, true);
     }
     SuspenseFX.shake(stage, 380);
+    SuspenseFX.winnerSpotlight(stage);
     SoundFX.fanfare();
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
@@ -602,7 +632,7 @@ Isla</textarea>
     clock.textContent = "🏁";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.textContent = `🦆 ${result.winner} wins the race!`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🦆 ${escapeHtml(result.winner)} wins the race!</span>`;
     winnerBanner.classList.add("show");
     if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
     if (noRepeatEl.checked) {

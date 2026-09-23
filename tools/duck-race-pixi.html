@@ -652,7 +652,11 @@ const DuckSprites = (() => {
     });
 
     statusText.textContent = "Racing…";
-    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    // Timed to the WINNER's own finish, not the slowest duck's, so the
+    // race actually ends the moment the winner crosses the line instead of
+    // continuing to count down toward whoever finishes last.
+    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
+    const maxTime = winnerTime + 0.3;
     const slowMo = result.photoFinish;
     let speed = 1;
     let slowMoApplied = false;

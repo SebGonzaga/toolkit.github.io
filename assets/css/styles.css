@@ -186,7 +186,9 @@ a { color: inherit; }
   overflow: hidden;
   transition: transform 0.4s ease;
 }
+.field.zoom-mild { transform: scale(1.018); }
 .field.zoom { transform: scale(1.045); }
+.field.zoom-mild.zoom { transform: scale(1.06); }
 .field.many-names { height: 350px; }
 
 .field .start-gate,
@@ -194,10 +196,33 @@ a { color: inherit; }
   position: absolute; top: 0; bottom: 0; width: 2px; z-index: 2;
 }
 .field .start-gate { left: 4%; background: rgba(0,0,0,0.15); }
+
+/* Finish line as a proper checkered arch: a checkerboard post, a matching
+   arch bar across the top, and a waving flag — plus a warm glow so it reads
+   as a destination, not just a stripe. Each skin can retint via --fc-a/--fc-b
+   and --finish-glow without redefining the whole shape. */
 .field .finish-gate {
-  right: 4%;
-  background-image: repeating-linear-gradient(180deg, rgba(0,0,0,0.55) 0 8px, transparent 8px 16px);
+  right: 4%; width: 9px; z-index: 3;
+  --fc-a: rgba(20, 20, 25, 0.88);
+  --fc-b: rgba(255, 255, 255, 0.92);
+  --finish-glow: rgba(239, 185, 60, 0.55);
+  background-image: repeating-conic-gradient(var(--fc-a) 0% 25%, var(--fc-b) 0% 50%);
+  background-size: 9px 9px;
+  box-shadow: 0 0 16px 2px var(--finish-glow);
+  border-radius: 2px;
 }
+.field .finish-gate::before {
+  content: ""; position: absolute; top: -9px; left: -16px; right: -16px; height: 9px;
+  background-image: repeating-conic-gradient(var(--fc-a) 0% 25%, var(--fc-b) 0% 50%);
+  background-size: 9px 9px;
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 0 10px 1px var(--finish-glow);
+}
+.field .finish-gate::after {
+  content: "\1F3C1"; position: absolute; top: -27px; right: -7px; font-size: 15px;
+  animation: finish-flag-wave 1s ease-in-out infinite; transform-origin: 70% 90%;
+}
+@keyframes finish-flag-wave { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(10deg); } }
 
 .field-tokens { position: absolute; inset: 0; z-index: 5; }
 
@@ -213,6 +238,17 @@ a { color: inherit; }
 
 .field-token .token-art { width: 100%; height: 100%; display: block; position: relative; }
 .field-token .token-art svg { width: 100%; height: 100%; display: block; }
+
+/* Generic speed trail: a light streak that grows behind any racer while it
+   surges. Themes with their own bespoke trail (thrust flame, wake, dust)
+   can leave this understated or hide it — it's additive, not load-bearing. */
+.field-token .speed-trail {
+  position: absolute; right: 100%; top: 50%; transform: translateY(-50%);
+  width: 0; height: 3px; border-radius: 3px; opacity: 0; z-index: 1;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55));
+  transition: width 0.12s ease, opacity 0.12s ease;
+}
+.field-token.surging .speed-trail { width: 22px; opacity: 0.8; }
 
 .field-token .rank-badge {
   position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
@@ -284,10 +320,23 @@ a { color: inherit; }
 .lb-row .lb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb-row.leader .lb-name { font-weight: 700; }
 
+/* Shared "big winner moment" banner dressing: an eyebrow + a large name,
+   instead of one flat sentence, so the win reads as a headline. Skins can
+   still set their own winner-banner background/border. */
+.winner-banner .wb-eyebrow {
+  display: block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px;
+}
+.winner-banner .wb-name {
+  display: block; font-size: 1.5rem; animation: wb-name-bounce 0.6s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes wb-name-bounce { 0% { transform: scale(0.8) translateY(6px); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+
 @media (max-width: 860px) {
   .field-stage { grid-template-columns: 1fr; }
   .leaderboard-panel { max-height: 170px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .field-token, .field-token .token-art, .field, .lb-row { animation: none !important; transition: none !important; }
+  .field-token, .field-token .token-art, .field, .lb-row, .winner-banner .wb-name,
+  .field .finish-gate::after, .field-token .speed-trail { animation: none !important; transition: none !important; }
 }

@@ -238,7 +238,11 @@ Isla</textarea>
 
     statusText.textContent = "Rising…";
     const start = performance.now();
-    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    // Timed to the WINNER's own rise time, not the slowest balloon's, so
+    // the clock/finish actually land the instant the winner pops instead of
+    // the winner popping while the clock still counts down for stragglers.
+    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
+    const maxTime = winnerTime + 0.3;
     let lastLeaderIdx = -1;
     let winnerPopped = false;
 

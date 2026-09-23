@@ -33,10 +33,25 @@
     position: relative; overflow: hidden;
   }
   .stage.projector { background: #050812; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 40px rgba(239,185,60,0.55) inset; }
 
   .starfield { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
   .star { position: absolute; background: #fff; border-radius: 50%; animation: twinkle ease-in-out infinite; }
   @keyframes twinkle { 0%,100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+  /* -- deep-space set dressing: drifting nebula wisps + distant planets --- */
+  .nebula { position: absolute; border-radius: 50%; filter: blur(18px); z-index: 0; pointer-events: none; opacity: 0.5; animation: nebula-drift ease-in-out infinite; }
+  @keyframes nebula-drift { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3%,-2%) scale(1.05); } }
+
+  .planet { position: absolute; border-radius: 50%; z-index: 1; pointer-events: none; animation: planet-drift ease-in-out infinite; }
+  .planet::after { content: ""; position: absolute; inset: -12% -34%; border-radius: 50%; border: 5px solid rgba(255,255,255,0.14); transform: rotate(-18deg); }
+  .planet.no-ring::after { display: none; }
+  @keyframes planet-drift { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
+
+  /* -- rocket exhaust: a flickering flame + drifting smoke/spark puffs --- */
+  .exhaust-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+  .exhaust-puff { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle, rgba(255,205,120,0.9), rgba(255,120,60,0) 70%); }
+  @keyframes puff-fade { 0% { transform: scale(0.5); opacity: 0.9; } 100% { transform: scale(2.2) translateX(-18px); opacity: 0; } }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
@@ -58,7 +73,12 @@
     transition: width 0.1s ease, opacity 0.1s ease;
     opacity: 0;
   }
-  .field-token.surging::before { width: 54px; opacity: 1; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95)); }
+  .field-token.surging::before { width: 54px; opacity: 1; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95)); animation: flame-flicker 0.18s ease-in-out infinite; }
+  @keyframes flame-flicker { 0%,100% { transform: translateY(-50%) scaleX(1); } 50% { transform: translateY(-50%) scaleX(0.85); } }
+  .field-token .speed-trail { display: none; } /* the ::before flame already covers this role here */
+  .field.zoom-mild { transform: scale(1.02); }
+  .field.zoom-mild.zoom { transform: scale(1.07); }
+  .field .finish-gate { --fc-a: rgba(15,18,32,0.85); --fc-b: rgba(239,185,60,0.9); --finish-glow: rgba(239,185,60,0.7); }
 
   .winner-banner {
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
@@ -132,15 +152,20 @@ Isla</textarea>
     <div>
       <div class="stage" id="stage">
         <div class="starfield" id="starfield"></div>
+        <div class="nebula" style="width:38%; aspect-ratio:1; left:-6%; top:12%; background:radial-gradient(circle, rgba(201,143,216,0.55), transparent 70%); animation-duration:16s;"></div>
+        <div class="nebula" style="width:30%; aspect-ratio:1; right:2%; bottom:-8%; background:radial-gradient(circle, rgba(143,185,216,0.4), transparent 70%); animation-duration:20s; animation-delay:-6s;"></div>
+        <div class="planet" style="width:46px; height:46px; left:8%; top:14%; background:radial-gradient(circle at 32% 30%, #efb93c, #a9660f 75%); animation-duration:9s;"></div>
+        <div class="planet no-ring" style="width:26px; height:26px; right:12%; top:22%; background:radial-gradient(circle at 35% 30%, #8fb9d8, #2c5b7a 75%); animation-duration:7s; animation-delay:-3s;"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
         <div class="field-stage">
-          <div class="field-wrap">
+          <div class="field-wrap" id="fieldWrap">
             <div class="field" id="field">
               <div class="start-gate"></div>
               <div class="finish-gate"></div>
+              <div class="exhaust-layer" id="exhaustLayer"></div>
               <div class="field-tokens" id="fieldTokens"></div>
             </div>
           </div>
@@ -168,6 +193,9 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
+  const fieldWrap = document.getElementById("fieldWrap");
+  const field = document.getElementById("field");
+  const exhaustLayer = document.getElementById("exhaustLayer");
   const fieldTokens = document.getElementById("fieldTokens");
   const leaderboard = document.getElementById("leaderboard");
   const statusText = document.getElementById("statusText");
@@ -191,6 +219,22 @@ Isla</textarea>
   let alreadyWon = [];
   let racing = false;
   let track = null;
+  const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // A couple of small sparks flung off a rocket's tail when it surges —
+  // cheap DOM particles, capped so a big roster can't flood the layer.
+  function spawnExhaustPuff(tokEl) {
+    if (prefersReducedMotion || exhaustLayer.childElementCount > 40) return;
+    const tRect = tokEl.getBoundingClientRect();
+    const fRect = field.getBoundingClientRect();
+    const p = document.createElement("div");
+    p.className = "exhaust-puff";
+    p.style.left = (tRect.left - fRect.left) + "px";
+    p.style.top = (tRect.top - fRect.top + tRect.height * 0.5 + (Math.random() * 6 - 3)) + "px";
+    p.style.animation = `puff-fade ${0.4 + Math.random() * 0.3}s ease-out forwards`;
+    exhaustLayer.appendChild(p);
+    setTimeout(() => p.remove(), 750);
+  }
 
   for (let i = 0; i < 60; i++) {
     const s = document.createElement("div");
@@ -227,6 +271,10 @@ Isla</textarea>
     track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
       tokenHTML,
       palette: PALETTE,
+      onCross: (entrant, tok) => {
+        const r = tok.el.getBoundingClientRect();
+        SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, { count: 10, spread: 0.35 });
+      },
     });
   }
 
@@ -252,16 +300,23 @@ Isla</textarea>
     buildStage(displayOrder);
 
     statusText.textContent = "Ignition sequence…";
-    await SuspenseFX.countdown(stage, ["3", "2", "1", "LIFTOFF!"]);
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "LIFTOFF!"], null, fieldWrap);
     SuspenseFX.shake(stage, 420);
 
     statusText.textContent = "3, 2, 1… liftoff!";
     track.play(); // actual motion is now driven by each token's own Web Animation
 
     const start = performance.now();
-    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    // Timed to the WINNER's own finish, not the slowest racer's, so the
+    // clock/zoom/slow-mo cues all reach their climax exactly when the
+    // winner crosses the line.
+    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
+    const maxTime = winnerTime + 0.3;
     const slowMo = result.photoFinish;
     let slowMoApplied = false;
+    let zoomMildOn = false;
+    let lastGroupShake = 0;
+    let lastPuffCheck = 0;
 
     // No longer drives position — only reads each token's own animation
     // clock (via track.update) to keep the leaderboard/clock in sync. Real
@@ -280,27 +335,47 @@ Isla</textarea>
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
       clock.textContent = Math.max(0, (maxTime - displayElapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided (still uses displayElapsed so it stays in sync with slow-mo during a photo finish)
 
-      track.update(rawElapsed);
+      const { groupSurge } = track.update(rawElapsed);
+
+      const overallProgress = displayElapsed / maxTime;
+      if (overallProgress > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }
+      if (overallProgress > 0.82) track.setZoom(true);
+      if (groupSurge && now - lastGroupShake > 900) {
+        lastGroupShake = now;
+        SuspenseFX.microShake(stage);
+      }
+      if (now - lastPuffCheck > 90) {
+        lastPuffCheck = now;
+        track.tokens.forEach((tok) => { if (tok.el.classList.contains("surging")) spawnExhaustPuff(tok.el); });
+      }
 
       requestAnimationFrame(rankFrame);
     }
     requestAnimationFrame(rankFrame);
 
-    await track.finished(); // resolves when every racer's real animation completes
+    // End the race the instant the winner's own animation completes —
+    // waiting for every racer used to let the winner cross the line while
+    // the clock (paced to the slowest racer) still had time on it.
+    await track.finishedByName(result.winner);
     finishRace(result);
   }
 
   function finishRace(result) {
     racing = false;
-    if (track) track.celebrateWinner(result.winner);
+    if (track) {
+      track.setZoom(false);
+      track.setZoomMild(false);
+      track.celebrateWinner(result.winner);
+    }
     SuspenseFX.flash(stage, 500);
+    SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "We have a winner";
     clock.textContent = "🏁";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.textContent = `🚀 ${result.winner} blasts across the line first!`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🚀 ${escapeHtml(result.winner)} blasts across the line first!</span>`;
     winnerBanner.classList.add("show");
     if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
     if (noRepeatEl.checked) {

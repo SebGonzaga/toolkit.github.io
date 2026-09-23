@@ -37,9 +37,40 @@
   .stage.projector .field-token .name-tag { background: rgba(255,255,255,0.15); color: #fff; }
   .stage.finished-glow { box-shadow: 0 0 0 4px var(--chalk), 0 0 40px rgba(53,96,74,0.5) inset; }
 
-  .heat-shimmer { position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  .heat-shimmer { position: absolute; inset: 0; pointer-events: none; z-index: 1;
     background: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 3px, transparent 3px 7px);
     opacity: 0.4; }
+
+  /* -- track environment: grass verges + a dirt lane, with scattered rocks,
+        flowers and bushes instead of one flat tan rectangle -------------- */
+  .dirt-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      linear-gradient(180deg,
+        #7fae57 0%, #6f9c4c 13%,
+        #d8c393 13%, #cdbb85 50%, #c2ae79 87%,
+        #6f9c4c 87%, #628a41 100%);
+  }
+  .stage.projector .dirt-bg {
+    background: linear-gradient(180deg, #1c2b12 0%, #17240e 13%, #3a2f18 13%, #332a15 87%, #17240e 87%, #101a0a 100%);
+  }
+  .dirt-texture {
+    position: absolute; left: 0; right: 0; top: 13%; bottom: 13%; z-index: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(94deg, rgba(0,0,0,0.05) 0 3px, transparent 3px 24px);
+  }
+  .field-decor { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .field-decor .decor { position: absolute; font-size: 1rem; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); }
+  .field-decor .decor.bush, .field-decor .decor.flower { animation: decor-sway ease-in-out infinite; transform-origin: 50% 100%; }
+  @keyframes decor-sway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+  .turtle-shadow {
+    position: absolute; left: 50%; bottom: 2%; width: 78%; height: 20%; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0,0,0,0.32), transparent 72%);
+    transform: translateX(-50%); z-index: 1;
+  }
+  .dust-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+  .dust-puff { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, rgba(150,120,70,0.6), transparent 70%); }
+  @keyframes dust-fade { 0% { transform: scale(0.4); opacity: 0.7; } 100% { transform: scale(1.8) translateX(-14px) translateY(3px); opacity: 0; } }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
@@ -47,9 +78,14 @@
   .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .field { background: #cdbb85; position: relative; z-index: 5; }
-  .stage.projector .field { background: #3a2f18; }
-  .field-token svg { animation: wob 1.4s ease-in-out infinite; transform-origin: 50% 80%; }
+  .field { position: relative; z-index: 5; }
+  .field.zoom-mild { transform: scale(1.02); }
+  .field.zoom-mild.zoom { transform: scale(1.06); }
+  .field .finish-gate { --fc-a: rgba(60,45,20,0.85); --fc-b: rgba(255,246,214,0.92); --finish-glow: rgba(53,96,74,0.55); }
+  /* Bigger, more prominent racers: larger token box + a real shadow. */
+  .field-token { width: 44px !important; height: 44px !important; }
+  .field.many-names .field-token { width: 30px !important; height: 30px !important; }
+  .field-token svg { animation: wob 1.4s ease-in-out infinite; transform-origin: 50% 80%; position: relative; z-index: 2; }
   @keyframes wob { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
   .field-token.surging svg { animation-duration: 0.5s; }
   .field-token.stalled svg { animation-duration: 3.4s; }
@@ -72,7 +108,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .field-token, .field-token svg { animation: none !important; transition: none !important; }
+    .field-token, .field-token svg, .field-decor .decor { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -127,16 +163,20 @@ Isla</textarea>
 
     <div>
       <div class="stage" id="stage">
-        <div class="heat-shimmer"></div>
         <div class="stage-header">
           <span class="status" id="statusText">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
         <div class="field-stage">
-          <div class="field-wrap">
+          <div class="field-wrap" id="fieldWrap">
             <div class="field" id="field">
+              <div class="dirt-bg"></div>
+              <div class="dirt-texture"></div>
+              <div class="heat-shimmer"></div>
+              <div class="field-decor" id="fieldDecor"></div>
               <div class="start-gate"></div>
               <div class="finish-gate"></div>
+              <div class="dust-layer" id="dustLayer"></div>
               <div class="field-tokens" id="fieldTokens"></div>
             </div>
           </div>
@@ -164,6 +204,10 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
+  const fieldWrap = document.getElementById("fieldWrap");
+  const field = document.getElementById("field");
+  const fieldDecor = document.getElementById("fieldDecor");
+  const dustLayer = document.getElementById("dustLayer");
   const fieldTokens = document.getElementById("fieldTokens");
   const leaderboard = document.getElementById("leaderboard");
   const statusText = document.getElementById("statusText");
@@ -185,6 +229,43 @@ Isla</textarea>
   let alreadyWon = [];
   let racing = false;
   let track = null;
+  const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Scatter rocks, flowers and bushes across the grass verges (top/bottom
+  // ~13% bands) once, purely decorative and CSS-animated from there.
+  const DECOR = [
+    { glyph: "🪨", cls: "rock", bands: [true, true] },
+    { glyph: "🌼", cls: "flower", bands: [true, true] },
+    { glyph: "🌿", cls: "bush", bands: [true, true] },
+    { glyph: "🌸", cls: "flower", bands: [true, true] },
+  ];
+  for (let i = 0; i < 16; i++) {
+    const d = DECOR[i % DECOR.length];
+    const el = document.createElement("span");
+    el.className = "decor " + d.cls;
+    el.textContent = d.glyph;
+    const inTopBand = i % 2 === 0;
+    el.style.left = (2 + Math.random() * 94) + "%";
+    el.style.top = inTopBand ? (1 + Math.random() * 8) + "%" : (91 + Math.random() * 7) + "%";
+    el.style.fontSize = (0.8 + Math.random() * 0.6) + "rem";
+    el.style.opacity = 0.75 + Math.random() * 0.25;
+    el.style.animationDuration = (2.4 + Math.random() * 2) + "s";
+    el.style.animationDelay = (Math.random() * 2) + "s";
+    fieldDecor.appendChild(el);
+  }
+
+  function spawnDust(tokEl) {
+    if (prefersReducedMotion || dustLayer.childElementCount > 40) return;
+    const tRect = tokEl.getBoundingClientRect();
+    const fRect = field.getBoundingClientRect();
+    const p = document.createElement("div");
+    p.className = "dust-puff";
+    p.style.left = (tRect.left - fRect.left) + "px";
+    p.style.top = (tRect.top - fRect.top + tRect.height * 0.82) + "px";
+    p.style.animation = `dust-fade ${0.5 + Math.random() * 0.3}s ease-out forwards`;
+    dustLayer.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -208,7 +289,7 @@ Isla</textarea>
   }
 
   function tokenHTML(entrant, color) {
-    return `<div class="dust"></div>${DUCK_SVG}`;
+    return `<div class="turtle-shadow"></div><div class="dust"></div>${DUCK_SVG}`;
   }
 
   function buildStage(order) {
@@ -216,6 +297,11 @@ Isla</textarea>
     track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
       tokenHTML,
       palette: PALETTE,
+      onCross: (entrant, tok) => {
+        spawnDust(tok.el);
+        const r = tok.el.getBoundingClientRect();
+        SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, { count: 10, spread: 0.35 });
+      },
     });
   }
 
@@ -241,7 +327,7 @@ Isla</textarea>
     buildStage(displayOrder);
 
     statusText.textContent = "Ready… whenever they feel like it…";
-    await SuspenseFX.countdown(stage, ["3", "2", "1", "GO! (eventually)"]);
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "GO! (eventually)"], null, fieldWrap);
 
     let commentaryIdx = 0;
     statusText.textContent = COMMENTARY[0];
@@ -253,9 +339,15 @@ Isla</textarea>
     track.play(); // actual motion is now driven by each token's own Web Animation
 
     const start = performance.now();
-    const maxTime = Math.max(...displayOrder.map((o) => o.finishTime)) + 0.3;
+    // Timed to the WINNER's own finish, not the slowest turtle's, so the
+    // clock reaches ~0 exactly as the winner crosses the line.
+    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
+    const maxTime = winnerTime + 0.3;
     const slowMo = result.photoFinish;
     let slowMoApplied = false;
+    let zoomMildOn = false;
+    let lastGroupShake = 0;
+    let lastDustCheck = 0;
 
     // No longer drives position — only reads each token's own animation
     // clock (via track.update) to keep the leaderboard/clock in sync. Real
@@ -275,28 +367,48 @@ Isla</textarea>
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
       clock.textContent = Math.max(0, (maxTime - displayElapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided (still uses displayElapsed so it stays in sync with slow-mo during a photo finish)
 
-      track.update(rawElapsed);
+      const { groupSurge } = track.update(rawElapsed);
+
+      const overallProgress = displayElapsed / maxTime;
+      if (overallProgress > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }
+      if (overallProgress > 0.82) track.setZoom(true);
+      if (groupSurge && now - lastGroupShake > 900) {
+        lastGroupShake = now;
+        SuspenseFX.microShake(stage);
+      }
+      if (now - lastDustCheck > 110) {
+        lastDustCheck = now;
+        track.tokens.forEach((tok) => { if (tok.el.classList.contains("surging")) spawnDust(tok.el); });
+      }
 
       requestAnimationFrame(rankFrame);
     }
     requestAnimationFrame(rankFrame);
 
-    await track.finished(); // resolves when every racer's real animation completes
+    // End the race the instant the winner's own animation completes —
+    // waiting for every turtle (including the slowest) let the winner
+    // cross the line while the clock still had time left on it.
+    await track.finishedByName(result.winner);
     clearInterval(commentaryTimer);
     finishRace(result);
   }
 
   function finishRace(result) {
     racing = false;
-    if (track) track.celebrateWinner(result.winner);
+    if (track) {
+      track.setZoom(false);
+      track.setZoomMild(false);
+      track.celebrateWinner(result.winner);
+    }
     SuspenseFX.shake(stage, 350);
+    SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "We have a winner (finally)";
     clock.textContent = "🏁";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.textContent = `🐢 ${result.winner} finally crosses the line!`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🐢 ${escapeHtml(result.winner)} finally crosses the line!</span>`;
     winnerBanner.classList.add("show");
     if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Impossibly close finish!");
     if (noRepeatEl.checked) {
