@@ -40,15 +40,16 @@
   .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .board { position: relative; height: 300px; margin: 0 4px; overflow: hidden; }
+  .board { position: relative; height: 300px; margin: 0 4px; overflow: hidden; transition: transform 0.4s ease; }
+  .board.zoom { transform: scale(1.03); }
   .pegs { position: absolute; inset: 0; }
   .peg { fill: rgba(30,42,69,0.35); transition: fill 0.12s ease, r 0.12s ease; transform-origin: center; transform-box: fill-box; }
-  .peg.hit { fill: var(--marker); r: 5; }
+  .peg.hit { fill: var(--marker); r: 5.5; }
   .ball {
-    position: absolute; top: 0; width: 22px; height: 22px; border-radius: 50%;
+    position: absolute; top: 0; width: 24px; height: 24px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #fff, var(--marker) 70%);
     border: 2px solid var(--ink);
-    box-shadow: 0 0 0 rgba(217,80,63,0);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
   }
   .ball-trail { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--marker); opacity: 0.35; pointer-events: none; }
   .slots { display: flex; overflow-x: auto; gap: 2px; padding-top: 6px; }
@@ -56,7 +57,7 @@
     flex: 1 1 0; min-width: 46px; border: var(--border); border-top: none; border-radius: 0 0 8px 8px;
     background: var(--paper-dim); padding: 8px 4px 10px; text-align: center; transition: background 0.2s, transform 0.2s;
   }
-  .slot.armed { background: rgba(217,80,63,0.18); }
+  .slot.armed { background: rgba(217,80,63,0.18); box-shadow: 0 0 12px 1px rgba(217,80,63,0.5); }
   .slot.landed { background: var(--pencil); transform: scale(1.06); }
   .slot-name { font-size: 0.78rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -247,7 +248,7 @@ Isla</textarea>
     ball.style.left = (boardW / 2 - 11) + "px";
 
     statusText.textContent = "Loading the ball…";
-    await SuspenseFX.countdown(stage, ["3", "2", "1", "Drop!"]);
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Drop!"], null, board);
     const slotEls = document.querySelectorAll(".slot");
     if (slotEls[winnerIdx]) slotEls[winnerIdx].classList.add("armed");
 
@@ -271,7 +272,11 @@ Isla</textarea>
       ball.style.left = x + "px";
 
       const row = Math.min(pegRows - 1, Math.floor((y / (boardH - 22)) * pegRows));
-      if (row !== lastRow && row >= 0) { hitRow(row); lastRow = row; }
+      if (row !== lastRow && row >= 0) {
+        hitRow(row);
+        lastRow = row;
+        if (row >= pegRows - 2) SuspenseFX.microShake(stage);
+      }
       trailTick++;
       if (trailTick % 3 === 0) spawnTrail(x + 9, y + 9);
 
@@ -290,6 +295,7 @@ Isla</textarea>
     dropping = false;
     stage.classList.remove("zoom");
     SuspenseFX.shake(stage, 350);
+    SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "Landed!";
@@ -298,7 +304,7 @@ Isla</textarea>
     if (slotEls[idx]) { slotEls[idx].classList.remove("armed"); slotEls[idx].classList.add("landed"); }
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.textContent = `🔴 The ball lands on ${result.winner}!`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🎯 Winner</span><span class="wb-name">🔴 The ball lands on ${escapeHtml(result.winner)}!</span>`;
     winnerBanner.classList.add("show");
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
     const rect = (slotEls[idx] || stage).getBoundingClientRect();

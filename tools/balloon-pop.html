@@ -234,7 +234,7 @@ Isla</textarea>
     buildStage(displayOrder);
 
     statusText.textContent = "Inflating…";
-    await SuspenseFX.countdown(stage, ["3", "2", "1", "Release!"]);
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Release!"], null, trackArea);
 
     statusText.textContent = "Rising…";
     const start = performance.now();
@@ -245,12 +245,13 @@ Isla</textarea>
     const maxTime = winnerTime + 0.3;
     let lastLeaderIdx = -1;
     let winnerPopped = false;
+    let lastGroupShake = 0;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
       clock.textContent = Math.max(0, (maxTime - elapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided
 
-      let leaderIdx = 0, leaderProgress = -1;
+      let leaderIdx = 0, leaderProgress = -1, surgingCount = 0;
       displayOrder.forEach((entrant, i) => {
         const el = document.getElementById(`balloon-${i}`);
         if (!el) return;
@@ -260,7 +261,9 @@ Isla</textarea>
         const progress = entrant.progressAt(elapsed);
         const bottom = progress * trackH;
         el.style.bottom = bottom + "px";
-        el.classList.toggle("surging", bottom - prevBottom > 2.2);
+        const surging = bottom - prevBottom > 2.2;
+        el.classList.toggle("surging", surging);
+        if (surging) surgingCount++;
         el.dataset.prevBottom = bottom;
         if (progress >= 0.999 && entrant.name === result.winner && !winnerPopped) {
           winnerPopped = true;
@@ -268,6 +271,11 @@ Isla</textarea>
         }
         if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
+
+      if (displayOrder.length >= 3 && surgingCount / displayOrder.length >= 0.35 && now - lastGroupShake > 900) {
+        lastGroupShake = now;
+        SuspenseFX.microShake(stage);
+      }
 
       if (leaderIdx !== lastLeaderIdx) {
         document.querySelectorAll(".col.leader").forEach((c) => c.classList.remove("leader"));
@@ -288,13 +296,14 @@ Isla</textarea>
   function finishRace(result) {
     racing = false;
     SuspenseFX.shake(stage, 300);
+    SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "Pop!";
     clock.textContent = "🎈";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.textContent = `🎈 ${result.winner}'s balloon pops at the top first!`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🎈 ${escapeHtml(result.winner)}'s balloon pops at the top first!</span>`;
     winnerBanner.classList.add("show");
     if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }

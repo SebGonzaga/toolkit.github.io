@@ -188,6 +188,18 @@ const SharedTrack = (() => {
       }
       prevLeaderIdx = leaderIdx;
 
+      // Camera-follow: bias the zoom's transform-origin toward the leading
+      // racer's current x position instead of the dead centre, so when
+      // setZoom()/setZoomMild() scale the track up, the push-in reads as
+      // "the camera is tracking the leader" rather than a flat centre-zoom.
+      // Cheap (one style write/frame) and composes with any existing zoom
+      // class since it only ever touches transform-origin, never transform.
+      const leaderTok = tokens[leaderIdx];
+      if (leaderTok && liveTrackW > 0) {
+        const originX = Math.min(92, Math.max(8, ((leaderTok.prevLeft + leaderTok.el.offsetWidth / 2) / liveTrackW) * 100));
+        fieldEl.style.transformOrigin = originX.toFixed(1) + "% 50%";
+      }
+
       const now = performance.now();
       if (leaderboardEl && now - lastLbUpdate > 140) {
         lastLbUpdate = now;

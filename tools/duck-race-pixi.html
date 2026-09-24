@@ -96,6 +96,8 @@
     font-size: clamp(3.2rem, 10vw, 6rem);
     text-shadow: 0 4px 0 rgba(0,0,0,0.35), 0 0 30px rgba(255,255,255,0.35);
   }
+  .fx-countdown-num.fx-long { font-size: clamp(1.7rem, 6.4vw, 3.1rem); letter-spacing: 0.03em; }
+  #field.fx-precountdown-zoom { transform: scale(1.02); transition: transform 0.7s cubic-bezier(.2,.7,.3,1); }
   .fx-photo-banner {
     position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
     background: var(--ink); color: #fff; font-family: var(--font-display); font-weight: 700;
@@ -218,6 +220,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
 <script>
 /* ============================================================================
  * SoundKit — Howler.js playing procedurally-synthesized WAVs.
@@ -615,9 +618,11 @@ const DuckSprites = (() => {
     const overlay = document.createElement("div");
     overlay.className = "fx-countdown";
     stage.appendChild(overlay);
-    const labels = ["3", "2", "1", "GO!"];
+    field.classList.add("fx-precountdown-zoom");
+    const labels = ["READY!", "3", "2", "1", "GO!"];
     for (const label of labels) {
-      overlay.innerHTML = `<span class="fx-countdown-num">${label}</span>`;
+      const long = label.length > 2;
+      overlay.innerHTML = `<span class="fx-countdown-num${long ? " fx-long" : ""}">${label}</span>`;
       SoundKit.beep(label === "GO!" ? "go" : "tick");
       const num = overlay.firstElementChild;
       await new Promise((resolve) => {
@@ -628,6 +633,7 @@ const DuckSprites = (() => {
       });
     }
     overlay.remove();
+    field.classList.remove("fx-precountdown-zoom");
   }
 
   async function runRace() {
@@ -665,6 +671,7 @@ const DuckSprites = (() => {
     let prevLeaderIdx = -1;
     let lastSplashCheck = 0;
     let lastLbSort = 0;
+    let lastGroupShake = 0;
     const usableW = () => Math.max(app.renderer.width - DuckSprites.TILE * 0.7, 0);
     const rowH = ducks.length > 14 ? 19 : 26;
 
@@ -736,10 +743,25 @@ const DuckSprites = (() => {
 
       layoutOverlay();
 
+      // Progressive, leader-tracking camera: as the race nears its climax,
+      // zoom in and pan so the pivot lands on wherever the current leader
+      // actually is, instead of a fixed off-center nudge — mirrors the
+      // transform-origin approach the DOM-based races use.
       if (virtualT / maxTime > 0.82) {
-        gsap.to(world.scale, { x: 1.05, y: 1.05, duration: 0.4, overwrite: true });
-        gsap.to(world, { x: -app.renderer.width * 0.025, y: -app.renderer.height * 0.025, duration: 0.4, overwrite: true });
+        const leaderX = ducks[leaderIdx] ? ducks[leaderIdx].container.x : app.renderer.width / 2;
+        const targetScale = 1.055;
+        const panX = (app.renderer.width / 2 - leaderX) * (targetScale - 1);
+        gsap.to(world.scale, { x: targetScale, y: targetScale, duration: 0.4, overwrite: true });
+        gsap.to(world, { x: panX, y: -app.renderer.height * 0.02, duration: 0.4, overwrite: true });
         if (!crowdStarted) { crowdStarted = true; SoundKit.crowdSwell(); }
+      }
+
+      // A quick camera jolt when a meaningful chunk of the field surges
+      // together — throttled so it can't fire every frame.
+      const surgingCount = ducks.reduce((n, d) => n + (d.wasSurging ? 1 : 0), 0);
+      if (ducks.length >= 3 && surgingCount / ducks.length >= 0.35 && now - lastGroupShake > 900) {
+        lastGroupShake = now;
+        SuspenseFX.microShake(stage);
       }
 
       if (virtualT >= maxTime) {
@@ -762,13 +784,14 @@ const DuckSprites = (() => {
     }
     gsap.fromTo(stage, { x: -6 }, { x: 0, duration: 0.38, ease: "elastic.out(1, 0.3)" });
     SoundKit.fanfare();
+    SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "We have a winner";
     clockEl.textContent = "🏁";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.textContent = `🦆 ${result.winner} wins the race!`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🦆 ${escapeHtml(result.winner)} wins the race!</span>`;
     winnerBanner.classList.add("show");
     gsap.fromTo(winnerBanner, { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.6)" });
 

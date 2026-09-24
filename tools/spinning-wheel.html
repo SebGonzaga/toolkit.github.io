@@ -17,7 +17,8 @@
 
   .stage { border: var(--border); border-radius: var(--radius); background: var(--chalk-dim); padding: 24px; min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
   .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 44px rgba(239,185,60,0.6) inset; }
-  .wheel-wrap { position: relative; width: 320px; height: 320px; }
+  .wheel-wrap { position: relative; width: 320px; height: 320px; transition: transform 0.4s ease; }
+  .wheel-wrap.zoom { transform: scale(1.06); }
   .wheel-glow {
     position: absolute; inset: -10px; border-radius: 50%;
     box-shadow: 0 0 0 0 rgba(239,185,60,0.5);
@@ -165,6 +166,7 @@ Mateo</textarea>
 
     const start = performance.now();
     let lastTickSlice = -1;
+    let zoomedIn = false;
 
     function frame(now) {
       const elapsed = now - start;
@@ -172,6 +174,11 @@ Mateo</textarea>
       const eased = easeOutQuint(t);
       const rotation = startRotation + totalDelta * eased;
       wheel.style.transform = `rotate(${rotation}deg)`;
+
+      // A late push-in as the wheel visibly slows down, right when the
+      // outcome starts to feel inevitable — not before, so it doesn't
+      // undercut the "which slice will it land on" suspense.
+      if (t > 0.82 && !zoomedIn) { zoomedIn = true; wheelWrap.classList.add("zoom"); }
 
       const tickSlice = Math.floor(rotation / slice);
       if (tickSlice !== lastTickSlice) {
@@ -193,13 +200,15 @@ Mateo</textarea>
 
   function finishSpin(result) {
     spinning = false;
+    wheelWrap.classList.remove("zoom");
     SuspenseFX.shake(wheelWrap, 260);
+    SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     sparkleBurst();
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.textContent = `🎉 ${result.winner} wins the spin!`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🎉 ${escapeHtml(result.winner)} wins the spin!</span>`;
     winnerBanner.classList.add("show");
     const rect = wheelWrap.getBoundingClientRect();
     SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
