@@ -80,6 +80,40 @@
   .field.zoom-mild.zoom { transform: scale(1.07); }
   .field .finish-gate { --fc-a: rgba(15,18,32,0.85); --fc-b: rgba(239,185,60,0.9); --finish-glow: rgba(239,185,60,0.7); }
 
+  /* A perspective wrapper around the rocket art itself (never on
+     .field-token — shared-track.js drives that element's own transform via
+     WAAPI for position, so any decorative animation lives one level down).
+     Idle drift is a slow pitch/roll wobble; surging adds a forward-leaning
+     bank so a burst of speed visibly tilts the nose down the track. */
+  .rocket3d {
+    position: relative; width: 100%; height: 100%;
+    transform-style: preserve-3d; transform-origin: 50% 50%;
+    animation: rocket-drift 1.3s ease-in-out infinite;
+  }
+  .rocket3d svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+  @keyframes rocket-drift {
+    0%, 100% { transform: rotateX(10deg) rotateZ(-3deg) translateY(0) translateZ(0); }
+    50%      { transform: rotateX(-8deg) rotateZ(3deg) translateY(-3px) translateZ(5px); }
+  }
+  .field-token.surging .rocket3d { animation: rocket-drift-surge 0.42s ease-in-out infinite; }
+  @keyframes rocket-drift-surge {
+    0%, 100% { transform: rotateX(6deg) rotateZ(-8deg) translateY(0) translateZ(0); }
+    50%      { transform: rotateX(-4deg) rotateZ(-2deg) translateY(-2px) translateZ(4px); }
+  }
+  .field-token.stalled .rocket3d { animation-duration: 2.6s; filter: saturate(0.8); }
+  /* Fins flutter independently of the body wobble so the rocket doesn't
+     read as one rigid cutout. */
+  .r-fin { animation: fin-flutter 0.6s ease-in-out infinite; transform-box: fill-box; }
+  .r-fin.top { transform-origin: 0% 100%; }
+  .r-fin.bottom { transform-origin: 0% 0%; animation-delay: -0.3s; }
+  @keyframes fin-flutter { 0%,100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+  .field-token.surging .r-fin { animation-duration: 0.24s; }
+  /* The engine core glow pulses on its own rhythm, independent of the trail
+     flame outside the token (::before above), for a lit-from-within look. */
+  .r-core { animation: core-pulse 0.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes core-pulse { 0%,100% { opacity: 0.55; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
+  .field-token.surging .r-core { animation-duration: 0.16s; }
+
   .winner-banner {
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
     background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display);
@@ -97,7 +131,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .field-token, .field-token svg, .star { animation: none !important; transition: none !important; }
+    .field-token, .field-token svg, .star, .rocket3d, .r-fin, .r-core { animation: none !important; transition: none !important; transform: none !important; }
   }
 </style>
 </head>
@@ -204,17 +238,39 @@ Isla</textarea>
   const historyList = document.getElementById("historyList");
   const starfield = document.getElementById("starfield");
 
-  const DUCK_SVG = `<svg viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 15 L44 6 Q58 15 44 24 Z" fill="var(--c,#d9503f)"/>
-    <circle cx="30" cy="15" r="4.5" fill="#eef1fb"/>
-    <path d="M18 8 L28 11 L18 12 Z" fill="#8fb9d8"/>
-    <path d="M18 22 L28 19 L18 18 Z" fill="#8fb9d8"/>
-  </svg>`;
-  const PALETTE = ["#d9503f", "#efb93c", "#8fb9d8", "#c98fd8", "#ffffff", "#35604a"];
-
-  function tokenHTML(entrant, color) {
-    return DUCK_SVG.replace('var(--c,#d9503f)', color);
+  // A layered, gradient-shaded rocket instead of one flat solid path: a
+  // radial-gradient fuselage (light source upper-left) for a rounded-tube
+  // look, separate nose-cone and fin shapes so they can move independently,
+  // a glass-highlight porthole, and a pulsing engine core. Each token gets
+  // a phase offset (idx-based) so a fleet of rockets doesn't flutter/bob in
+  // perfect unison.
+  function tokenHTML(entrant, color, idx) {
+    const gid = `rocketGrad${idx}`;
+    const phase = ((idx * 0.11) % 1).toFixed(2);
+    return `
+      <div class="rocket3d" style="animation-delay:-${phase}s">
+        <svg viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="${gid}" cx="40%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/>
+              <stop offset="42%" stop-color="${color}" stop-opacity="1"/>
+              <stop offset="100%" stop-color="${color}" stop-opacity="0.6"/>
+            </radialGradient>
+          </defs>
+          <path class="r-fin bottom" style="animation-delay:-${phase}s" d="M18 22 L28 19 L18 18 Z" fill="#5b83a3"/>
+          <path class="r-fin top" style="animation-delay:-${phase}s" d="M18 8 L28 11 L18 12 Z" fill="#8fb9d8"/>
+          <path d="M4 15 L44 6 Q58 15 44 24 Z" fill="url(#${gid})"/>
+          <!-- Underside shading: a soft dark sweep along the belly of the
+               fuselage so it reads as a cylinder, not a flat wedge. -->
+          <path class="r-shade" d="M10 20 Q28 27 46 18 Q28 24 10 20 Z" fill="rgba(0,0,0,0.18)"/>
+          <path class="r-hi" d="M10 10 Q26 6 40 9 Q26 9.5 10 10 Z" fill="rgba(255,255,255,0.35)"/>
+          <circle cx="30" cy="15" r="4.6" fill="#1e2a45"/>
+          <circle class="r-core" cx="30" cy="15" r="3.6" fill="#eef1fb"/>
+          <circle cx="31.3" cy="13.7" r="1.1" fill="#fff" opacity="0.6"/>
+        </svg>
+      </div>`;
   }
+  const PALETTE = ["#d9503f", "#efb93c", "#8fb9d8", "#c98fd8", "#ffffff", "#35604a"];
 
   let alreadyWon = [];
   let racing = false;

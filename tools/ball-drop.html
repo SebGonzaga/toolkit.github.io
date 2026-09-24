@@ -51,6 +51,16 @@
     border: 2px solid var(--ink);
     box-shadow: 0 3px 6px rgba(0,0,0,0.3);
   }
+  /* The highlight above is a reflection of the light source, so it must
+     stay fixed as the ball moves — real rolling motion instead lives in
+     this separate inner layer: a faint seam pattern that we rotate in JS
+     in proportion to horizontal distance travelled, the way an actual
+     sphere's surface markings would spin as it rolls. */
+  .ball-spin {
+    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: repeating-conic-gradient(rgba(0,0,0,0.16) 0deg 6deg, transparent 6deg 90deg);
+    opacity: 0.55;
+  }
   .ball-trail { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--marker); opacity: 0.35; pointer-events: none; }
   .slots { display: flex; overflow-x: auto; gap: 2px; padding-top: 6px; }
   .slot {
@@ -133,7 +143,7 @@ Isla</textarea>
         </div>
         <div class="board" id="board">
           <svg class="pegs" id="pegSvg"></svg>
-          <div class="ball" id="ball" style="display:none;"></div>
+          <div class="ball" id="ball" style="display:none;"><div class="ball-spin" id="ballSpin"></div></div>
         </div>
         <div class="slots" id="slots"></div>
       </div>
@@ -157,6 +167,7 @@ Isla</textarea>
   const board = document.getElementById("board");
   const pegSvg = document.getElementById("pegSvg");
   const ball = document.getElementById("ball");
+  const ballSpin = document.getElementById("ballSpin");
   const slotsEl = document.getElementById("slots");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
@@ -347,6 +358,9 @@ Isla</textarea>
     ball.style.display = "block";
     ball.style.top = "0px";
     ball.style.left = (startX - BALL_R) + "px";
+    ball.style.transform = "scale(1,1)";
+    let spinDeg = 0, lastX = startX;
+    ballSpin.style.transform = "rotate(0deg)";
 
     statusText.textContent = "Loading the ball…";
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Drop!"], null, board);
@@ -379,6 +393,13 @@ Isla</textarea>
 
       ball.style.top = (y - BALL_R) + "px";
       ball.style.left = (x - BALL_R) + "px";
+      // Roll the surface pattern in proportion to horizontal distance
+      // travelled (arc length / radius), like an actual rolling sphere —
+      // not just a spin synced to elapsed time, which would look identical
+      // whether the ball was moving or briefly stalled against a peg.
+      spinDeg += ((x - lastX) / BALL_R) * (180 / Math.PI);
+      lastX = x;
+      ballSpin.style.transform = `rotate(${spinDeg.toFixed(1)}deg)`;
 
       // Fire peg-hit flashes off the real collisions the simulation recorded
       // (not a guessed row from height), scaled onto the same playback clock.
@@ -386,6 +407,13 @@ Isla</textarea>
         const row = sim.hits[hitIdx].row;
         if (row !== lastRow) { hitRow(row); lastRow = row; }
         if (row >= pegRows - 2) SuspenseFX.microShake(stage);
+        // A quick squash-and-recover on the ball itself for every impact —
+        // the visual cue that it just bounced off something solid, not
+        // just changed direction.
+        ball.animate(
+          [{ transform: "scale(1,1)" }, { transform: "scale(1.22,0.8)", offset: 0.35 }, { transform: "scale(1,1)" }],
+          { duration: 160, easing: "ease-out" }
+        );
         hitIdx++;
       }
 
