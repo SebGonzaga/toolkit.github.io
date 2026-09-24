@@ -163,12 +163,48 @@ Isla</textarea>
   const historyList = document.getElementById("historyList");
   const clouds = document.getElementById("clouds");
 
-  const BALLOON_SVG = `<svg viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="20" cy="18" rx="16" ry="18" fill="var(--c,#d9503f)"/>
-    <path d="M20 36 L17 40 L23 40 Z" fill="var(--c,#d9503f)"/>
-    <path d="M20 40 Q16 44 20 50" stroke="#4a5674" stroke-width="1.2" fill="none"/>
-  </svg>`;
   const PALETTE = ["#d9503f", "#efb93c", "#35604a", "#8fb9d8", "#c98fd8", "#ffffff"];
+
+  // shade(color, amt): nudge every RGB channel of a hex color by amt
+  // (negative = darker, positive = lighter) to derive real matching
+  // shadow/highlight tones from each racer's palette color.
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const clamp = (v) => Math.min(255, Math.max(0, v));
+    const r = clamp((n >> 16) + amt), g = clamp(((n >> 8) & 0xff) + amt), b = clamp((n & 0xff) + amt);
+    return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+  }
+
+  // A glossy latex balloon instead of one flat-filled ellipse: a multi-stop
+  // radial gradient (light upper-left) for a rounded, stretched-rubber
+  // look, a broad soft sheen plus a sharp specular dot (the combo that
+  // reads as "shiny", not just "light"), and a dark rim shadow along the
+  // lower edge so it reads as a sphere, not a disc. Each balloon gets its
+  // own gradient id since every column renders its own inline <svg>.
+  function balloonHTML(color, idx) {
+    const gid = `balloonGrad${idx}`;
+    const mid = shade(color, -20);
+    const deep = shade(color, -90);
+    const knot = shade(color, -35);
+    return `<svg viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="${gid}" cx="34%" cy="24%" r="82%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.85"/>
+          <stop offset="18%" stop-color="#fff" stop-opacity="0.4"/>
+          <stop offset="42%" stop-color="${color}" stop-opacity="1"/>
+          <stop offset="78%" stop-color="${mid}" stop-opacity="1"/>
+          <stop offset="100%" stop-color="${deep}" stop-opacity="1"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="20" cy="18" rx="16" ry="18" fill="url(#${gid})" stroke="${deep}" stroke-width="0.5" stroke-opacity="0.4"/>
+      <ellipse cx="14" cy="11" rx="6" ry="8.5" fill="#fff" opacity="0.32" transform="rotate(-18 14 11)"/>
+      <ellipse cx="12.3" cy="8" rx="2" ry="2.8" fill="#fff" opacity="0.8" transform="rotate(-18 12.3 8)"/>
+      <path d="M8 29 Q20 37 32 29 Q20 34 8 29 Z" fill="rgba(0,0,0,0.17)"/>
+      <path d="M20 36 L17 40 L23 40 Z" fill="${knot}"/>
+      <ellipse cx="20" cy="36.6" rx="2.1" ry="0.9" fill="rgba(255,255,255,0.35)"/>
+      <path d="M20 40 Q16 44 20 50" stroke="#4a5674" stroke-width="1.2" fill="none"/>
+    </svg>`;
+  }
 
   let alreadyWon = [];
   let racing = false;
@@ -212,7 +248,7 @@ Isla</textarea>
       col.innerHTML = `
         <div class="col-track" data-idx="${i}">
           <div class="ceiling-mark"></div>
-          <div class="balloon-token" id="balloon-${i}">${BALLOON_SVG.replace(/var\\(--c,#d9503f\\)/g, color)}</div>
+          <div class="balloon-token" id="balloon-${i}">${balloonHTML(color, i)}</div>
         </div>
         <div class="col-name">${escapeHtml(entrant.name)}</div>`;
       trackArea.appendChild(col);

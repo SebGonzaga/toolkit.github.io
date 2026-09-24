@@ -379,14 +379,32 @@ Isla</textarea>
 
   const PALETTE = ["#efb93c", "#ffffff", "#35604a", "#d9503f", "#8fb9d8", "#c98fd8"];
 
+  // shade(color, amt): nudge every RGB channel of a hex color by amt
+  // (negative = darker, positive = lighter). Used to derive real matching
+  // shadow/highlight tones from each racer's palette color instead of
+  // leaning on flat black/white overlays alone — that's what pushes the
+  // shapes from "tinted silhouette" toward "lit volume".
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const clamp = (v) => Math.min(255, Math.max(0, v));
+    const r = clamp((n >> 16) + amt), g = clamp(((n >> 8) & 0xff) + amt), b = clamp((n & 0xff) + amt);
+    return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+  }
+
   // Layered, radially-shaded duck built from a few SVG shapes rather than
   // one flat silhouette, plus a shadow + paddle ripples baked into the same
   // markup so every racer carries its own "3D" swim + splash effects.
+  // Three-stop gradients (bright highlight -> true color -> a genuinely
+  // darker shade of the same hue) plus a crisp specular dot and a thin rim
+  // light read as a glossy, rounded body instead of a flat tinted disc.
   // A per-token phase offset (idx-based) desyncs the bob/wing/tail timing
   // across racers so a big field doesn't move in obvious lockstep.
   function tokenHTML(entrant, color, idx) {
     const gid = `duckGrad${idx}`;
     const gid2 = `duckHeadGrad${idx}`;
+    const gid3 = `duckBeakGrad${idx}`;
+    const mid = shade(color, -25);
+    const deep = shade(color, -95);
     const phase = ((idx * 0.13) % 1).toFixed(2);
     return `
       <div class="duck-shadow"></div>
@@ -399,28 +417,42 @@ Isla</textarea>
             <!-- Off-center radial gradients (light from upper-left) instead
                  of a flat top-to-bottom fade, so the body/head read as
                  rounded volumes rather than a flat tinted silhouette. -->
-            <radialGradient id="${gid}" cx="38%" cy="28%" r="75%">
-              <stop offset="0%" stop-color="#fff" stop-opacity="0.55"/>
-              <stop offset="38%" stop-color="${color}" stop-opacity="1"/>
-              <stop offset="100%" stop-color="${color}" stop-opacity="0.62"/>
+            <radialGradient id="${gid}" cx="36%" cy="25%" r="82%">
+              <stop offset="0%" stop-color="#fff" stop-opacity="0.7"/>
+              <stop offset="26%" stop-color="${color}" stop-opacity="1"/>
+              <stop offset="64%" stop-color="${mid}" stop-opacity="1"/>
+              <stop offset="100%" stop-color="${deep}" stop-opacity="1"/>
             </radialGradient>
-            <radialGradient id="${gid2}" cx="35%" cy="30%" r="70%">
-              <stop offset="0%" stop-color="#fff" stop-opacity="0.6"/>
-              <stop offset="45%" stop-color="${color}" stop-opacity="1"/>
-              <stop offset="100%" stop-color="${color}" stop-opacity="0.68"/>
+            <radialGradient id="${gid2}" cx="33%" cy="27%" r="75%">
+              <stop offset="0%" stop-color="#fff" stop-opacity="0.75"/>
+              <stop offset="32%" stop-color="${color}" stop-opacity="1"/>
+              <stop offset="100%" stop-color="${mid}" stop-opacity="1"/>
             </radialGradient>
+            <linearGradient id="${gid3}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f7b273"/>
+              <stop offset="100%" stop-color="#c96a2e"/>
+            </linearGradient>
           </defs>
-          <ellipse class="d-tail" style="animation-delay:-${phase}s" cx="9" cy="28" rx="6.5" ry="5" fill="url(#${gid})"/>
-          <ellipse class="d-body" cx="26" cy="30" rx="20" ry="14" fill="url(#${gid})"/>
+          <ellipse class="d-tail" style="animation-delay:-${phase}s" cx="9" cy="28" rx="6.5" ry="5" fill="url(#${gid})" stroke="${deep}" stroke-width="0.5" stroke-opacity="0.4"/>
+          <ellipse class="d-body" cx="26" cy="30" rx="20" ry="14" fill="url(#${gid})" stroke="${deep}" stroke-width="0.6" stroke-opacity="0.35"/>
           <!-- Underside shading: a soft dark arc along the belly sells the
                body as a sphere sitting in light, not a flat disc. -->
-          <path class="d-belly-shade" d="M10 34 Q26 44 42 34 Q26 40 10 34 Z" fill="rgba(0,0,0,0.16)"/>
-          <ellipse class="d-wing" style="animation-delay:-${phase}s" cx="22" cy="29" rx="9.5" ry="7" fill="rgba(0,0,0,0.16)"/>
-          <path class="d-wing-hi" d="M16 25 Q22 21 29 25 Q22 25 16 25 Z" fill="rgba(255,255,255,0.3)"/>
-          <circle class="d-head" cx="42" cy="16" r="11" fill="url(#${gid2})"/>
-          <ellipse cx="45" cy="19" rx="3.2" ry="2.2" fill="#fff" opacity="0.4"/>
-          <path d="M50 14 L61 17 L50 20 Z" fill="#d9503f"/>
-          <path d="M50 15.5 L58 17 L50 18.6 Z" fill="#f2795f"/>
+          <path class="d-belly-shade" d="M10 34 Q26 44 42 34 Q26 40 10 34 Z" fill="rgba(0,0,0,0.18)"/>
+          <!-- Rim light: a thin bright arc along the top edge, opposite the
+               belly shade, so light reads as wrapping around a round body. -->
+          <path class="d-rim" d="M8 19 Q26 12 44 18" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.1" stroke-linecap="round"/>
+          <ellipse class="d-wing" style="animation-delay:-${phase}s" cx="22" cy="29" rx="9.5" ry="7" fill="rgba(0,0,0,0.18)"/>
+          <path class="d-wing-hi" d="M16 25 Q22 21 29 25 Q22 25 16 25 Z" fill="rgba(255,255,255,0.32)"/>
+          <!-- A couple of feather strokes on the wing for surface texture. -->
+          <path d="M17 27 Q21 29.2 26 28 M17 30 Q21 32.2 26 31" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="0.8" stroke-linecap="round"/>
+          <circle class="d-head" cx="42" cy="16" r="11" fill="url(#${gid2})" stroke="${deep}" stroke-width="0.5" stroke-opacity="0.35"/>
+          <!-- Soft chin shade so the head reads as a sphere, not a disc. -->
+          <path d="M36 22 Q42 26.5 47 22" fill="none" stroke="rgba(0,0,0,0.13)" stroke-width="1.4" stroke-linecap="round"/>
+          <ellipse cx="45" cy="19" rx="3.4" ry="2.4" fill="#fff" opacity="0.45"/>
+          <circle cx="38.5" cy="10.5" r="1.7" fill="#fff" opacity="0.6"/>
+          <path d="M50 14 L61 17 L50 20 Z" fill="url(#${gid3})"/>
+          <path d="M50 15.5 L58 17 L50 18.6 Z" fill="#ffd9a8" opacity="0.85"/>
+          <path d="M52 16.4 L57 17 L52 17.6 Z" fill="#8a4a1e" opacity="0.5"/>
           <circle cx="45.5" cy="13" r="2" fill="#1e2a45"/>
           <circle cx="46.2" cy="12.3" r="0.6" fill="#fff"/>
         </svg>
