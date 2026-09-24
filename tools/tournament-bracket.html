@@ -132,6 +132,7 @@ Sana</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -278,10 +279,12 @@ Sana</textarea>
     const flips = 7 + Math.floor(Math.random() * 3) * 2 + (side === 0 ? 0 : 1); // parity lands on the winner
     for (let i = 0; i < flips; i++) {
       slots.forEach((s, k) => s.classList.toggle("flash", k === (i % 2)));
+      SoundFX.tick(i % 2 ? 1.25 : 0.95);   // ping-pong between the two names
       await sleep(70 + i * i * 6);
     }
     slots.forEach((s) => s.classList.remove("flash"));
     el.classList.remove("playing");
+    if (!(r === rounds.length - 1)) SoundFX.matchWin();
     setWinner(r, m, side);
     render();
     if (champion) celebrate();

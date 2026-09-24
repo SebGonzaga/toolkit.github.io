@@ -37,6 +37,7 @@
   .duck {
     position: absolute; left: -8%; width: 42px; height: 34px;
     animation: swim linear infinite;
+    cursor: pointer; pointer-events: auto;   /* click a duck: it quacks */
   }
   @keyframes swim {
     0% { left: -8%; transform: translateY(0); }
@@ -133,6 +134,38 @@
 <footer class="site-footer">
   <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever.</div>
 </footer>
+
+<script src="assets/js/sound-fx.js"></script>
+<script>
+  // Every tool card "says" something when you hover it (audio unlocks after your first click/tap).
+  const PREVIEWS = {
+    "duck-race": "duck", "rocket-race": "rocket", "turtle-race": "turtle", "ball-drop": "ball",
+    "balloon-pop": "balloon", "spinning-wheel": "wheel", "slot-machine": "slot", "mystery-card-flip": "card",
+    "team-generator": "team", "tournament-bracket": "bracket", "weighted-picker": "weighted",
+    "elimination-mode": "elim", "yes-no-wheel": "yesno",
+  };
+  document.querySelectorAll(".tool-card").forEach((card) => {
+    const slug = (card.getAttribute("href") || "").split("/").pop().replace(".html", "");
+    card.dataset.sfxHover = "off";   // suppress the generic bloop; the card plays its own preview
+    card.addEventListener("mouseenter", () => SoundFX.preview(PREVIEWS[slug]));
+  });
+
+  // Easter egg: click a pond duck (or the logo) for a quack, a squeak, and a little wiggle.
+  document.querySelectorAll(".pond .duck, .brand .mark").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();          // the logo links to this same page; stay put and quack instead
+      e.stopPropagation();
+      SoundFX.unlock();
+      SoundFX.quack(0.9 + Math.random() * 0.4);
+      setTimeout(() => SoundFX.squeak(1 + Math.random() * 0.3), 120);
+      el.animate(
+        [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-14deg) scale(1.25)" },
+         { transform: "rotate(10deg) scale(1.1)" }, { transform: "rotate(0) scale(1)" }],
+        { duration: 380, easing: "ease-out" }
+      );
+    });
+  });
+</script>
 
 </body>
 </html>

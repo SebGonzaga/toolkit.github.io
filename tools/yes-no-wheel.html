@@ -101,6 +101,7 @@ No</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -202,6 +203,7 @@ No</textarea>
     (async () => {
       await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Spin!"]);
       const start = performance.now();
+      SoundFX.slideWhistle(400, 1400, 0.4, 0.1);
       function frame(now) {
         const t = Math.min(1, (now - start) / duration);
         const rot = startRot + delta * easeOutQuint(t);
@@ -210,6 +212,7 @@ No</textarea>
         const tick = Math.floor(rot / sl);
         if (tick !== lastTick) {
           lastTick = tick;
+          SoundFX.tick(1.15 - t * 0.35);
           pointer.classList.add("tick"); wheelGlow.classList.add("pulse");
           setTimeout(() => { pointer.classList.remove("tick"); wheelGlow.classList.remove("pulse"); }, 90);
         }
@@ -229,6 +232,7 @@ No</textarea>
     banner.classList.remove("show"); void banner.offsetWidth; banner.classList.add("show");
     hub.textContent = { yes: "👍", no: "👎", maybe: "🤔" }[answer.toLowerCase()] || "✨";
     tally[answer] = (tally[answer] || 0) + 1; renderTally();
+    SoundFX.answer(answer);   // ding-ding for yes, a buzzer for no, "hmmm" for maybe
     SuspenseFX.shake(wheelWrap, 260);
     SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");

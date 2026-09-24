@@ -176,6 +176,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
@@ -300,6 +301,7 @@ Isla</textarea>
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Flip!"], null, cardArena);
 
     statusText.textContent = "Flipping through the deck…";
+    SoundFX.drumroll(Math.max(1, totalDuration - 0.6));
 
     // TIMER CONTRACT: the slider value is exactly when the winner is revealed.
     // Time is split into a flutter build-up (fast-then-slow, same ease-in
@@ -332,18 +334,21 @@ Isla</textarea>
     const stepScale = flutterBudget / stepSum;
 
     for (const raw of steps) {
+      SoundFX.flutter();   // fwip-fwip-fwip as the deck riffles
       await flutter(raw * stepScale, 10 + Math.random() * 14);
     }
 
     const herrings = RaceEngine.shuffle(result.eligiblePool.filter((n) => n !== result.winner));
     for (let p = 0; p < peekCount; p++) {
       statusText.textContent = "Is it…?";
+      SoundFX.uhoh();
       await peek(herrings[p % herrings.length] || result.winner, { duration: PEEK_DUR });
       await new Promise((r) => setTimeout(r, PEEK_GAP * 1000));
     }
 
     statusText.textContent = "Almost there…";
     cardName.textContent = result.winner;
+    SoundFX.flipReveal();
     await weightedFlip({ spins: 1, duration: FINAL_DUR, lift: 20, scaleUp: 1.08 });
     SuspenseFX.microShake(stage);
 

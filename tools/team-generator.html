@@ -146,6 +146,7 @@ Tariq</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -235,6 +236,7 @@ Tariq</textarea>
       const per = Math.max(60, Math.min(320, 4500 / deals.length));
       for (let i = 0; i < deals.length; i++) {
         placeMember(teams, deals[i]);
+        SoundFX.deal(deals[i].team);   // each team has its own note
         if (i === deals.length - 1) break;
         await new Promise((r) => setTimeout(r, per));
       }
@@ -244,6 +246,7 @@ Tariq</textarea>
     dealing = false; dealBtn.disabled = false;
     statusText.textContent = "Teams are set!";
     actions.hidden = false;
+    SoundFX.winner();
     SuspenseFX.shake(stage, 260);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);

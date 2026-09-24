@@ -124,6 +124,7 @@
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -223,6 +224,7 @@
     statusText.textContent = "Shaking the hat…";
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Draw!"]);
     statusText.textContent = "Drawing…";
+    SoundFX.rattle(0.7);   // shaking the hat
 
     const steps = Math.max(18, Math.min(30, flickerPool.length * 3));
     let prev = null;
@@ -233,6 +235,7 @@
       else { do { n = flickerPool[Math.floor(Math.random() * flickerPool.length)]; } while ((n === prev || n === result.winner && i === steps - 2) && flickerPool.length > 2); }
       prev = n;
       ticketName.classList.remove("ghost");
+      SoundFX.tick(0.9 + Math.random() * 0.3);
       ticketName.textContent = n;
       renderHat(n);
       clock.textContent = "";
@@ -241,6 +244,7 @@
     }
 
     ticket.classList.add("locked");
+    SoundFX.stamp();
     renderHat(null, result.winner);
     statusText.textContent = "Drawn!";
     SuspenseFX.microShake(ticket, 260);

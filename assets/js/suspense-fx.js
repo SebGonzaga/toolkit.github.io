@@ -6,6 +6,13 @@
  */
 const SuspenseFX = (() => {
   let injected = false;
+
+  // Optional sound layer: if sound-fx.js is on the page, every effect below
+  // gets a matching cartoon sound for free. Pages without it stay silent.
+  function sfx(name, ...args) {
+    try { if (typeof SoundFX !== "undefined" && SoundFX[name]) SoundFX[name](...args); } catch (e) { /* audio is never critical */ }
+  }
+
   function injectStyles() {
     if (injected) return;
     injected = true;
@@ -112,6 +119,7 @@ const SuspenseFX = (() => {
         const label = labels[i];
         const long = String(label).length > 2;
         overlay.innerHTML = `<span class="fx-countdown-num${long ? " fx-long" : ""}">${label}</span>`;
+        sfx("countdownStep", label, i, labels.length);
         if (onStep) onStep(label, i);
         i++;
         if (i < labels.length) {
@@ -130,6 +138,7 @@ const SuspenseFX = (() => {
 
   function shake(el, duration = 420) {
     injectStyles();
+    sfx("thud");
     el.classList.remove("fx-shake");
     void el.offsetWidth; // restart animation
     el.classList.add("fx-shake");
@@ -141,6 +150,7 @@ const SuspenseFX = (() => {
   // finish-line jolt firing every few seconds.
   function microShake(el, duration = 220) {
     injectStyles();
+    sfx("bump");
     el.classList.remove("fx-micro-shake");
     void el.offsetWidth;
     el.classList.add("fx-micro-shake");
@@ -149,6 +159,7 @@ const SuspenseFX = (() => {
 
   function flash(el, duration = 500) {
     injectStyles();
+    sfx("sparkle");
     el.classList.remove("fx-flash");
     void el.offsetWidth;
     el.classList.add("fx-flash");
@@ -157,6 +168,7 @@ const SuspenseFX = (() => {
 
   function photoFinishBanner(container, text = "Photo finish!") {
     injectStyles();
+    sfx("dramatic");
     const b = document.createElement("div");
     b.className = "fx-photo-banner";
     b.textContent = text;
@@ -169,6 +181,8 @@ const SuspenseFX = (() => {
    * of the viewport). shapes: array of css backgrounds/emoji strings optional.
    */
   function burst(x = window.innerWidth / 2, y = window.innerHeight / 3, opts = {}) {
+    // Big celebratory bursts get a party popper; the small per-racer ones a plain pop.
+    sfx((opts.count || 36) >= 20 ? "partyPopper" : "pop", 1 + Math.random() * 0.4);
     const { count = 36, colors = ["#efb93c", "#d9503f", "#35604a", "#1e2a45", "#8fb9d8", "#c98fd8"], spread = 1 } = opts;
     for (let i = 0; i < count; i++) {
       const el = document.createElement("div");
@@ -202,6 +216,7 @@ const SuspenseFX = (() => {
    */
   function winnerSpotlight(container, duration = 1900) {
     injectStyles();
+    sfx("winner");
     const dim = document.createElement("div");
     dim.className = "fx-spotlight";
     const beam = document.createElement("div");

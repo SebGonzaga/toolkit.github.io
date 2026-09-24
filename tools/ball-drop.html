@@ -154,6 +154,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
@@ -369,6 +370,7 @@ Isla</textarea>
     // the countdown ends.
 
     statusText.textContent = "Dropping…";
+    SoundFX.drop();
     const start = performance.now();
     let lastRow = -1;
     let trailTick = 0;
@@ -405,6 +407,7 @@ Isla</textarea>
       // (not a guessed row from height), scaled onto the same playback clock.
       while (hitIdx < sim.hits.length && sim.hits[hitIdx].t * timeScale <= elapsed) {
         const row = sim.hits[hitIdx].row;
+        SoundFX.ping(row + Math.floor(Math.random() * 3));   // xylophone pings off the pegs
         if (row !== lastRow) { hitRow(row); lastRow = row; }
         if (row >= pegRows - 2) SuspenseFX.microShake(stage);
         // A quick squash-and-recover on the ball itself for every impact —
@@ -446,6 +449,7 @@ Isla</textarea>
 
   function finishDrop(result, idx) {
     dropping = false;
+    SoundFX.matchWin();   // ding! it landed
     stage.classList.remove("zoom");
     SuspenseFX.shake(stage, 350);
     SuspenseFX.winnerSpotlight(stage);

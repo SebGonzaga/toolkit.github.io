@@ -213,6 +213,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script src="../assets/js/shared-track.js"></script>
 <script>
@@ -416,6 +417,10 @@ Isla</textarea>
 
     track.play(); // actual motion is now driven by each token's own Web Animation
 
+    // Comedic little footsteps: a slow "plod… plod…" that alternates pitch, one per turtle-ish beat.
+    let stepFlip = false;
+    plodTimer = setInterval(() => { stepFlip = !stepFlip; SoundFX.plod(stepFlip ? 1 : 0.85); }, 480);
+
     const start = performance.now();
     // Timed to the WINNER's own finish, not the slowest turtle's, so the
     // clock reaches ~0 exactly as the winner crosses the line.
@@ -427,6 +432,7 @@ Isla</textarea>
     let zoomMildOn = false;
     let lastGroupShake = 0;
     let lastDustCheck = 0;
+    let crowdSwellStarted = false;
 
     // No longer drives position — only reads each token's own animation
     // clock (via track.update) to keep the leaderboard/clock in sync. Real
@@ -450,7 +456,10 @@ Isla</textarea>
 
       const overallProgress = displayElapsed / maxTime;
       if (overallProgress > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }
-      if (overallProgress > 0.82) track.setZoom(true);
+      if (overallProgress > 0.82) {
+        track.setZoom(true);
+        if (!crowdSwellStarted) { crowdSwellStarted = true; SoundFX.crowdSwell(Math.max(1.2, maxTime * 0.2)); }
+      }
       if (groupSurge && now - lastGroupShake > 900) {
         lastGroupShake = now;
         SuspenseFX.microShake(stage);
@@ -472,8 +481,14 @@ Isla</textarea>
     finishRace(result);
   }
 
+  let plodTimer = null;
+
   function finishRace(result) {
     racing = false;
+    clearInterval(plodTimer);
+    // The punchline: a slow race deserves a ba-dum-tss and a clown horn.
+    SoundFX.rimshot();
+    setTimeout(() => SoundFX.clownHorn(), 900);
     if (track) {
       track.setZoom(false);
       track.setZoomMild(false);

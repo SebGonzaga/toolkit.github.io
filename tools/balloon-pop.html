@@ -146,6 +146,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
@@ -273,6 +274,7 @@ Isla</textarea>
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Release!"], null, trackArea);
 
     statusText.textContent = "Rising…";
+    SoundFX.slideWhistle(300, 1500, 0.6, 0.1);
     const start = performance.now();
     // Timed to the WINNER's own rise time, not the slowest balloon's, so
     // the clock/finish actually land the instant the winner pops instead of
@@ -304,12 +306,14 @@ Isla</textarea>
         if (progress >= 0.999 && entrant.name === result.winner && !winnerPopped) {
           winnerPopped = true;
           el.classList.add("popped");
+          SoundFX.balloonPop();
         }
         if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
 
       if (displayOrder.length >= 3 && surgingCount / displayOrder.length >= 0.35 && now - lastGroupShake > 900) {
         lastGroupShake = now;
+        SoundFX.squeak(0.9 + Math.random() * 0.5);   // rubbery squeaks as the pack surges
         SuspenseFX.microShake(stage);
       }
 

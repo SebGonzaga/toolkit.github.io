@@ -154,6 +154,7 @@ Isla</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
@@ -251,6 +252,7 @@ Isla</textarea>
     stage.classList.remove("finished-glow");
     lever.classList.add("pulled");
     setTimeout(() => lever.classList.remove("pulled"), 300);
+    SoundFX.lever();   // ka-CHUNK, boing
     SuspenseFX.shake(machine, 300);
 
     const duration = Number(durationEl.value);
@@ -264,6 +266,10 @@ Isla</textarea>
     bulbs.forEach((b) => b.classList.add("excited"));
 
     statusText.textContent = "Spinning…";
+    // Reel clatter until the name reel locks, plus a drumroll for the last beat of suspense.
+    const clatter = setInterval(() => SoundFX.reelTick(), 70);
+    setTimeout(() => clearInterval(clatter), duration * 1000);
+    setTimeout(() => SoundFX.drumroll(1.2), Math.max(0, duration * 1000 - 1300));
     const start = performance.now();
     const tick = () => {
       const elapsed = (performance.now() - start) / 1000;
@@ -282,8 +288,8 @@ Isla</textarea>
       spinTo(reelName, stripLen - 1, dName);
     });
 
-    setTimeout(() => { reelWinLeft.classList.remove("spinning"); reelWinLeft.classList.add("locking"); SuspenseFX.flash(reelWinLeft, 300); }, dLeft * 1000);
-    setTimeout(() => { reelWinRight.classList.remove("spinning"); reelWinRight.classList.add("locking"); SuspenseFX.flash(reelWinRight, 300); }, dRight * 1000);
+    setTimeout(() => { reelWinLeft.classList.remove("spinning"); reelWinLeft.classList.add("locking"); SoundFX.reelStop(); SuspenseFX.flash(reelWinLeft, 300); }, dLeft * 1000);
+    setTimeout(() => { reelWinRight.classList.remove("spinning"); reelWinRight.classList.add("locking"); SoundFX.reelStop(); SuspenseFX.flash(reelWinRight, 300); }, dRight * 1000);
     // Beat of suspense: hush right before the name reel locks, plus a
     // camera push-in on the machine itself for that final held breath.
     setTimeout(() => { statusText.textContent = "Almost there…"; machine.classList.add("zoom"); }, dName * 1000 - 550);
@@ -296,6 +302,7 @@ Isla</textarea>
     machine.classList.remove("zoom");
     reelWinName.classList.remove("spinning");
     reelWinName.classList.add("locking");
+    SoundFX.kaChing();   // jackpot!
     SuspenseFX.flash(reelWinName, 450);
     SuspenseFX.shake(machine, 300);
     SuspenseFX.winnerSpotlight(stage);

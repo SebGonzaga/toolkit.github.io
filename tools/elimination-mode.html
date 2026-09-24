@@ -125,6 +125,7 @@ Sana</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -183,15 +184,18 @@ Sana</textarea>
       const pick = i === hops - 1 ? target : (cand[Math.floor(Math.random() * cand.length)] || target);
       if (prev) prev.el.classList.remove("scan");
       pick.el.classList.add("scan");
+      SoundFX.tick(1.2 + i * 0.03);
       prev = pick;
       await sleep(sweepMs * weights[i] / wSum);
     }
     target.el.classList.remove("scan");
     target.el.classList.add("doomed");
+    SoundFX.uhoh();
     SuspenseFX.microShake(stage, 200);
     await sleep(doomMs);
     target.el.classList.remove("doomed");
     target.el.classList.add("out");
+    SoundFX.eliminated();   // sad trombone, bonk, splat, clown horn… it's a surprise
     cutIndex++;
     const n = alive().length;
     leftCount.textContent = n + " left";

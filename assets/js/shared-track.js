@@ -198,6 +198,7 @@ const SharedTrack = (() => {
       // Overtake flash: when the lead changes hands, give the new leader a
       // quick glow instead of letting the swap happen silently.
       if (prevLeaderIdx !== -1 && leaderIdx !== prevLeaderIdx) {
+        try { if (typeof SoundFX !== "undefined") SoundFX.leadChange(); } catch (e) { /* audio is never critical */ }
         const tok = tokens[leaderIdx].el;
         tok.classList.remove("lead-change");
         void tok.offsetWidth;

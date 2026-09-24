@@ -578,7 +578,7 @@ Isla</textarea>
     buildStage(displayOrder);
 
     statusText.textContent = "On your marks…";
-    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "GO!"], (label) => SoundFX.beep(label === "GO!" ? "go" : "tick"), fieldWrap);
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "GO!"], null, fieldWrap);   // countdown beeps now come from SuspenseFX
 
     // A little splash-fest right at the starting line as everyone dives in.
     track.tokens.forEach((tok, i) => {
@@ -682,7 +682,7 @@ Isla</textarea>
     }
     SuspenseFX.shake(stage, 380);
     SuspenseFX.winnerSpotlight(stage);
-    SoundFX.fanfare();
+    SoundFX.quackChorus();   // the fanfare + cheer already fire from winnerSpotlight()
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
     statusText.textContent = "We have a winner";

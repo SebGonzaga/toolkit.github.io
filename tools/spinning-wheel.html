@@ -84,6 +84,7 @@ Mateo</textarea>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
   const namesEl = document.getElementById("names");
@@ -151,6 +152,7 @@ Mateo</textarea>
     const names = getNames();
     if (names.length < 2) return;
     spinning = true;
+    SoundFX.whoosh(0.5, true, 0.12);
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
     drawWheel(names);
@@ -183,6 +185,8 @@ Mateo</textarea>
       const tickSlice = Math.floor(rotation / slice);
       if (tickSlice !== lastTickSlice) {
         lastTickSlice = tickSlice;
+        // Ticks slow down and drop in pitch as the wheel runs out of steam.
+        SoundFX.tick(1.15 - t * 0.35);
         pointer.classList.add("tick");
         wheelGlow.classList.add("pulse");
         setTimeout(() => { pointer.classList.remove("tick"); wheelGlow.classList.remove("pulse"); }, 90);
@@ -201,6 +205,7 @@ Mateo</textarea>
   function finishSpin(result) {
     spinning = false;
     wheelWrap.classList.remove("zoom");
+    SoundFX.boing(1);   // the pointer wobbles to a stop
     SuspenseFX.shake(wheelWrap, 260);
     SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
