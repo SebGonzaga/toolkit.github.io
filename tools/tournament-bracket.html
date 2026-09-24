@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tournament Bracket Maker — Pick &amp; Race</title>
+<meta name="description" content="Seed a class into a single-elimination bracket and play it out match by match — or let the engine run the whole thing.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+  .tool-wrap { display: grid; grid-template-columns: 300px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .tool-wrap > div { min-width: 0; }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; position: sticky; top: 20px; }
+  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
+  .panel label:first-of-type { margin-top: 0; }
+  textarea { width: 100%; min-height: 170px; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical; background: #fff; color: var(--ink); }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 0.88rem; }
+  .toggle-row label { margin: 0; font-weight: 500; }
+  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+  .hint { font-size: 0.8rem; color: var(--ink-soft); margin: 8px 0 0; }
+
+  .stage { border: var(--border); border-radius: var(--radius); background: var(--chalk-dim); padding: 18px; min-height: 420px; position: relative; overflow: hidden; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 44px rgba(239,185,60,0.6) inset; }
+  .stage-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .bracket-scroll { overflow-x: auto; padding: 4px 2px 12px; }
+  .bracket { display: flex; gap: 26px; align-items: stretch; min-width: min-content; }
+  .round { display: flex; flex-direction: column; min-width: 172px; }
+  .round-title { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 8px; text-align: center; }
+  .round-matches { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 12px; }
+
+  .match { position: relative; border: var(--border); border-radius: 8px; background: var(--paper); overflow: hidden; box-shadow: 2px 2px 0 var(--ink); }
+  .match.ready { box-shadow: 3px 3px 0 var(--marker); }
+  .match.playing { animation: pulse 0.5s ease infinite alternate; }
+  @keyframes pulse { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+  .slot {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    padding: 7px 10px; border: 0; background: transparent; font: 600 0.88rem var(--font-body); color: var(--ink);
+    cursor: default; min-height: 34px;
+  }
+  .slot + .slot { border-top: 1.5px solid var(--ink); }
+  .slot .seed { font-size: 0.68rem; font-weight: 700; color: var(--ink-soft); width: 16px; flex: none; }
+  .slot .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .slot.tbd .nm { color: #9aa1b3; font-weight: 500; font-style: italic; }
+  .slot.bye .nm { color: #9aa1b3; font-weight: 500; }
+  .match.ready .slot:not(.tbd):not(.bye) { cursor: pointer; }
+  .match.ready .slot:not(.tbd):not(.bye):hover { background: var(--pencil-dim); }
+  .slot:focus-visible { outline: 3px solid var(--pencil); outline-offset: -3px; }
+  .slot.flash { background: var(--pencil); }
+  .slot.win { background: var(--chalk); color: #fff; }
+  .slot.win .seed { color: rgba(255,255,255,0.7); }
+  .slot.lose .nm { text-decoration: line-through; color: #9aa1b3; }
+
+  .champion-col { display: flex; flex-direction: column; min-width: 150px; justify-content: center; align-items: center; text-align: center; }
+  .trophy { font-size: 2.6rem; filter: grayscale(1); opacity: 0.35; transition: filter 0.4s, opacity 0.4s; }
+  .champion-col.crowned .trophy { filter: none; opacity: 1; animation: pulse 0.6s ease infinite alternate; }
+  .champ-name { font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; margin-top: 4px; min-height: 1.5em; }
+
+  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .winner-banner.show { display: block; }
+  .empty-state { text-align: center; padding: 70px 20px; color: var(--ink-soft); }
+  .empty-state .big { font-size: 2.6rem; }
+
+  @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } .panel { position: static; } }
+  @media (prefers-reduced-motion: reduce) { .match.playing, .champion-col.crowned .trophy { animation: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
+      <a href="spinning-wheel.html">Wheel</a>
+      <a href="team-generator.html">Teams</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin-top:28px;">Tournament Bracket Maker</h1>
+  <p>A single-elimination bracket for any number of names. Play one match at a time, run a round, or click a name to decide a match yourself.</p>
+
+  <div class="tool-wrap">
+    <div class="panel">
+      <label for="names">Names (one per line, up to 32)</label>
+      <textarea id="names">Ava
+Liam
+Noor
+Diego
+Priya
+Mateo
+Yuki
+Isla
+Omar
+Chloe
+Kofi
+Sana</textarea>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="inOrder">
+        <label for="inOrder">Seed in the order listed (first name = top seed)</label>
+      </div>
+      <p class="hint" id="sizeHint"></p>
+
+      <button class="btn marker" id="buildBtn">Build the bracket</button>
+    </div>
+
+    <div>
+      <div class="stage" id="stage">
+        <div class="stage-header">
+          <span class="status" id="statusText">Ready when you are</span>
+          <div class="controls" id="controls" hidden>
+            <button class="btn small" id="nextBtn">Play next match</button>
+            <button class="btn small ghost" id="roundBtn">Play round</button>
+            <button class="btn small ghost" id="allBtn">Run it all</button>
+          </div>
+        </div>
+        <div class="bracket-scroll" id="bracketScroll">
+          <div class="empty-state"><div class="big">🏆</div>Add your names and build a bracket.</div>
+        </div>
+      </div>
+      <div class="winner-banner" id="winnerBanner"></div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const namesEl = $("names"), stage = $("stage"), statusText = $("statusText"), controls = $("controls");
+  const bracketScroll = $("bracketScroll"), winnerBanner = $("winnerBanner");
+  const MAX_NAMES = 32;
+  let rounds = [];      // rounds[r][m] = { p: [name|null, name|null], seeds: [n|null, n|null], w: null|0|1 }
+  let busy = false;
+  let champion = null;
+
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const getNames = () => namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function updateHint() {
+    const n = Math.min(getNames().length, MAX_NAMES);
+    if (n < 2) { $("sizeHint").textContent = "Add at least two names."; return; }
+    let size = 2; while (size < n) size *= 2;
+    const byes = size - n;
+    $("sizeHint").textContent = `${n} names → ${Math.log2(size)} rounds` + (byes ? `, ${byes} bye${byes > 1 ? "s" : ""} for the top seeds.` : ".");
+  }
+  namesEl.addEventListener("input", updateHint);
+
+  // Standard bracket seeding: 1 meets the lowest seed, and the top seeds
+  // stay on opposite halves so they can only meet late.
+  function seedOrder(size) {
+    let order = [1, 2];
+    while (order.length < size) {
+      const m = order.length * 2 + 1;
+      order = order.flatMap((s) => [s, m - s]);
+    }
+    return order;
+  }
+
+  function roundLabel(r, total) {
+    const fromEnd = total - 1 - r;
+    if (fromEnd === 0) return "Final";
+    if (fromEnd === 1) return "Semifinals";
+    if (fromEnd === 2) return "Quarterfinals";
+    return "Round " + (r + 1);
+  }
+
+  function build() {
+    let names = getNames();
+    if (names.length < 2) { statusText.textContent = "Add at least two names first"; return; }
+    let note = "";
+    if (names.length > MAX_NAMES) { names = names.slice(0, MAX_NAMES); note = ` (first ${MAX_NAMES} used)`; }
+    const seeded = $("inOrder").checked ? names : RaceEngine.shuffle(names);
+    let size = 2; while (size < seeded.length) size *= 2;
+    const order = seedOrder(size);
+
+    rounds = [];
+    const first = [];
+    for (let i = 0; i < size; i += 2) {
+      const sa = order[i], sb = order[i + 1];
+      first.push({
+        p: [sa <= seeded.length ? seeded[sa - 1] : null, sb <= seeded.length ? seeded[sb - 1] : null],
+        seeds: [sa <= seeded.length ? sa : null, sb <= seeded.length ? sb : null],
+        w: null,
+      });
+    }
+    rounds.push(first);
+    for (let s = size / 4; s >= 1; s /= 2) {
+      rounds.push(Array.from({ length: s }, () => ({ p: [null, null], seeds: [null, null], w: null })));
+    }
+    // Byes advance automatically.
+    first.forEach((m, i) => {
+      if (m.p[0] && !m.p[1]) setWinner(0, i, 0, true);
+      else if (m.p[1] && !m.p[0]) setWinner(0, i, 1, true);
+    });
+
+    champion = null;
+    winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
+    controls.hidden = false;
+    render();
+    statusText.textContent = `${seeded.length} names seeded${note}. Play the first match!`;
+  }
+
+  function setWinner(r, m, side, silent) {
+    const match = rounds[r][m];
+    match.w = side;
+    const name = match.p[side];
+    if (r + 1 < rounds.length) {
+      const next = rounds[r + 1][Math.floor(m / 2)];
+      next.p[m % 2] = name;
+      next.seeds[m % 2] = match.seeds[side];
+    } else {
+      champion = name;
+    }
+  }
+
+  function isReady(match) { return match.w === null && match.p[0] && match.p[1]; }
+
+  function nextReady(onlyRound) {
+    for (let r = 0; r < rounds.length; r++) {
+      if (onlyRound !== undefined && r !== onlyRound) continue;
+      for (let m = 0; m < rounds[r].length; m++) if (isReady(rounds[r][m])) return [r, m];
+    }
+    return null;
+  }
+
+  function slotHtml(match, side, r, m) {
+    const name = match.p[side];
+    const seed = match.seeds[side];
+    const cls = ["slot"];
+    let label;
+    if (name) label = esc(name);
+    else if (r === 0) { cls.push("bye"); label = "bye"; }
+    else { cls.push("tbd"); label = "to be decided"; }
+    if (match.w === side) cls.push("win");
+    else if (match.w !== null && name) cls.push("lose");
+    const clickable = isReady(match) && name;
+    return `<button class="${cls.join(" ")}" data-r="${r}" data-m="${m}" data-s="${side}" ${clickable ? "" : "tabindex='-1'"} ${clickable ? `aria-label="Advance ${esc(name)}"` : ""}>` +
+           `<span class="seed">${seed || ""}</span><span class="nm">${label}</span></button>`;
+  }
+
+  function render() {
+    const total = rounds.length;
+    let html = '<div class="bracket">';
+    rounds.forEach((round, r) => {
+      html += `<div class="round"><div class="round-title">${roundLabel(r, total)}</div><div class="round-matches">`;
+      round.forEach((match, m) => {
+        html += `<div class="match${isReady(match) ? " ready" : ""}" id="match-${r}-${m}">${slotHtml(match, 0, r, m)}${slotHtml(match, 1, r, m)}</div>`;
+      });
+      html += "</div></div>";
+    });
+    html += `<div class="champion-col${champion ? " crowned" : ""}"><div class="trophy">🏆</div><div class="champ-name">${champion ? esc(champion) : ""}</div></div>`;
+    html += "</div>";
+    bracketScroll.innerHTML = html;
+    const remaining = rounds.flat().filter(isReady).length;
+    controls.querySelectorAll("button").forEach((b) => { b.disabled = busy || !!champion || !remaining; });
+  }
+
+  // Suspense beat: highlight flickers between the two names, slowing down,
+  // then lands on the (already decided) winner.
+  async function playMatch(r, m, forcedSide) {
+    const match = rounds[r][m];
+    const side = forcedSide !== undefined ? forcedSide : (RaceEngine.run(match.p.slice(), { duration: 1 }).winner === match.p[0] ? 0 : 1);
+    const el = $(`match-${r}-${m}`);
+    el.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    el.classList.add("playing");
+    const slots = el.querySelectorAll(".slot");
+    const flips = 7 + Math.floor(Math.random() * 3) * 2 + (side === 0 ? 0 : 1); // parity lands on the winner
+    for (let i = 0; i < flips; i++) {
+      slots.forEach((s, k) => s.classList.toggle("flash", k === (i % 2)));
+      await sleep(70 + i * i * 6);
+    }
+    slots.forEach((s) => s.classList.remove("flash"));
+    el.classList.remove("playing");
+    setWinner(r, m, side);
+    render();
+    if (champion) celebrate();
+  }
+
+  function celebrate() {
+    statusText.textContent = "We have a champion!";
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Champion</span><span class="wb-name">🎉 ${esc(champion)} wins the bracket!</span>`;
+    winnerBanner.classList.add("show");
+    SuspenseFX.shake(stage, 300);
+    SuspenseFX.winnerSpotlight(stage);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    const t = bracketScroll.querySelector(".trophy").getBoundingClientRect();
+    SuspenseFX.burst(t.left + t.width / 2, t.top + t.height / 2);
+  }
+
+  async function run(mode) {
+    if (busy || champion) return;
+    busy = true; render();
+    const first = nextReady();
+    const roundLimit = mode === "round" && first ? first[0] : undefined;
+    let target = first;
+    while (target) {
+      const [r, m] = target;
+      const isFinal = r === rounds.length - 1;
+      statusText.textContent = isFinal ? "The final…" : `${roundLabel(r, rounds.length)}: ${rounds[r][m].p[0]} vs ${rounds[r][m].p[1]}`;
+      await playMatch(r, m);
+      if (champion || mode === "one") break;
+      await sleep(280);
+      target = nextReady(roundLimit);
+    }
+    busy = false; render();
+    if (!champion) statusText.textContent = nextReady() ? "Ready for the next match" : "Round complete";
+  }
+
+  // Click a name in a ready match to decide it yourself.
+  bracketScroll.addEventListener("click", async (e) => {
+    const b = e.target.closest(".slot");
+    if (!b || busy || champion) return;
+    const r = +b.dataset.r, m = +b.dataset.m, s = +b.dataset.s;
+    if (!isReady(rounds[r][m])) return;
+    busy = true;
+    await playMatch(r, m, s);
+    busy = false; render();
+    if (!champion) statusText.textContent = `${rounds[r][m].p[s]} advances`;
+  });
+
+  $("buildBtn").addEventListener("click", build);
+  $("nextBtn").addEventListener("click", () => run("one"));
+  $("roundBtn").addEventListener("click", () => run("round"));
+  $("allBtn").addEventListener("click", () => run("all"));
+  updateHint();
+</script>
+
+</body>
+</html>

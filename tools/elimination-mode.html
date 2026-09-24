@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elimination Name Picker — Pick &amp; Race</title>
+<meta name="description" content="Names drop out one by one until a single survivor is left. Auto-play for the drama, or click to cut each name yourself.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; position: sticky; top: 20px; }
+  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
+  .panel label:first-of-type { margin-top: 0; }
+  textarea { width: 100%; min-height: 150px; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical; background: #fff; color: var(--ink); }
+  input[type="range"] { width: 100%; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: var(--border); border-radius: 8px; overflow: hidden; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label { margin: 0 !important; padding: 8px 6px; text-align: center; cursor: pointer; font-size: 0.82rem; background: var(--paper); }
+  .seg input + label + input + label { border-left: var(--border); }
+  .seg input:checked + label { background: var(--ink); color: var(--paper); }
+  .seg input:focus-visible + label { outline: 3px solid var(--pencil); outline-offset: -3px; }
+  .val { font-family: var(--font-display); font-weight: 700; }
+  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+  .hint { font-size: 0.8rem; color: var(--ink-soft); margin: 8px 0 0; }
+
+  /* Stage: a dark game-show board. Tiles go red when marked, then drop away. */
+  .stage { border: var(--border); border-radius: var(--radius); background: radial-gradient(ellipse at 50% 0%, #2b3a63, #141c33 78%); padding: 22px; min-height: 460px; position: relative; overflow: hidden; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 44px rgba(239,185,60,0.55) inset; }
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; gap: 12px; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: #fdf6e6; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; color: #fdf6e6; margin-left: auto; }
+  .stage-header .left { font-family: var(--font-display); font-size: 1.4rem; color: var(--pencil); font-variant-numeric: tabular-nums; }
+
+  .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+  .tile {
+    position: relative; height: 62px; display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 4px 8px; border-radius: 10px; border: 2px solid var(--pencil); background: var(--paper); color: var(--ink);
+    font-family: var(--font-display); font-weight: 700; font-size: 1rem; line-height: 1.1; word-break: break-word;
+    transition: transform 0.28s ease, opacity 0.45s ease, background 0.12s ease, border-color 0.12s ease, filter 0.4s ease;
+  }
+  .tile.scan { background: #fff3c4; transform: scale(1.06); }
+  .tile.doomed { background: var(--marker); border-color: #fff; color: #fff; transform: scale(1.1) rotate(-2deg); }
+  .tile.out { opacity: 0.16; transform: scale(0.86) translateY(8px); filter: grayscale(1); border-color: #7d87a3; text-decoration: line-through; }
+  .tile.out .x { display: none; }
+  .tile.survivor { grid-column: 1 / -1; height: 110px; font-size: 2rem; background: var(--pencil); border-color: #fff; transform: none; box-shadow: 0 0 0 4px rgba(239,185,60,0.35), 0 0 40px rgba(239,185,60,0.6); animation: crown 0.8s ease infinite alternate; }
+  @keyframes crown { from { transform: scale(1); } to { transform: scale(1.03); } }
+  .board.finale .tile.out { display: none; }
+  .board.finale .tile.survivor { order: -1; }
+
+  .fallen { margin-top: 18px; font-size: 0.82rem; color: #b7c0d9; min-height: 1.4em; }
+  .fallen .chip { display: inline-block; border: 1px solid #55617f; border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; text-decoration: line-through; }
+  .fallen b { color: #fdf6e6; font-weight: 600; margin-right: 6px; }
+
+  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .winner-banner.show { display: block; }
+
+  @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } .panel { position: static; } .board { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } }
+  @media (prefers-reduced-motion: reduce) { .tile, .tile.survivor { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
+      <a href="spinning-wheel.html">Wheel</a>
+      <a href="weighted-picker.html">Weighted</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin-top:28px;">Elimination Name Picker</h1>
+  <p>Everyone starts on the board. A spotlight sweeps across the names, marks one, and they're out, until a single survivor remains.</p>
+
+  <div class="tool-wrap">
+    <div class="panel">
+      <label for="names">Names (one per line)</label>
+      <textarea id="names">Ava
+Liam
+Noor
+Diego
+Priya
+Mateo
+Yuki
+Isla
+Omar
+Chloe
+Kofi
+Sana</textarea>
+
+      <label>How it plays</label>
+      <div class="seg" role="radiogroup" aria-label="Play mode">
+        <input type="radio" name="mode" id="modeAuto" value="auto" checked><label for="modeAuto">Auto-play</label>
+        <input type="radio" name="mode" id="modeClick" value="click"><label for="modeClick">Click to cut</label>
+      </div>
+
+      <label for="pace" id="paceLabel">Time until the survivor is revealed: <span class="val" id="paceVal">20s</span></label>
+      <input type="range" id="pace" min="8" max="60" value="20">
+      <p class="hint">The countdown hits 0.0 the moment the last name is revealed. The final cuts take a bigger share of the time for suspense.</p>
+
+      <button class="btn marker" id="startBtn">Start eliminating</button>
+      <button class="btn ghost small" id="resetBtn" style="margin-top:8px; width:100%;">Reset board</button>
+    </div>
+
+    <div>
+      <div class="stage" id="stage">
+        <div class="stage-header">
+          <span class="status" id="statusText">Ready when you are</span>
+          <span class="clock" id="clock"></span>
+          <span class="left" id="leftCount"></span>
+        </div>
+        <div class="board" id="board"></div>
+        <div class="fallen" id="fallen"></div>
+      </div>
+      <div class="winner-banner" id="winnerBanner"></div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const namesEl = $("names"), board = $("board"), stage = $("stage"), statusText = $("statusText");
+  const clock = $("clock"), leftCount = $("leftCount"), fallen = $("fallen"), banner = $("winnerBanner"), startBtn = $("startBtn");
+  let tiles = [];           // [{name, el}]
+  let plan = null;          // shuffled cut order; last entry is the survivor
+  let cutIndex = 0, running = false, finished = false;
+
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const getNames = () => [...new Set(namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean))];
+  const mode = () => document.querySelector('input[name="mode"]:checked').value;
+
+  $("pace").addEventListener("input", () => { $("paceVal").textContent = $("pace").value + "s"; });
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", () => {
+    const auto = mode() === "auto";
+    $("pace").disabled = !auto;
+    $("paceLabel").style.opacity = auto ? 1 : 0.4;
+    startBtn.textContent = auto ? "Start eliminating" : (plan && !finished ? "Cut the next name" : "Begin");
+    resetBoard();
+  }));
+
+  function resetBoard() {
+    if (running) return;
+    const names = getNames();
+    tiles = []; plan = null; cutIndex = 0; finished = false; clock.textContent = "";
+    banner.classList.remove("show"); stage.classList.remove("finished-glow");
+    board.classList.remove("finale"); fallen.innerHTML = "";
+    board.innerHTML = names.map((n) => `<div class="tile">${esc(n)}</div>`).join("");
+    tiles = [...board.children].map((el, i) => ({ name: names[i], el }));
+    leftCount.textContent = names.length ? names.length + " in" : "";
+    statusText.textContent = names.length < 2 ? "Add at least two names" : "Ready when you are";
+    startBtn.textContent = mode() === "auto" ? "Start eliminating" : "Begin";
+    startBtn.disabled = false;
+  }
+  namesEl.addEventListener("input", resetBoard);
+  $("resetBtn").addEventListener("click", resetBoard);
+
+  const alive = () => tiles.filter((t) => !t.el.classList.contains("out"));
+
+  // One cut, fitted to a time budget (ms): ~55% spotlight sweep, ~30% the
+  // red "doomed" beat, ~15% settle. The sweep hops slow down as they go.
+  async function cutOne(budgetMs) {
+    const t0 = performance.now();
+    const doomedName = plan[cutIndex];
+    const pool = alive();
+    const target = pool.find((t) => t.name === doomedName);
+    const sweepMs = budgetMs * 0.55, doomMs = budgetMs * 0.30;
+    const hops = Math.max(2, Math.min(9, 3 + pool.length, Math.floor(sweepMs / 60)));
+    const weights = Array.from({ length: hops }, (_, i) => 0.6 + i * 0.16);
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    let prev = null;
+    for (let i = 0; i < hops; i++) {
+      const cand = pool.filter((t) => t !== prev && t !== target);
+      const pick = i === hops - 1 ? target : (cand[Math.floor(Math.random() * cand.length)] || target);
+      if (prev) prev.el.classList.remove("scan");
+      pick.el.classList.add("scan");
+      prev = pick;
+      await sleep(sweepMs * weights[i] / wSum);
+    }
+    target.el.classList.remove("scan");
+    target.el.classList.add("doomed");
+    SuspenseFX.microShake(stage, 200);
+    await sleep(doomMs);
+    target.el.classList.remove("doomed");
+    target.el.classList.add("out");
+    cutIndex++;
+    const n = alive().length;
+    leftCount.textContent = n + " left";
+    fallen.innerHTML = `<b>Out so far:</b>` + plan.slice(0, cutIndex).map((x) => `<span class="chip">${esc(x)}</span>`).join("");
+    await sleep(Math.max(0, budgetMs - (performance.now() - t0)));   // settle out the remainder of this cut's slot
+  }
+
+  function crown() {
+    const winnerName = plan[plan.length - 1];
+    const w = tiles.find((t) => t.name === winnerName);
+    w.el.classList.add("survivor");
+    board.classList.add("finale");
+    finished = true;
+    statusText.textContent = "One survivor!";
+    leftCount.textContent = "🏆";
+    banner.innerHTML = `<span class="wb-eyebrow">🏆 Last one standing</span><span class="wb-name">🎉 ${esc(winnerName)} survives!</span>`;
+    void banner.offsetWidth; banner.classList.add("show");
+    SuspenseFX.shake(stage, 320);
+    SuspenseFX.winnerSpotlight(stage);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    const r = w.el.getBoundingClientRect();
+    SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2);
+  }
+
+  async function start() {
+    if (running) return;
+    const names = getNames();
+    if (names.length < 2) { statusText.textContent = "Add at least two names first"; return; }
+    if (finished) resetBoard();
+    running = true; startBtn.disabled = true;
+
+    if (!plan) {
+      plan = RaceEngine.shuffle(names);      // plan[0] goes first ... plan[last] survives
+      cutIndex = 0;
+    }
+    const totalCuts = plan.length - 1;
+
+    if (mode() === "click") {
+      const remainingBefore = totalCuts - cutIndex;
+      statusText.textContent = remainingBefore === 1 ? "The final cut…" : "Cutting…";
+      await cutOne(remainingBefore <= 5 ? 1800 : 1100);
+      running = false;
+      if (cutIndex >= totalCuts) crown();
+      else { startBtn.disabled = false; startBtn.textContent = "Cut the next name"; statusText.textContent = "Who's next?"; }
+      return;
+    }
+
+    statusText.textContent = "Here we go…";
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Cut!"]);
+
+    // TIMER CONTRACT: the slider value is exactly when the survivor is revealed.
+    // Each cut gets a share of the budget; the last five get a growing share so
+    // the tension builds. Every cut is scheduled against a real deadline.
+    const total = Number($("pace").value) * 1000;
+    const shares = Array.from({ length: totalCuts }, (_, k) => {
+      const fromEnd = totalCuts - k;               // 1 = the final cut
+      return fromEnd <= 5 ? 1 + (6 - fromEnd) * 0.9 : 1;
+    });
+    const shareSum = shares.reduce((a, b) => a + b, 0);
+    const deadlines = [];
+    shares.reduce((acc, sh, k) => (deadlines[k] = acc + sh / shareSum * total), 0);
+
+    const t0 = performance.now();
+    const tickClock = setInterval(() => {
+      clock.textContent = Math.max(0, (total - (performance.now() - t0)) / 1000).toFixed(1) + "s";
+    }, 50);
+    while (cutIndex < totalCuts) {
+      const left = totalCuts - cutIndex;
+      statusText.textContent = left === 1 ? "The final cut…" : (left <= 5 ? "It's getting tense…" : "Cutting…");
+      const budget = Math.max(120, deadlines[cutIndex] - (performance.now() - t0));
+      await cutOne(budget);
+    }
+    clearInterval(tickClock);
+    clock.textContent = "0.0s";
+    running = false;
+    crown();
+  }
+  startBtn.addEventListener("click", start);
+  resetBoard();
+</script>
+
+</body>
+</html>

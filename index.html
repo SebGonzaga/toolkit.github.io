@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick &amp; Race — classroom name pickers that don't feel like a spreadsheet</title>
+<meta name="description" content="Duck races, spinning wheels, and a dozen other ways to pick a name at random — built for teachers, free to use, no login wall.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    padding: 56px 0 40px;
+  }
+  .hero h1 { font-size: clamp(2.1rem, 4vw, 3.1rem); }
+  .hero .lede { font-size: 1.08rem; }
+  .hero .cta-row { display: flex; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+  .hero .stat-line { margin-top: 26px; font-size: 0.9rem; color: var(--ink-soft); display: flex; gap: 18px; }
+  .hero .stat-line strong { color: var(--ink); font-family: var(--font-display); }
+
+  .pond {
+    border: var(--border);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--chalk-dim), #dff0e5);
+    aspect-ratio: 4/3;
+    position: relative;
+    overflow: hidden;
+  }
+  .pond .finish {
+    position: absolute; right: 8%; top: 0; bottom: 0; width: 3px;
+    background: repeating-linear-gradient(180deg, var(--ink) 0 8px, transparent 8px 16px);
+  }
+  .duck {
+    position: absolute; left: -8%; width: 42px; height: 34px;
+    animation: swim linear infinite;
+  }
+  @keyframes swim {
+    0% { left: -8%; transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+    100% { left: 84%; transform: translateY(0); }
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-3px) rotate(-3deg); } }
+
+  section.intro { padding: 8px 0 0; }
+  section.intro h2 { font-size: 1.6rem; }
+
+  .filters { display: flex; gap: 10px; margin: 18px 0 6px; flex-wrap: wrap; }
+  .filters button {
+    border: var(--border); background: var(--paper); border-radius: 999px;
+    padding: 6px 16px; font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; cursor: pointer;
+  }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .duck, .btn { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="#tools">All tools</a>
+      <a href="tools/duck-race.html">Duck Race</a>
+      <a href="tools/spinning-wheel.html">Wheel</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div>
+      <h1>Pick a name without another silent cold-call spinner.</h1>
+      <p class="lede">A dozen different ways to choose who goes next — ducks paddle, wheels spin, balls drop through pegs — all free, no login, no ads blocking the picker itself.</p>
+      <div class="cta-row">
+        <a class="btn marker" href="tools/duck-race.html">Try the duck race</a>
+        <a class="btn ghost" href="#tools">Browse every tool</a>
+      </div>
+      <div class="stat-line">
+        <span><strong>13</strong> picker styles</span>
+        <span><strong>0</strong> accounts required</span>
+        <span><strong>2–30s</strong> race length, your call</span>
+      </div>
+    </div>
+    <div class="pond" aria-hidden="true">
+      <div class="finish"></div>
+      <svg class="duck" style="top:14%; animation-duration:4.6s;" viewBox="0 0 60 48"><ellipse cx="26" cy="30" rx="20" ry="14" fill="#efb93c"/><circle cx="42" cy="16" r="11" fill="#efb93c"/><path d="M50 14 L60 17 L50 20 Z" fill="#d9503f"/><circle cx="45" cy="13" r="2" fill="#1e2a45"/></svg>
+      <svg class="duck" style="top:42%; animation-duration:3.8s; animation-delay:.4s" viewBox="0 0 60 48"><ellipse cx="26" cy="30" rx="20" ry="14" fill="#fff"/><circle cx="42" cy="16" r="11" fill="#fff"/><path d="M50 14 L60 17 L50 20 Z" fill="#d9503f"/><circle cx="45" cy="13" r="2" fill="#1e2a45"/></svg>
+      <svg class="duck" style="top:70%; animation-duration:5.4s; animation-delay:.9s" viewBox="0 0 60 48"><ellipse cx="26" cy="30" rx="20" ry="14" fill="#35604a"/><circle cx="42" cy="16" r="11" fill="#35604a"/><path d="M50 14 L60 17 L50 20 Z" fill="#efb93c"/><circle cx="45" cy="13" r="2" fill="#fff"/></svg>
+    </div>
+  </section>
+
+  <section class="intro" id="tools">
+    <h2>Every picker, one engine underneath</h2>
+    <p>Each tool below runs on the same fair, weighted-shuffle engine — only the skin changes. Pick the one your class hasn't seen this week.</p>
+
+    <div class="filters" role="group" aria-label="Filter tools">
+      <button aria-pressed="true">All</button>
+      <button aria-pressed="false">Races</button>
+      <button aria-pressed="false">Spin &amp; reveal</button>
+      <button aria-pressed="false">Group &amp; sort</button>
+    </div>
+
+    <div class="tool-grid">
+      <a class="tool-card" href="tools/duck-race.html"><span class="tab race">race</span><span class="icon">🦆</span><h3>Duck Race</h3><p>Ducks paddle across a pond; first to the line wins.</p></a>
+      <a class="tool-card" href="tools/rocket-race.html"><span class="tab race">race</span><span class="icon">🚀</span><h3>Rocket Race</h3><p>Rockets streak across the screen with trail effects.</p></a>
+      <a class="tool-card" href="tools/turtle-race.html"><span class="tab race">race</span><span class="icon">🐢</span><h3>Turtle Race</h3><p>Deliberately, comedically slow.</p></a>
+      <a class="tool-card" href="tools/ball-drop.html"><span class="tab race">race</span><span class="icon">🔴</span><h3>Ball Drop</h3><p>One ball tumbles through pegs into a name slot.</p></a>
+      <a class="tool-card" href="tools/balloon-pop.html"><span class="tab race">race</span><span class="icon">🎈</span><h3>Balloon Pop</h3><p>Balloons rise — first to the top wins.</p></a>
+      <a class="tool-card" href="tools/spinning-wheel.html"><span class="tab spin">spin</span><span class="icon">🎡</span><h3>Spinning Wheel</h3><p>The classic. Spin it, watch it settle.</p></a>
+      <a class="tool-card" href="tools/slot-machine.html"><span class="tab spin">spin</span><span class="icon">🎰</span><h3>Slot Machine</h3><p>Reels tumble and lock in a name.</p></a>
+      <a class="tool-card" href="tools/mystery-card-flip.html"><span class="tab spin">spin</span><span class="icon">🃏</span><h3>Mystery Card Flip</h3><p>Flip through a deck to reveal the pick.</p></a>
+      <a class="tool-card" href="tools/team-generator.html"><span class="tab mix">mix</span><span class="icon">👥</span><h3>Team Generator</h3><p>Random pairs or groups of any size.</p></a>
+      <a class="tool-card" href="tools/tournament-bracket.html"><span class="tab mix">mix</span><span class="icon">🏆</span><h3>Tournament Bracket</h3><p>Seed the class and run a bracket.</p></a>
+      <a class="tool-card" href="tools/weighted-picker.html"><span class="tab mix">mix</span><span class="icon">⚖️</span><h3>Weighted Picker</h3><p>Give some names better odds, quietly.</p></a>
+      <a class="tool-card" href="tools/elimination-mode.html"><span class="tab mix">mix</span><span class="icon">🕳️</span><h3>Elimination Mode</h3><p>Narrow a shuffled list to one survivor.</p></a>
+      <a class="tool-card" href="tools/yes-no-wheel.html"><span class="tab mix">mix</span><span class="icon">🎯</span><h3>Yes / No Wheel</h3><p>Not a name picker — a decision wheel.</p></a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever.</div>
+</footer>
+
+</body>
+</html>
