@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Team Generator — Pick &amp; Race</title>
+<meta name="description" content="Split a class into random pairs or groups of any size. Names are dealt out card by card so the reveal feels fair.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; position: sticky; top: 20px; }
+  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
+  .panel label:first-of-type { margin-top: 0; }
+  textarea, input[type="number"] { width: 100%; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; background: #fff; color: var(--ink); }
+  textarea { min-height: 170px; resize: vertical; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: var(--border); border-radius: 8px; overflow: hidden; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label { margin: 0; padding: 8px 6px; text-align: center; cursor: pointer; font-size: 0.82rem; background: var(--paper); }
+  .seg label + input + label, .seg input + label + input + label { border-left: var(--border); }
+  .seg input:checked + label { background: var(--ink); color: var(--paper); }
+  .seg input:focus-visible + label { outline: 3px solid var(--pencil); outline-offset: -3px; }
+  .stepper { display: flex; gap: 8px; align-items: center; }
+  .stepper input { text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .stepper button { flex: 0 0 40px; height: 40px; border: var(--border); border-radius: 8px; background: var(--paper); font-size: 1.2rem; font-weight: 700; cursor: pointer; color: var(--ink); }
+  .stepper button:hover { background: var(--pencil-dim); }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 0.88rem; }
+  .toggle-row label { margin: 0; font-weight: 500; }
+  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+  .hint { font-size: 0.8rem; color: var(--ink-soft); margin: 8px 0 0; }
+
+  .stage { border: var(--border); border-radius: var(--radius); background: var(--chalk-dim); padding: 20px; min-height: 420px; position: relative; overflow: hidden; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 44px rgba(239,185,60,0.6) inset; }
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .stage-header .meta { font-size: 0.85rem; color: var(--ink-soft); }
+
+  .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .team {
+    border: var(--border); border-radius: var(--radius); background: var(--paper);
+    border-top: 8px solid var(--tc, var(--ink));
+    min-height: 120px; padding: 10px 12px 12px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .team h3 { font-size: 1rem; margin: 0 0 2px; display: flex; justify-content: space-between; align-items: baseline; }
+  .team h3 .count { font-family: var(--font-body); font-size: 0.75rem; font-weight: 600; color: var(--ink-soft); }
+  .team ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+  .team li {
+    font-weight: 600; font-size: 0.92rem; padding: 4px 10px; border-radius: 999px;
+    background: color-mix(in srgb, var(--tc, var(--ink)) 14%, #fff);
+    border: 1.5px solid var(--tc, var(--ink));
+    animation: deal 0.42s cubic-bezier(.2,1.3,.4,1) both;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  @keyframes deal { 0% { transform: translateY(-26px) rotate(-6deg) scale(0.7); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  .team.empty h3 { color: var(--ink-soft); }
+
+  .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .empty-state { text-align: center; padding: 70px 20px; color: var(--ink-soft); }
+  .empty-state .big { font-size: 2.6rem; }
+
+  @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } .panel { position: static; } }
+  @media (prefers-reduced-motion: reduce) { .team li { animation: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
+      <a href="spinning-wheel.html">Wheel</a>
+      <a href="tournament-bracket.html">Bracket</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin-top:28px;">Random Team Generator</h1>
+  <p>Pairs, trios, or a set number of groups. Names are dealt out one at a time so sizes always stay within one of each other.</p>
+
+  <div class="tool-wrap">
+    <div class="panel">
+      <label for="names">Names (one per line)</label>
+      <textarea id="names">Ava
+Liam
+Noor
+Diego
+Priya
+Mateo
+Yuki
+Isla
+Omar
+Chloe
+Kofi
+Sana
+Jonas
+Mei
+Tariq</textarea>
+
+      <label style="margin-top:16px;">Split by</label>
+      <div class="seg" role="radiogroup" aria-label="Split mode">
+        <input type="radio" name="mode" id="modeTeams" value="teams" checked><label for="modeTeams">Number of teams</label>
+        <input type="radio" name="mode" id="modeSize" value="size"><label for="modeSize">People per team</label>
+      </div>
+
+      <label for="amount" id="amountLabel">How many teams?</label>
+      <div class="stepper">
+        <button type="button" id="minus" aria-label="Decrease">−</button>
+        <input type="number" id="amount" min="1" max="40" value="4">
+        <button type="button" id="plus" aria-label="Increase">+</button>
+      </div>
+      <p class="hint" id="preview"></p>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="fancyNames" checked>
+        <label for="fancyNames">Give teams animal names</label>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="instant">
+        <label for="instant">Skip the deal animation</label>
+      </div>
+
+      <button class="btn marker" id="dealBtn">Deal the teams</button>
+    </div>
+
+    <div>
+      <div class="stage" id="stage">
+        <div class="stage-header">
+          <span class="status" id="statusText">Ready when you are</span>
+          <span class="meta" id="metaText"></span>
+        </div>
+        <div id="teamGrid">
+          <div class="empty-state"><div class="big">👥</div>Set your split, then deal.</div>
+        </div>
+      </div>
+      <div class="actions" id="actions" hidden>
+        <button class="btn small" id="redealBtn">Re-deal</button>
+        <button class="btn small ghost" id="copyBtn">Copy teams</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const namesEl = $("names"), amountEl = $("amount"), previewEl = $("preview"), amountLabel = $("amountLabel");
+  const teamGrid = $("teamGrid"), statusText = $("statusText"), metaText = $("metaText"), stage = $("stage");
+  const dealBtn = $("dealBtn"), actions = $("actions");
+  const TEAM_COLORS = ["#35604a", "#d9503f", "#c48a0c", "#1e2a45", "#3f7fae", "#9a5bb0", "#c2589a", "#5f8f2d"];
+  const TEAM_NAMES = ["Comets", "Otters", "Foxes", "Owls", "Pandas", "Falcons", "Turtles", "Wolves", "Herons", "Badgers", "Lynx", "Koalas",
+                      "Ravens", "Bison", "Geckos", "Dolphins", "Moose", "Puffins", "Hawks", "Bears"];
+  let dealing = false, lastTeams = null;
+
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const getNames = () => namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  const mode = () => document.querySelector('input[name="mode"]:checked').value;
+
+  function teamCount(n) {
+    const a = Math.max(1, Math.floor(Number(amountEl.value) || 1));
+    const count = mode() === "teams" ? a : Math.ceil(n / a);
+    return Math.max(1, Math.min(count, n));
+  }
+
+  function updatePreview() {
+    const n = getNames().length;
+    amountLabel.textContent = mode() === "teams" ? "How many teams?" : "How many people per team?";
+    if (n < 2) { previewEl.textContent = "Add at least two names."; return; }
+    const t = teamCount(n);
+    const lo = Math.floor(n / t), hi = Math.ceil(n / t);
+    previewEl.textContent = `${n} people → ${t} team${t > 1 ? "s" : ""} of ${lo === hi ? lo : lo + "–" + hi}`;
+  }
+
+  function step(delta) {
+    amountEl.value = Math.max(1, Math.min(40, (Number(amountEl.value) || 1) + delta));
+    updatePreview();
+  }
+  $("minus").addEventListener("click", () => step(-1));
+  $("plus").addEventListener("click", () => step(1));
+  [namesEl, amountEl].forEach((el) => el.addEventListener("input", updatePreview));
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", updatePreview));
+
+  // Round-robin deal from a shuffled list: sizes can differ by at most one.
+  function buildTeams(names, count) {
+    const shuffled = RaceEngine.shuffle(names);
+    const nameOrder = $("fancyNames").checked ? RaceEngine.shuffle(TEAM_NAMES) : null;
+    const teams = Array.from({ length: count }, (_, i) => ({
+      title: nameOrder ? nameOrder[i % nameOrder.length] : "Team " + (i + 1),
+      color: TEAM_COLORS[i % TEAM_COLORS.length],
+      members: [],
+    }));
+    const deals = shuffled.map((name, i) => ({ name, team: i % count }));
+    return { teams, deals };
+  }
+
+  function renderShells(teams) {
+    teamGrid.innerHTML = '<div class="team-grid">' + teams.map((t, i) =>
+      `<div class="team empty" id="team${i}" style="--tc:${t.color}"><h3>${esc(t.title)}<span class="count">0</span></h3><ul></ul></div>`
+    ).join("") + "</div>";
+  }
+
+  function placeMember(teams, d) {
+    const t = teams[d.team];
+    t.members.push(d.name);
+    const box = $("team" + d.team);
+    box.classList.remove("empty");
+    box.querySelector("ul").insertAdjacentHTML("beforeend", `<li title="${esc(d.name)}">${esc(d.name)}</li>`);
+    box.querySelector(".count").textContent = t.members.length;
+  }
+
+  async function deal() {
+    if (dealing) return;
+    const names = getNames();
+    if (names.length < 2) { statusText.textContent = "Add at least two names first"; return; }
+    dealing = true; dealBtn.disabled = true;
+    actions.hidden = true;
+    stage.classList.remove("finished-glow");
+    const count = teamCount(names.length);
+    const { teams, deals } = buildTeams(names, count);
+    renderShells(teams);
+    metaText.textContent = `${names.length} people · ${count} team${count > 1 ? "s" : ""}`;
+
+    if ($("instant").checked) {
+      deals.forEach((d) => placeMember(teams, d));
+    } else {
+      statusText.textContent = "Shuffling the deck…";
+      await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Deal!"]);
+      statusText.textContent = "Dealing…";
+      // Total deal time stays ~4-6s no matter the class size.
+      const per = Math.max(60, Math.min(320, 4500 / deals.length));
+      for (let i = 0; i < deals.length; i++) {
+        placeMember(teams, deals[i]);
+        if (i === deals.length - 1) break;
+        await new Promise((r) => setTimeout(r, per));
+      }
+    }
+
+    lastTeams = teams;
+    dealing = false; dealBtn.disabled = false;
+    statusText.textContent = "Teams are set!";
+    actions.hidden = false;
+    SuspenseFX.shake(stage, 260);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    const r = stage.getBoundingClientRect();
+    SuspenseFX.burst(r.left + r.width / 2, r.top + Math.min(r.height / 2, 200));
+  }
+
+  $("copyBtn").addEventListener("click", async () => {
+    if (!lastTeams) return;
+    const text = lastTeams.map((t) => `${t.title}: ${t.members.join(", ")}`).join("\n");
+    try { await navigator.clipboard.writeText(text); $("copyBtn").textContent = "Copied ✓"; }
+    catch (e) { $("copyBtn").textContent = "Copy blocked"; }
+    setTimeout(() => { $("copyBtn").textContent = "Copy teams"; }, 1600);
+  });
+  $("redealBtn").addEventListener("click", deal);
+  dealBtn.addEventListener("click", deal);
+  updatePreview();
+</script>
+
+</body>
+</html>
