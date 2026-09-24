@@ -242,14 +242,14 @@ Isla</textarea>
     // the clock/finish actually land the instant the winner pops instead of
     // the winner popping while the clock still counts down for stragglers.
     const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
-    const maxTime = winnerTime + 0.3;
+    const maxTime = winnerTime; // the engine sets this to the slider value (see race-engine.js)
     let lastLeaderIdx = -1;
     let winnerPopped = false;
     let lastGroupShake = 0;
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
-      clock.textContent = Math.max(0, (maxTime - elapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided
+      clock.textContent = Math.max(0, maxTime - elapsed).toFixed(1) + "s"; // maxTime == the slider value (engine guarantees it)
 
       let leaderIdx = 0, leaderProgress = -1, surgingCount = 0;
       displayOrder.forEach((entrant, i) => {

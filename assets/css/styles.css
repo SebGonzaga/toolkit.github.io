@@ -235,6 +235,11 @@ a { color: inherit; }
 }
 .field.many-names .field-token { width: 22px; height: 22px; }
 @keyframes field-bob { 0%, 100% { margin-top: -2px; } 50% { margin-top: 2px; } }
+/* Tie the body-bob's tempo to the engine's own velocity state instead of a
+   flat 1.6s loop, so the physical animation reads as faster/slower rather
+   than just the position doing all the work. */
+.field-token.surging { animation-duration: 0.95s; }
+.field-token.stalled { animation-duration: 2.4s; }
 
 .field-token .token-art { width: 100%; height: 100%; display: block; position: relative; }
 .field-token .token-art svg { width: 100%; height: 100%; display: block; }

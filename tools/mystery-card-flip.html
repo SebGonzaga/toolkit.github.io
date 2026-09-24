@@ -247,25 +247,34 @@ Isla</textarea>
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Flip!"], null, cardArena);
 
     statusText.textContent = "Flipping through the deck…";
-    const start = performance.now();
 
-    // Per-flip durations grow with an ease-in cubic curve: many quick flips
-    // early on, stretching out into a long, dramatic final reveal — the
-    // same "starts fast, ends slow" shape as the wheel and slot machine,
-    // just expressed as discrete steps instead of one continuous tween.
+    // TIMER CONTRACT: the slider value is exactly when the winner is revealed.
+    // Flip lengths still grow on an ease-in cubic (many quick flips early,
+    // one long final reveal), but they're normalised so they sum to the
+    // slider, and every flip is scheduled against the real clock so timer
+    // drift can't accumulate.
     const n = sequence.length;
     const minStep = 0.05, maxStep = 0.85;
-    let elapsedPlanned = 0;
+    const weights = sequence.map((_, i) => minStep + (maxStep - minStep) * Math.pow((i + 1) / n, 3));
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    const ends = [];
+    weights.reduce((acc, w, i) => (ends[i] = acc + (w / wSum) * totalDuration), 0);
+
+    const start = performance.now();
+    const tickClock = setInterval(() => {
+      const left = totalDuration - (performance.now() - start) / 1000;
+      clock.textContent = Math.max(0, left).toFixed(1) + "s";
+    }, 50);
     for (let i = 0; i < n; i++) {
       const isLast = i === n - 1;
-      const p = (i + 1) / n;
-      const step = minStep + (maxStep - minStep) * Math.pow(p, 3);
-      elapsedPlanned += step;
-      clock.textContent = Math.max(0, totalDuration - elapsedPlanned).toFixed(1) + "s";
+      const nowSec = (performance.now() - start) / 1000;
+      const step = Math.max(0.03, ends[i] - nowSec);   // absorb any lateness from earlier flips
       if (isLast) statusText.textContent = "Almost there…";
       await flipTo(sequence[i], step, !isLast);
       if (isLast) SuspenseFX.microShake(stage);
     }
+    clearInterval(tickClock);
+    clock.textContent = "0.0s";
 
     finishFlip(result);
   }

@@ -311,8 +311,9 @@ Isla</textarea>
     // clock/zoom/slow-mo cues all reach their climax exactly when the
     // winner crosses the line.
     const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
-    const maxTime = winnerTime + 0.3;
+    const maxTime = winnerTime; // the engine sets this to the slider value (see race-engine.js)
     const slowMo = result.photoFinish;
+    const realTotal = maxTime * (slowMo ? RaceEngine.SLOWMO_STRETCH : 1); // real seconds the race takes == the slider value
     let slowMoApplied = false;
     let zoomMildOn = false;
     let lastGroupShake = 0;
@@ -333,7 +334,7 @@ Isla</textarea>
       }
 
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
-      clock.textContent = Math.max(0, (maxTime - displayElapsed)).toFixed(1) + "s"; // counts down to the RACE'S actual length, not the raw slider value, so it reaches ~0 right as the winner is decided (still uses displayElapsed so it stays in sync with slow-mo during a photo finish)
+      clock.textContent = Math.max(0, realTotal - rawElapsed).toFixed(1) + "s"; // real remaining time: hits 0.0 exactly when the winner is decided
 
       const { groupSurge } = track.update(rawElapsed);
 

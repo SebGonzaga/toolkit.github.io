@@ -662,8 +662,10 @@ const DuckSprites = (() => {
     // race actually ends the moment the winner crosses the line instead of
     // continuing to count down toward whoever finishes last.
     const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
-    const maxTime = winnerTime + 0.3;
+    const maxTime = winnerTime; // the engine sets this to the slider value (see race-engine.js)
     const slowMo = result.photoFinish;
+    const realTotal = maxTime * (slowMo ? RaceEngine.SLOWMO_STRETCH : 1); // real seconds the race takes == the slider value
+    let realT = 0;
     let speed = 1;
     let slowMoApplied = false;
     let crowdStarted = false;
@@ -683,6 +685,7 @@ const DuckSprites = (() => {
     function raceTick() {
       const dtSec = Math.min(app.ticker.deltaMS / 1000, 1 / 30) * speed;
       virtualT += dtSec;
+      realT += Math.min(app.ticker.deltaMS / 1000, 1 / 30);
 
       if (slowMo && !slowMoApplied && virtualT > maxTime * 0.85) {
         slowMoApplied = true;
@@ -690,7 +693,7 @@ const DuckSprites = (() => {
         statusText.textContent = "Photo finish incoming…";
       }
 
-      clockEl.textContent = Math.max(0, maxTime - virtualT).toFixed(1) + "s";
+      clockEl.textContent = Math.max(0, realTotal - realT).toFixed(1) + "s";
 
       let leaderIdx = 0, leaderProgress = -1;
       const ranked = ducks.map((d, i) => {

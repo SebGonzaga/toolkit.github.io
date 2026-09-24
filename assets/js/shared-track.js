@@ -56,15 +56,15 @@ const SharedTrack = (() => {
 
     const trackW = fieldEl.clientWidth;
 
-    // Build a Web Animations API Animation straight from buildCurve's own
-    // checkpoints: each (time, progress) pair becomes a keyframe offset/value,
-    // so the browser (not our rAF loop) owns interpolation, easing, pausing,
-    // and slow-motion (via playbackRate) for the actual on-screen motion.
-    // Preview/idle entrants (no curve yet) get no animation and just sit at
-    // their CSS default `left: 0`.
+    // Build a Web Animations API Animation from the engine's own simulated
+    // trace: each sample becomes a keyframe offset/value, so the browser
+    // (not our rAF loop) owns interpolation, pausing, and slow-motion (via
+    // playbackRate) for the actual on-screen motion. Preview/idle entrants
+    // (no finishTime yet) get no animation and just sit at their CSS
+    // default `left: 0`.
+    const MAX_DRIFT_PX = 5; // subtle racing-line wander, not a lane change
     function buildAnim(el, entrant) {
-      const curve = entrant.curve;
-      if (!curve || !entrant.finishTime) return null;
+      if (!entrant.finishTime) return null;
       const tokenWidth = el.offsetWidth || 34;
       // Drive motion via `transform: translateX(px)` instead of `left: %`.
       // `left` is a layout property — the browser has to reflow every frame
@@ -75,14 +75,31 @@ const SharedTrack = (() => {
       // `transform`, so every keyframe must restate it — WAAPI replaces the
       // whole transform value per keyframe rather than merging with CSS.
       const usablePx = Math.max(trackW - tokenWidth, 0);
-      const keyframes = curve.times.map((t, idx) => ({
-        transform: `translateY(-50%) translateX(${(curve.progresses[idx] * usablePx).toFixed(2)}px)`,
-        offset: idx === 0 ? 0 : idx === curve.times.length - 1 ? 1 : Math.min(1, t / entrant.finishTime),
-        easing: "ease-in-out",
-      }));
+      // Sample the engine's simulated distance-vs-time curve densely instead
+      // of animating straight between a handful of sparse checkpoints with
+      // per-segment easing (that old approach decelerated racers to a full
+      // stop at every checkpoint and burst them off again — it read as
+      // "dashing" rather than a swim/roll/flight). progressAt()/lateralAt()
+      // already carry the simulation's real acceleration/drag/stamina shape,
+      // so plain "linear" interpolation between closely-spaced samples
+      // reproduces that shape continuously with no artificial dead stops.
+      // The lateral sample rides along as a few px of racing-line drift so
+      // the token doesn't track a perfectly straight line either.
+      const SAMPLES = 48;
+      const keyframes = Array.from({ length: SAMPLES + 1 }, (_, idx) => {
+        const frac = idx / SAMPLES;
+        const tt = frac * entrant.finishTime;
+        const progress = idx === SAMPLES ? 1 : entrant.progressAt(tt);
+        const drift = entrant.lateralAt ? entrant.lateralAt(tt) * MAX_DRIFT_PX : 0;
+        return {
+          transform: `translateY(calc(-50% + ${drift.toFixed(2)}px)) translateX(${(progress * usablePx).toFixed(2)}px)`,
+          offset: frac,
+        };
+      });
       const anim = el.animate(keyframes, {
         duration: Math.max(entrant.finishTime * 1000, 1),
         fill: "forwards",
+        easing: "linear", // the curve's shape is already baked into the dense samples above
       });
       anim.pause(); // held at the start until track.play() is called (post-countdown)
       return anim;
