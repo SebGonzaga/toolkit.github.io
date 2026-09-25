@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rocket Race Name Picker — Pick &amp; Race</title>
-<meta name="description" content="Type or paste a class list, pick a race length, and let rockets decide who goes first.">
+<title>Spaceship Shootdown Name Picker — Duel &amp; Decide</title>
+<meta name="description" content="Type or paste a class list, pick a battle length, and let spaceships duel it out until only one is left flying.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
@@ -48,10 +48,41 @@
   .planet.no-ring::after { display: none; }
   @keyframes planet-drift { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
 
-  /* -- rocket exhaust: a flickering flame + drifting smoke/spark puffs --- */
+  /* -- ambient thruster puffs (calm flight) --- */
   .exhaust-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
   .exhaust-puff { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle, rgba(255,205,120,0.9), rgba(255,120,60,0) 70%); }
   @keyframes puff-fade { 0% { transform: scale(0.5); opacity: 0.9; } 100% { transform: scale(2.2) translateX(-18px); opacity: 0; } }
+
+  /* -- combat layer: lasers + explosions, drawn above the ships --- */
+  .fx-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
+  .laser-wrap { position: absolute; height: 0; transform-origin: 0 50%; }
+  .laser-beam {
+    position: absolute; left: 0; top: -1.5px; width: 100%; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--bc, #fff) 0%, #fff 55%, rgba(255,255,255,0) 100%);
+    box-shadow: 0 0 10px 1px var(--bc, #fff);
+    animation: laser-fire 0.25s ease-out forwards;
+  }
+  @keyframes laser-fire {
+    0% { opacity: 0; transform: scaleX(0.15); }
+    30% { opacity: 1; transform: scaleX(1); }
+    100% { opacity: 0; transform: scaleX(1); }
+  }
+  .explosion-fx {
+    position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, #ffd25c 25%, #ff7a3d 55%, rgba(255,90,40,0) 75%);
+    animation: explosion-grow 0.55s ease-out forwards;
+  }
+  .explosion-fx.big { animation: explosion-grow-big 0.75s ease-out forwards; }
+  @keyframes explosion-grow {
+    0% { transform: scale(0.3); opacity: 1; }
+    60% { transform: scale(2.6); opacity: 1; }
+    100% { transform: scale(3.4); opacity: 0; }
+  }
+  @keyframes explosion-grow-big {
+    0% { transform: scale(0.4); opacity: 1; }
+    60% { transform: scale(4.2); opacity: 1; }
+    100% { transform: scale(5.4); opacity: 0; }
+  }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
@@ -60,12 +91,17 @@
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
   .field { background: rgba(255,255,255,0.06); position: relative; z-index: 5; }
-  .field .finish-gate {
-    background-image: repeating-linear-gradient(180deg, rgba(239,185,60,0.7) 0 8px, transparent 8px 16px);
-  }
-  .field .start-gate { background: rgba(255,255,255,0.15); }
+  .field-token { left: 0; top: 0; transform: translate(0,0); animation: none; will-change: transform; }
+  .field-token.stalled { animation: none; }
+
+  .field-token .token-art { width: 100%; height: 100%; display: block; position: relative; }
+  .field-token .token-art svg { width: 100%; height: 100%; display: block; }
   .field-token .name-tag { background: rgba(10,14,28,0.75); color: #eef1fb; }
-  .field-token::before {
+
+  /* Engine flame + firing/hit flashes live on the SAME element (.token-art)
+     that carries the heading rotation, so the flame trails correctly behind
+     the nose no matter which way a ship is flying. */
+  .field-token .token-art::before {
     content: ""; position: absolute; right: 100%; top: 50%; transform: translateY(-50%);
     width: 34px; height: 6px;
     background: linear-gradient(90deg, transparent, rgba(239,185,60,0.85));
@@ -73,18 +109,25 @@
     transition: width 0.1s ease, opacity 0.1s ease;
     opacity: 0;
   }
-  .field-token.surging::before { width: 54px; opacity: 1; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95)); animation: flame-flicker 0.18s ease-in-out infinite; }
+  .field-token.surging .token-art::before { width: 54px; opacity: 1; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95)); animation: flame-flicker 0.18s ease-in-out infinite; }
   @keyframes flame-flicker { 0%,100% { transform: translateY(-50%) scaleX(1); } 50% { transform: translateY(-50%) scaleX(0.85); } }
-  .field-token .speed-trail { display: none; } /* the ::before flame already covers this role here */
-  .field.zoom-mild { transform: scale(1.02); }
-  .field.zoom-mild.zoom { transform: scale(1.07); }
-  .field .finish-gate { --fc-a: rgba(15,18,32,0.85); --fc-b: rgba(239,185,60,0.9); --finish-glow: rgba(239,185,60,0.7); }
+  .field-token.firing .token-art { animation: firing-flash 0.22s ease-in-out; }
+  @keyframes firing-flash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.9) drop-shadow(0 0 8px #fff); } }
+  .field-token.hit-flash .token-art { animation: hit-flash 0.13s ease-in-out 2; }
+  @keyframes hit-flash { 0%,100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(2.6) saturate(0.2); } }
+  .field-token.destroyed { transition: opacity 0.45s ease, filter 0.45s ease; opacity: 0.18; filter: grayscale(1) brightness(0.5); pointer-events: none; }
+  .field-token.destroyed .rank-badge { display: block; background: #3a1010; color: #ff9a7a; }
+  .field-token.victor .token-art { animation: victor-glow 0.9s ease-in-out infinite; }
+  @keyframes victor-glow {
+    0%,100% { filter: drop-shadow(0 0 8px rgba(239,185,60,0.7)); }
+    50% { filter: drop-shadow(0 0 22px rgba(239,185,60,1)); }
+  }
 
-  /* A perspective wrapper around the rocket art itself (never on
-     .field-token — shared-track.js drives that element's own transform via
-     WAAPI for position, so any decorative animation lives one level down).
-     Idle drift is a slow pitch/roll wobble; surging adds a forward-leaning
-     bank so a burst of speed visibly tilts the nose down the track. */
+  /* A perspective wrapper around the ship art itself (never on .field-token
+     — JS drives that element's own transform for arena position, so any
+     decorative animation lives one level down). Idle drift is a slow
+     pitch/roll wobble; surging adds a forward-leaning bank so a burst of
+     speed visibly tilts the nose. */
   .rocket3d {
     position: relative; width: 100%; height: 100%;
     transform-style: preserve-3d; transform-origin: 50% 50%;
@@ -100,8 +143,7 @@
     0%, 100% { transform: rotateX(6deg) rotateZ(-8deg) translateY(0) translateZ(0); }
     50%      { transform: rotateX(-4deg) rotateZ(-2deg) translateY(-2px) translateZ(4px); }
   }
-  .field-token.stalled .rocket3d { animation-duration: 2.6s; filter: saturate(0.8); }
-  /* Fins flutter independently of the body wobble so the rocket doesn't
+  /* Fins flutter independently of the body wobble so the ship doesn't
      read as one rigid cutout. */
   .r-fin { animation: fin-flutter 0.6s ease-in-out infinite; transform-box: fill-box; }
   .r-fin.top { transform-origin: 0% 100%; }
@@ -109,7 +151,7 @@
   @keyframes fin-flutter { 0%,100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
   .field-token.surging .r-fin { animation-duration: 0.24s; }
   /* The engine core glow pulses on its own rhythm, independent of the trail
-     flame outside the token (::before above), for a lit-from-within look. */
+     flame outside the token, for a lit-from-within look. */
   .r-core { animation: core-pulse 0.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
   @keyframes core-pulse { 0%,100% { opacity: 0.55; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
   .field-token.surging .r-core { animation-duration: 0.16s; }
@@ -126,12 +168,24 @@
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
 
+  /* -- Fleet Status sidebar (replaces the finish-line leaderboard) --- */
+  .fleet-row { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; padding: 4px 0; }
+  .fleet-row .fleet-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--chalk)); flex-shrink: 0; }
+  .fleet-row .fleet-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.3s ease; }
+  .fleet-row .fleet-status { font-size: 0.85rem; flex-shrink: 0; }
+  .fleet-row.destroyed .fleet-name { opacity: 0.4; text-decoration: line-through; }
+  .fleet-row.winner .fleet-name { font-weight: 800; }
+  .leaderboard-panel.many-names .fleet-row { padding: 2px 0; font-size: 0.72rem; }
+
   @media (max-width: 860px) {
     .tool-wrap { grid-template-columns: 1fr; }
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .field-token, .field-token svg, .star, .rocket3d, .r-fin, .r-core { animation: none !important; transition: none !important; transform: none !important; }
+    .field-token svg, .star, .rocket3d, .r-fin, .r-core, .laser-beam, .explosion-fx { animation: none !important; transition: none !important; }
+    /* .field-token itself keeps its JS-driven transform — that's the ship's
+       actual position, not a decorative flourish — so it stays visible and
+       correctly placed even with reduced motion on. */
   }
 </style>
 </head>
@@ -152,8 +206,8 @@
 </header>
 
 <main class="wrap">
-  <h1 style="margin-top:28px;">Rocket Race Name Picker</h1>
-  <p>Paste your roster, set a race length, and let the rockets pick. Works for 2 names or 40.</p>
+  <h1 style="margin-top:28px;">Spaceship Shootdown Name Picker</h1>
+  <p>Paste your roster, set a battle length, and let the fleet duel it out — the last ship flying gets picked. Works for 2 names or 40.</p>
 
   <div class="tool-wrap">
     <div class="panel">
@@ -167,7 +221,7 @@ Mateo
 Yuki
 Isla</textarea>
 
-      <label for="duration">Race length: <span class="duration-val" id="durationVal">8s</span></label>
+      <label for="duration">Battle length: <span class="duration-val" id="durationVal">8s</span></label>
       <input type="range" id="duration" min="2" max="30" value="8">
 
       <div class="toggle-row">
@@ -179,7 +233,7 @@ Isla</textarea>
         <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
       </div>
 
-      <button class="btn marker" id="startBtn">Launch the race</button>
+      <button class="btn marker" id="startBtn">Start the battle</button>
       <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
     </div>
 
@@ -197,14 +251,13 @@ Isla</textarea>
         <div class="field-stage">
           <div class="field-wrap" id="fieldWrap">
             <div class="field" id="field">
-              <div class="start-gate"></div>
-              <div class="finish-gate"></div>
               <div class="exhaust-layer" id="exhaustLayer"></div>
               <div class="field-tokens" id="fieldTokens"></div>
+              <div class="fx-layer" id="fxLayer"></div>
             </div>
           </div>
           <div class="leaderboard-panel">
-            <div class="lb-title">Standings</div>
+            <div class="lb-title">Fleet Status</div>
             <div class="lb-track" id="leaderboard"></div>
           </div>
         </div>
@@ -218,7 +271,6 @@ Isla</textarea>
 <script src="../assets/js/race-engine.js"></script>
 <script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
-<script src="../assets/js/shared-track.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -231,6 +283,7 @@ Isla</textarea>
   const fieldWrap = document.getElementById("fieldWrap");
   const field = document.getElementById("field");
   const exhaustLayer = document.getElementById("exhaustLayer");
+  const fxLayer = document.getElementById("fxLayer");
   const fieldTokens = document.getElementById("fieldTokens");
   const leaderboard = document.getElementById("leaderboard");
   const statusText = document.getElementById("statusText");
@@ -239,12 +292,14 @@ Isla</textarea>
   const historyList = document.getElementById("historyList");
   const starfield = document.getElementById("starfield");
 
-  // A layered, gradient-shaded rocket instead of one flat solid path: a
+  // A layered, gradient-shaded ship instead of one flat solid path: a
   // radial-gradient fuselage (light source upper-left) for a rounded-tube
   // look, separate nose-cone and fin shapes so they can move independently,
   // a glass-highlight porthole, and a pulsing engine core. Each token gets
-  // a phase offset (idx-based) so a fleet of rockets doesn't flutter/bob in
-  // perfect unison.
+  // a phase offset (idx-based) so a fleet of ships doesn't flutter/bob in
+  // perfect unison. The nose points along the SVG's +x axis (right), which
+  // is what lets a plain CSS rotate() line the nose up with the ship's
+  // actual heading in the arena.
   function tokenHTML(entrant, color, idx) {
     const gid = `rocketGrad${idx}`;
     const gid2 = `rocketFinGrad${idx}`;
@@ -288,21 +343,25 @@ Isla</textarea>
 
   // shade(color, amt): nudge every RGB channel of a hex color by amt
   // (negative = darker, positive = lighter) to derive real matching
-  // shadow/highlight tones from each racer's palette color.
+  // shadow/highlight tones from each ship's palette color.
   function shade(hex, amt) {
     const n = parseInt(hex.slice(1), 16);
     const clamp = (v) => Math.min(255, Math.max(0, v));
     const r = clamp((n >> 16) + amt), g = clamp(((n >> 8) & 0xff) + amt), b = clamp((n & 0xff) + amt);
     return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
   }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
 
   let alreadyWon = [];
   let racing = false;
-  let track = null;
+  let fleet = null;
   const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // A couple of small sparks flung off a rocket's tail when it surges —
-  // cheap DOM particles, capped so a big roster can't flood the layer.
+  // A couple of small sparks flung off a ship's tail as it flies — cheap
+  // DOM particles, capped so a big roster can't flood the layer.
   function spawnExhaustPuff(tokEl) {
     SoundFX.sputter(0.85 + Math.random() * 0.4);
     if (prefersReducedMotion || exhaustLayer.childElementCount > 40) return;
@@ -310,11 +369,216 @@ Isla</textarea>
     const fRect = field.getBoundingClientRect();
     const p = document.createElement("div");
     p.className = "exhaust-puff";
-    p.style.left = (tRect.left - fRect.left) + "px";
-    p.style.top = (tRect.top - fRect.top + tRect.height * 0.5 + (Math.random() * 6 - 3)) + "px";
+    p.style.left = (tRect.left - fRect.left + tRect.width * 0.5 + (Math.random() * 8 - 4)) + "px";
+    p.style.top = (tRect.top - fRect.top + tRect.height * 0.5 + (Math.random() * 8 - 4)) + "px";
     p.style.animation = `puff-fade ${0.4 + Math.random() * 0.3}s ease-out forwards`;
     exhaustLayer.appendChild(p);
     setTimeout(() => p.remove(), 750);
+  }
+
+  // A bright bolt drawn straight from a shooter's current position to its
+  // target's, at the instant of firing. A wrapper div carries the
+  // position+rotation (set once, never animated) so the inner bar's own
+  // grow/fade keyframes never fight with that placement.
+  function spawnLaser(fromEl, toEl, color) {
+    const fr = field.getBoundingClientRect();
+    const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+    const ax = a.left - fr.left + a.width / 2, ay = a.top - fr.top + a.height / 2;
+    const bx = b.left - fr.left + b.width / 2, by = b.top - fr.top + b.height / 2;
+    const dx = bx - ax, dy = by - ay;
+    const dist = Math.hypot(dx, dy) || 1;
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    const wrap = document.createElement("div");
+    wrap.className = "laser-wrap";
+    wrap.style.cssText = `left:${ax}px; top:${ay}px; width:${dist}px; transform: rotate(${angle}deg);`;
+    wrap.innerHTML = `<div class="laser-beam" style="--bc:${color}"></div>`;
+    fxLayer.appendChild(wrap);
+    setTimeout(() => wrap.remove(), 260);
+  }
+
+  // A flash + a ring of debris where a ship went down. `big` marks the
+  // decisive final blow, which gets a larger boom and a bigger shockwave.
+  function spawnExplosion(shipEl, big) {
+    const r = shipEl.getBoundingClientRect();
+    const fr = field.getBoundingClientRect();
+    const cx = r.left - fr.left + r.width / 2, cy = r.top - fr.top + r.height / 2;
+    const ring = document.createElement("div");
+    ring.className = "explosion-fx" + (big ? " big" : "");
+    ring.style.left = cx + "px"; ring.style.top = cy + "px";
+    fxLayer.appendChild(ring);
+    setTimeout(() => ring.remove(), big ? 800 : 600);
+    SoundFX.explosionBoom(big);
+    SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, {
+      count: big ? 26 : 14, spread: big ? 0.9 : 0.5,
+      colors: ["#ffcf5c", "#ff7a3d", "#d9503f", "#ffffff"],
+    });
+  }
+
+  /**
+   * Builds one battle's worth of ships + fleet-status rows, and owns their
+   * movement/combat state. Ships wander the arena with the same
+   * steer-toward-a-drifting-target feel as the other pickers' racers, just
+   * in two dimensions instead of one — RaceEngine still decides who wins,
+   * this only decides how the fight *looks*.
+   */
+  function createFleet(tokensEl, fleetListEl, entrants) {
+    const n = entrants.length;
+    const many = n > 14;
+    const fieldEl = tokensEl.closest(".field") || tokensEl;
+
+    tokensEl.innerHTML = "";
+    fieldEl.classList.toggle("many-names", many);
+    if (fleetListEl) {
+      fleetListEl.innerHTML = "";
+      const panel = fleetListEl.closest(".leaderboard-panel");
+      if (panel) panel.classList.toggle("many-names", many);
+    }
+
+    const showNamesAlways = n <= 10;
+    const marginX = 0.09, marginY = 0.15;
+
+    const ships = entrants.map((entrant, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      const el = document.createElement("div");
+      el.className = "field-token" + (showNamesAlways ? " always-visible" : "");
+      el.tabIndex = 0;
+      el.style.setProperty("--c", color);
+      el.innerHTML = `
+        <span class="rank-badge"></span>
+        <span class="token-art">${tokenHTML(entrant, color, i)}</span>
+        <span class="name-tag">${escapeHtml(entrant.name)}</span>
+      `;
+      tokensEl.appendChild(el);
+      return {
+        name: entrant.name, color, el,
+        artEl: el.querySelector(".token-art"),
+        badgeEl: el.querySelector(".rank-badge"),
+        x: rnd(marginX, 1 - marginX), y: rnd(marginY, 1 - marginY),
+        vx: 0, vy: 0, angle: rnd(0, 360),
+        tx: 0.5, ty: 0.5, wanderTimer: 0,
+        speed: rnd(0.045, 0.085), turnRate: rnd(1.3, 2.6),
+        aimUntil: -1, aimTarget: null,
+        alive: true, rowEl: null,
+      };
+    });
+    const byName = Object.fromEntries(ships.map((s) => [s.name, s]));
+
+    if (fleetListEl) {
+      ships.forEach((ship) => {
+        const row = document.createElement("div");
+        row.className = "fleet-row";
+        row.innerHTML = `<span class="fleet-dot" style="--c:${ship.color}"></span><span class="fleet-name">${escapeHtml(ship.name)}</span><span class="fleet-status">🚀</span>`;
+        fleetListEl.appendChild(row);
+        ship.rowEl = row;
+      });
+    }
+
+    // Place every ship once so the arena isn't empty before a battle starts
+    // (matches the idle-preview behaviour of the other pickers).
+    function paint() {
+      const rect = fieldEl.getBoundingClientRect();
+      ships.forEach((ship) => {
+        ship.el.style.transform = `translate(${(ship.x * rect.width).toFixed(1)}px, ${(ship.y * rect.height).toFixed(1)}px) translate(-50%, -50%)`;
+        ship.artEl.style.transform = `rotate(${ship.angle.toFixed(1)}deg)`;
+      });
+    }
+    paint();
+
+    function step(dt) {
+      if (dt <= 0) return;
+      const rect = fieldEl.getBoundingClientRect();
+      const tokenSize = many ? 22 : 34;
+      const mx = Math.min(0.4, (tokenSize / 2 + 6) / Math.max(rect.width, 1));
+      const my = Math.min(0.4, (tokenSize / 2 + 6) / Math.max(rect.height, 1));
+      const now = performance.now() / 1000;
+      ships.forEach((ship) => {
+        if (!ship.alive) return;
+        let tx, ty, spd = ship.speed;
+        if (ship.aimUntil > now && ship.aimTarget && ship.aimTarget.alive) {
+          tx = ship.aimTarget.x; ty = ship.aimTarget.y; spd = ship.speed * 1.7;
+        } else {
+          ship.wanderTimer -= dt;
+          if (ship.wanderTimer <= 0) {
+            ship.tx = rnd(mx, 1 - mx); ship.ty = rnd(my, 1 - my);
+            ship.wanderTimer = rnd(1.0, 2.4);
+          }
+          tx = ship.tx; ty = ship.ty;
+        }
+        const dx = tx - ship.x, dy = ty - ship.y;
+        const dist = Math.hypot(dx, dy) || 0.0001;
+        const dvx = (dx / dist) * spd, dvy = (dy / dist) * spd;
+        const turn = Math.min(1, dt * ship.turnRate);
+        ship.vx += (dvx - ship.vx) * turn;
+        ship.vy += (dvy - ship.vy) * turn;
+        ship.x = Math.min(1 - mx, Math.max(mx, ship.x + ship.vx * dt));
+        ship.y = Math.min(1 - my, Math.max(my, ship.y + ship.vy * dt));
+        const targetAngle = Math.atan2(ship.vy, ship.vx) * 180 / Math.PI;
+        const diff = ((targetAngle - ship.angle + 540) % 360) - 180;
+        ship.angle += diff * Math.min(1, dt * 6);
+        const surging = Math.hypot(ship.vx, ship.vy) > ship.speed * 1.25;
+        ship.el.classList.toggle("surging", surging);
+        ship.el.style.transform = `translate(${(ship.x * rect.width).toFixed(1)}px, ${(ship.y * rect.height).toFixed(1)}px) translate(-50%, -50%)`;
+        ship.artEl.style.transform = `rotate(${ship.angle.toFixed(1)}deg)`;
+      });
+    }
+
+    // Called right as a shot is fired: the shooter banks toward its target
+    // for a beat (a little pursuit flourish) while the beam + sound play.
+    function fire(shooterName, victimName) {
+      const shooter = byName[shooterName], victim = byName[victimName];
+      if (!shooter || !victim) return;
+      if (shooter.alive) {
+        shooter.aimUntil = performance.now() / 1000 + 0.5;
+        shooter.aimTarget = victim;
+        shooter.el.classList.add("firing");
+        setTimeout(() => shooter.el.classList.remove("firing"), 240);
+      }
+      if (victim.alive) {
+        victim.el.classList.add("hit-flash");
+        setTimeout(() => victim.el.classList.remove("hit-flash"), 260);
+      }
+      spawnLaser(shooter.el, victim.el, shooter.color);
+    }
+
+    // Takes one ship out of the fight: explosion, fade, fleet-row update.
+    function kill(name, big) {
+      const ship = byName[name];
+      if (!ship || !ship.alive) return;
+      ship.alive = false;
+      spawnExplosion(ship.el, big);
+      ship.el.classList.add("destroyed");
+      if (ship.badgeEl) ship.badgeEl.textContent = "💥";
+      if (ship.rowEl) {
+        ship.rowEl.classList.add("destroyed");
+        const st = ship.rowEl.querySelector(".fleet-status");
+        if (st) st.textContent = "💥";
+      }
+    }
+
+    function celebrate(name) {
+      const ship = byName[name];
+      if (!ship) return;
+      ship.el.classList.add("victor");
+      if (ship.rowEl) {
+        ship.rowEl.classList.add("winner");
+        const st = ship.rowEl.querySelector(".fleet-status");
+        if (st) st.textContent = "🏆";
+      }
+    }
+
+    function teardown() {
+      // Nothing async is in flight per-ship (no WAAPI handles to cancel),
+      // but this hook exists so buildFleet() has a clean symmetric API —
+      // and a spot to stop any stray timers if this grows further.
+    }
+
+    return { ships, step, fire, kill, celebrate, teardown };
+  }
+
+  function buildFleet(entrants) {
+    if (fleet) fleet.teardown();
+    fleet = createFleet(fieldTokens, leaderboard, entrants);
+    return fleet;
   }
 
   for (let i = 0; i < 60; i++) {
@@ -343,23 +607,7 @@ Isla</textarea>
       alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
   }
 
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-  }
-
-  function buildStage(order) {
-    if (track) track.destroy(); // cancel any in-flight animations before replacing tokens
-    track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
-      tokenHTML,
-      palette: PALETTE,
-      onCross: (entrant, tok) => {
-        const r = tok.el.getBoundingClientRect();
-        SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, { count: 10, spread: 0.35 });
-      },
-    });
-  }
-
-  async function runRace() {
+  async function runBattle() {
     if (racing) return;
     const roster = getNames();
     if (roster.length < 2) {
@@ -370,6 +618,10 @@ Isla</textarea>
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
     const duration = Number(durationEl.value);
+    // RaceEngine still runs its full fair, weighted simulation — we just
+    // reinterpret its output for a shootdown instead of a footrace: the
+    // engine's own "winner" (the one who'd finish first) is the last ship
+    // left flying, and everyone else goes down in reverse finishing order.
     const result = RaceEngine.run(roster, {
       duration,
       noRepeat: noRepeatEl.checked,
@@ -378,96 +630,107 @@ Isla</textarea>
 
     const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
     const displayOrder = result.eligiblePool.map((name) => byName[name]);
-    buildStage(displayOrder);
+    const battle = buildFleet(displayOrder);
 
-    statusText.textContent = "Ignition sequence…";
-    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "LIFTOFF!"], null, fieldWrap);
+    const rankedByFinish = displayOrder.slice().sort((a, b) => a.finishTime - b.finishTime);
+    const survivorName = rankedByFinish[0].name;
+    const eliminationOrder = rankedByFinish.slice(1).reverse().map((o) => o.name);
+    const nEv = eliminationOrder.length;
+
+    const startBuf = Math.min(1.1, duration * 0.14);
+    const preVictoryGap = Math.min(1.0, duration * 0.08);
+    const lastEventTime = Math.max(startBuf + 0.4, duration - preVictoryGap);
+    const gap = (lastEventTime - startBuf) / nEv;
+
+    const alivePool = new Set(displayOrder.map((o) => o.name));
+    const events = eliminationOrder
+      .map((victim, i) => ({ victim, t: startBuf + gap * (i + 1) + (Math.random() - 0.5) * gap * 0.35 }))
+      .sort((a, b) => a.t - b.t);
+    let prevT = 0;
+    events.forEach((ev, i) => {
+      ev.t = Math.min(lastEventTime, Math.max(ev.t, prevT + Math.max(0.35, gap * 0.4)));
+      prevT = ev.t;
+      const candidates = [...alivePool].filter((nm) => nm !== ev.victim);
+      ev.shooter = candidates[Math.floor(Math.random() * candidates.length)];
+      ev.fireAt = Math.max(startBuf * 0.5, ev.t - Math.min(0.55, Math.max(0.25, duration * 0.05)));
+      ev.fired = false; ev.resolved = false;
+      ev.final = i === events.length - 1;
+      alivePool.delete(ev.victim);
+    });
+
+    statusText.textContent = "Fleets scrambling…";
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "ENGAGE!"], null, fieldWrap);
     SuspenseFX.shake(stage, 420);
     SoundFX.rocketLaunch();
 
-    statusText.textContent = "3, 2, 1… liftoff!";
-    track.play(); // actual motion is now driven by each token's own Web Animation
+    statusText.textContent = "Weapons hot — good luck out there";
 
-    const start = performance.now();
-    // Timed to the WINNER's own finish, not the slowest racer's, so the
-    // clock/zoom/slow-mo cues all reach their climax exactly when the
-    // winner crosses the line.
-    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
-    const maxTime = winnerTime; // the engine sets this to the slider value (see race-engine.js)
     const slowMo = result.photoFinish;
-    const realTotal = maxTime * (slowMo ? RaceEngine.SLOWMO_STRETCH : 1); // real seconds the race takes == the slider value
+    const maxTime = lastEventTime;
+    const realTotal = maxTime * (slowMo ? RaceEngine.SLOWMO_STRETCH : 1);
     let slowMoApplied = false;
-    let zoomMildOn = false;
-    let lastGroupShake = 0;
+    let lastVirt = 0;
     let lastPuffCheck = 0;
-    let crowdSwellStarted = false;
-    let prevLeaderIdx = -1;
+    let allDone = false;
+    let resolvedAt = 0;
+    const start = performance.now();
 
-    // No longer drives position — only reads each token's own animation
-    // clock (via track.update) to keep the leaderboard/clock in sync. Real
-    // slow motion comes from track.setPlaybackRate(), a genuine browser
-    // primitive, not a manual time remap.
-    function rankFrame(now) {
+    function frame(now) {
       if (!racing) return;
       const rawElapsed = (now - start) / 1000;
 
-      if (slowMo && !slowMoApplied && rawElapsed > maxTime * 0.85) {
+      if (slowMo && !slowMoApplied && rawElapsed > maxTime * 0.82) {
         slowMoApplied = true;
-        track.setPlaybackRate(0.35);
-        statusText.textContent = "Photo finish incoming…";
+        statusText.textContent = "Final duel — it's close!";
+        SuspenseFX.photoFinishBanner(stage, "Final duel!");
       }
+      const virt = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
+      clock.textContent = Math.max(0, realTotal - rawElapsed).toFixed(1) + "s";
 
-      const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
-      clock.textContent = Math.max(0, realTotal - rawElapsed).toFixed(1) + "s"; // real remaining time: hits 0.0 exactly when the winner is decided
+      const dt = Math.min(0.08, Math.max(0, virt - lastVirt));
+      lastVirt = virt;
+      battle.step(dt);
 
-      const { leaderIdx, groupSurge } = track.update(rawElapsed);
-      if (prevLeaderIdx !== -1 && leaderIdx !== prevLeaderIdx) SoundFX.leadChange();
-      prevLeaderIdx = leaderIdx;
+      events.forEach((ev) => {
+        if (!ev.fired && virt >= ev.fireAt) {
+          ev.fired = true;
+          battle.fire(ev.shooter, ev.victim);
+        }
+        if (!ev.resolved && virt >= ev.t) {
+          ev.resolved = true;
+          battle.kill(ev.victim, ev.final);
+          if (ev.final) { allDone = true; resolvedAt = now; }
+        }
+      });
 
-      const overallProgress = displayElapsed / maxTime;
-      if (overallProgress > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }
-      if (overallProgress > 0.82) {
-        track.setZoom(true);
-        if (!crowdSwellStarted) { crowdSwellStarted = true; SoundFX.crowdSwell(Math.max(1.2, maxTime * 0.2)); }
-      }
-      if (groupSurge && now - lastGroupShake > 900) {
-        lastGroupShake = now;
-        SuspenseFX.microShake(stage);
-      }
       if (now - lastPuffCheck > 90) {
         lastPuffCheck = now;
-        track.tokens.forEach((tok) => { if (tok.el.classList.contains("surging")) spawnExhaustPuff(tok.el); });
+        battle.ships.forEach((s) => { if (s.alive && s.el.classList.contains("surging")) spawnExhaustPuff(s.el); });
       }
 
-      requestAnimationFrame(rankFrame);
+      if (allDone && now - resolvedAt > 650) {
+        finishBattle({ winner: survivorName, photoFinish: result.photoFinish });
+        return;
+      }
+      requestAnimationFrame(frame);
     }
-    requestAnimationFrame(rankFrame);
-
-    // End the race the instant the winner's own animation completes —
-    // waiting for every racer used to let the winner cross the line while
-    // the clock (paced to the slowest racer) still had time on it.
-    await track.finishedByName(result.winner);
-    finishRace(result);
+    requestAnimationFrame(frame);
   }
 
-  function finishRace(result) {
+  function finishBattle(result) {
     racing = false;
-    if (track) {
-      track.setZoom(false);
-      track.setZoomMild(false);
-      track.celebrateWinner(result.winner);
-    }
+    if (fleet) fleet.celebrate(result.winner);
     SuspenseFX.flash(stage, 500);
     SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
-    statusText.textContent = "We have a winner";
-    clock.textContent = "🏁";
+    statusText.textContent = "Last ship flying!";
+    clock.textContent = "🏆";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🚀 ${escapeHtml(result.winner)} blasts across the line first!</span>`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🚀 ${escapeHtml(result.winner)} is the last ship flying!</span>`;
     winnerBanner.classList.add("show");
-    if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
+    if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Down to the wire!");
     if (noRepeatEl.checked) {
       alreadyWon.push(result.winner);
       renderHistory();
@@ -476,8 +739,8 @@ Isla</textarea>
     SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
-  startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
+  startBtn.addEventListener("click", runBattle);
+  buildFleet(getNames().map((name) => ({ name })));
 </script>
 
 </body>

@@ -480,6 +480,20 @@ const SoundFX = (() => {
     tone(55, 1.6, { type: "sawtooth", gain: 0.12, glideTo: 180, filter: { type: "lowpass", freq: 300 } });
     whoosh(1.2, true, 0.1);
   }
+  /** Cartoon laser "pew" — a bright downward-glide square blip with a thin noise crack. */
+  function laserZap(p = 1) {
+    if (!allowed("laser", 90)) return;
+    tone(1900 * p, 0.1, { type: "square", gain: 0.14, glideTo: 420 * p, filter: { type: "lowpass", freq: 4000 } });
+    tone(2600 * p, 0.05, { type: "sawtooth", gain: 0.05, glideTo: 900 * p, delay: 0.01 });
+    noiseBurst(0.03, { filterType: "highpass", filterFreq: 3500, gain: 0.05 });
+  }
+  /** Cartoon "kaboom" — low thump + falling noise sweep, punchier/shorter than rocketLaunch. */
+  function explosionBoom(big = false) {
+    if (!allowed("boom", 180)) return;
+    noiseBurst(big ? 0.55 : 0.32, { filterType: "lowpass", filterFreq: big ? 1400 : 900, sweepTo: 120, gain: big ? 0.32 : 0.24 });
+    tone(big ? 90 : 130, big ? 0.5 : 0.32, { type: "sawtooth", gain: 0.26, glideTo: 35, filter: { type: "lowpass", freq: 400 } });
+    if (big) later(() => noiseBurst(0.7, { filterType: "highpass", filterFreq: 1800, gain: 0.08, fadeIn: 0.1 }), 60);
+  }
   function balloonPop() {
     if (!allowed("balloonpop", 100)) return;
     noiseBurst(0.09, { filterType: "highpass", filterFreq: 700, gain: 0.4 });
@@ -491,7 +505,7 @@ const SoundFX = (() => {
   /** Index-page hover previews: each tool card "says" something. */
   function preview(kind) {
     const map = {
-      duck: () => quack(1), rocket: () => whoosh(0.35, true, 0.12), turtle: () => plod(0.8),
+      duck: () => quack(1), rocket: () => laserZap(1), turtle: () => plod(0.8),
       ball: () => ping(3), balloon: () => squeak(1.1), wheel: () => { tick(1); later(() => tick(0.9), 90); later(() => tick(0.8), 200); },
       slot: () => kaChing(), card: () => flutter(), team: () => deal(2), bracket: () => matchWin(),
       weighted: () => thud(), elim: () => uhoh(), yesno: () => answer("yes"),
@@ -594,7 +608,7 @@ const SoundFX = (() => {
     // game
     beep, countdownStep, splash, crowdSwell, cheer, fanfare, winner, leadChange,
     tick, reelTick, reelStop, lever, kaChing, drumroll, ping, matchWin, flutter, flipReveal,
-    deal, rattle, stamp, answer, eliminated, plod, sputter, rocketLaunch, balloonPop, drop,
+    deal, rattle, stamp, answer, eliminated, plod, sputter, rocketLaunch, laserZap, explosionBoom, balloonPop, drop,
     preview,
   };
 })();
