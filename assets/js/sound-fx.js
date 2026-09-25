@@ -468,6 +468,12 @@ const SoundFX = (() => {
     tone(140 * p, 0.12, { gain: 0.14, glideTo: 90 * p });
     noiseBurst(0.02, { filterType: "lowpass", filterFreq: 1200, gain: 0.05, delay: 0.02 });
   }
+  /** Comedic toy-rocket engine misfire — a little "b-budda-pft" puff, paired with each exhaust sprite. */
+  function sputter(p = 1) {
+    if (!allowed("sputter", 100)) return;
+    tone(120 * p, 0.05, { type: "square", gain: 0.09, glideTo: 60 * p, filter: { type: "lowpass", freq: 900 } });
+    noiseBurst(0.05, { filterType: "lowpass", filterFreq: 500, gain: 0.06, delay: 0.015 });
+  }
   function rocketLaunch() {
     if (!allowed("rocket", 500)) return;
     noiseBurst(1.8, { filterType: "lowpass", filterFreq: 250, sweepTo: 1400, gain: 0.22, fadeIn: 0.5 });
@@ -588,7 +594,7 @@ const SoundFX = (() => {
     // game
     beep, countdownStep, splash, crowdSwell, cheer, fanfare, winner, leadChange,
     tick, reelTick, reelStop, lever, kaChing, drumroll, ping, matchWin, flutter, flipReveal,
-    deal, rattle, stamp, answer, eliminated, plod, rocketLaunch, balloonPop, drop,
+    deal, rattle, stamp, answer, eliminated, plod, sputter, rocketLaunch, balloonPop, drop,
     preview,
   };
 })();

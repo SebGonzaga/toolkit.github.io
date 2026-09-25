@@ -304,6 +304,7 @@ Isla</textarea>
   // A couple of small sparks flung off a rocket's tail when it surges —
   // cheap DOM particles, capped so a big roster can't flood the layer.
   function spawnExhaustPuff(tokEl) {
+    SoundFX.sputter(0.85 + Math.random() * 0.4);
     if (prefersReducedMotion || exhaustLayer.childElementCount > 40) return;
     const tRect = tokEl.getBoundingClientRect();
     const fRect = field.getBoundingClientRect();
@@ -400,6 +401,7 @@ Isla</textarea>
     let lastGroupShake = 0;
     let lastPuffCheck = 0;
     let crowdSwellStarted = false;
+    let prevLeaderIdx = -1;
 
     // No longer drives position — only reads each token's own animation
     // clock (via track.update) to keep the leaderboard/clock in sync. Real
@@ -418,7 +420,9 @@ Isla</textarea>
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
       clock.textContent = Math.max(0, realTotal - rawElapsed).toFixed(1) + "s"; // real remaining time: hits 0.0 exactly when the winner is decided
 
-      const { groupSurge } = track.update(rawElapsed);
+      const { leaderIdx, groupSurge } = track.update(rawElapsed);
+      if (prevLeaderIdx !== -1 && leaderIdx !== prevLeaderIdx) SoundFX.leadChange();
+      prevLeaderIdx = leaderIdx;
 
       const overallProgress = displayElapsed / maxTime;
       if (overallProgress > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }

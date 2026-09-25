@@ -433,6 +433,7 @@ Isla</textarea>
     let lastGroupShake = 0;
     let lastDustCheck = 0;
     let crowdSwellStarted = false;
+    let prevLeaderIdx = -1;
 
     // No longer drives position — only reads each token's own animation
     // clock (via track.update) to keep the leaderboard/clock in sync. Real
@@ -452,7 +453,11 @@ Isla</textarea>
       const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
       clock.textContent = Math.max(0, realTotal - rawElapsed).toFixed(1) + "s"; // real remaining time: hits 0.0 exactly when the winner is decided
 
-      const { groupSurge } = track.update(rawElapsed);
+      const { leaderIdx, groupSurge } = track.update(rawElapsed);
+      // A "lead change" between two turtles is almost a contradiction in
+      // terms — which is exactly why the little chime is funny here.
+      if (prevLeaderIdx !== -1 && leaderIdx !== prevLeaderIdx) SoundFX.leadChange();
+      prevLeaderIdx = leaderIdx;
 
       const overallProgress = displayElapsed / maxTime;
       if (overallProgress > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }

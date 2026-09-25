@@ -644,11 +644,14 @@ Isla</textarea>
         lastSplashCheck = now;
         track.tokens.forEach((tok) => {
           const isSurging = tok.el.classList.contains("surging");
-          if (isSurging && tok.el.dataset.wasSurging !== "1") splashAtToken(tok.el, false);
+          if (isSurging && tok.el.dataset.wasSurging !== "1") {
+            splashAtToken(tok.el, false);
+            SoundFX.quack(0.85 + Math.random() * 0.35); // little quacks as paddling ducks surge
+          }
           tok.el.dataset.wasSurging = isSurging ? "1" : "0";
         });
         if (leaderIdx !== prevLeaderIdx) {
-          if (prevLeaderIdx !== -1) splashAtToken(track.tokens[leaderIdx].el, true);
+          if (prevLeaderIdx !== -1) { splashAtToken(track.tokens[leaderIdx].el, true); SoundFX.leadChange(); }
           prevLeaderIdx = leaderIdx;
         }
       }

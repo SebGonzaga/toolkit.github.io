@@ -321,6 +321,7 @@ Isla</textarea>
         document.querySelectorAll(".col.leader").forEach((c) => c.classList.remove("leader"));
         const el = document.getElementById(`col-${leaderIdx}`);
         if (el) el.classList.add("leader");
+        if (lastLeaderIdx !== -1) SoundFX.leadChange();
         lastLeaderIdx = leaderIdx;
       }
 
