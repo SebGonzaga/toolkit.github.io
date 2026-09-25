@@ -323,9 +323,9 @@ Isla</textarea>
         yFrac: Math.min(1, Math.max(0, (row + 0.5) / rows + jitterY)),
         ampXFrac: 0.5 / cols,
         ampYFrac: 0.5 / rows,
-        fy1: rand(0.4, 0.8), py1: rand(0, Math.PI * 2),
-        fy2: rand(0.9, 1.6), py2: rand(0, Math.PI * 2),
-        fj: rand(1.1, 2.1), pj: rand(0, Math.PI * 2),
+        fy1: rand(0.22, 0.4), py1: rand(0, Math.PI * 2),
+        fy2: rand(0.45, 0.75), py2: rand(0, Math.PI * 2),
+        fj: rand(0.5, 0.95), pj: rand(0, Math.PI * 2),
         color,
         lastTrail: 0,
         wentDanger: false,
@@ -372,7 +372,12 @@ Isla</textarea>
       clock.textContent = Math.max(0, maxTime - elapsed).toFixed(1) + "s"; // maxTime == the slider value (engine guarantees it)
 
       const areaW = flightArea.clientWidth, areaH = flightArea.clientHeight;
-      const margin = many ? 24 : 36;
+      // Horizontal margin has to clear the name tag (wider than the balloon
+      // itself); vertical has to clear the balloon-plus-tag stack at its
+      // biggest (near-pop) size. Sized so a balloon's full silhouette stays
+      // inside the visible box at all times instead of clipping at the edge.
+      const marginX = many ? 28 : 42;
+      const marginY = many ? 34 : 48;
 
       let leaderIdx = 0, leaderProgress = -1, surgingCount = 0;
       displayOrder.forEach((entrant, i) => {
@@ -385,20 +390,24 @@ Isla</textarea>
         const prevScale = parseFloat(el.dataset.prevScale || String(MIN_SCALE));
         const scale = MIN_SCALE + progress * (MAX_SCALE - MIN_SCALE);
 
-        // Flight gets more frantic the bigger a balloon gets — a gentle
-        // drift near the start, a real scramble right before it pops.
-        const intensity = 1 + progress * 1.7;
-        const ampX = home.ampXFrac * areaW * 0.85;
-        const ampY = home.ampYFrac * areaH * 0.85;
-        const baseX = margin + home.xFrac * (areaW - margin * 2);
-        const baseY = margin + home.yFrac * (areaH - margin * 2);
+        // Flight gets a bit more lively as a balloon grows — a slow, calm
+        // drift near the start, a touch livelier right before it pops —
+        // but stays gentle throughout rather than swinging wildly.
+        const intensity = 1 + progress * 0.85;
+        const ampX = home.ampXFrac * areaW * 0.55;
+        const ampY = home.ampYFrac * areaH * 0.55;
+        const baseX = marginX + home.xFrac * (areaW - marginX * 2);
+        const baseY = marginY + home.yFrac * (areaH - marginY * 2);
         const lateral = entrant.lateralAt ? entrant.lateralAt(elapsed) : 0; // -1..1, tied to the underlying pace sim
         const jitter = Math.sin(elapsed * home.fj + home.pj);
         const xOff = (lateral * 0.7 + jitter * 0.3) * ampX * intensity;
         const yOff = (Math.sin(elapsed * home.fy1 + home.py1) * 0.65 +
                       Math.sin(elapsed * home.fy2 + home.py2) * 0.35) * ampY * intensity;
-        const x = Math.min(areaW - margin * 0.5, Math.max(margin * 0.5, baseX + xOff));
-        const y = Math.min(areaH - margin * 0.5, Math.max(margin * 0.5, baseY + yOff));
+        // Clamped to the FULL margin (not half) so the balloon's whole
+        // silhouette — including the name tag — never slips past the edge
+        // of the visible box, even mid-swing.
+        const x = Math.min(areaW - marginX, Math.max(marginX, baseX + xOff));
+        const y = Math.min(areaH - marginY, Math.max(marginY, baseY + yOff));
         wrapEl.style.left = x + "px";
         wrapEl.style.top = y + "px";
         el.style.transform = `scale(${scale.toFixed(3)})`;
