@@ -381,6 +381,7 @@ Isla</textarea>
   // position+rotation (set once, never animated) so the inner bar's own
   // grow/fade keyframes never fight with that placement.
   function spawnLaser(fromEl, toEl, color) {
+    SoundFX.laserZap(0.85 + Math.random() * 0.35);
     const fr = field.getBoundingClientRect();
     const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
     const ax = a.left - fr.left + a.width / 2, ay = a.top - fr.top + a.height / 2;

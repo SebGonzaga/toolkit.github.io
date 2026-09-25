@@ -363,6 +363,7 @@ Isla</textarea>
     let winnerPopped = false;
     let lastGroupShake = 0;
     let climaxOn = false;
+    let lastHeartbeat = 0;
     const many = displayOrder.length > 14;
     const showTrails = !many; // keep the sky readable when the roster is big
 
@@ -446,6 +447,18 @@ Isla</textarea>
         lastLeaderIdx = leaderIdx;
       }
 
+      // A rising "heartbeat" squeak tied to whoever's currently biggest —
+      // quiet and slow early on, faster and higher-pitched as they get
+      // closer to popping, so the tension builds in the ears as well as
+      // on screen.
+      if (leaderProgress > 0.45 && !winnerPopped) {
+        const gap = 620 - leaderProgress * 420;
+        if (now - lastHeartbeat > gap) {
+          lastHeartbeat = now;
+          SoundFX.squeak(1 + leaderProgress * 0.75);
+        }
+      }
+
       // Climax mode: once the leader is deep in the danger zone, the whole
       // stage starts pulsing and the clock throbs too, so the tension isn't
       // only visible on the one balloon you happen to be looking at.
@@ -454,7 +467,7 @@ Isla</textarea>
         climaxOn = wantsClimax;
         stage.classList.toggle("climax", climaxOn);
         clock.classList.toggle("hot", climaxOn);
-        if (climaxOn) SuspenseFX.flash(stage);
+        if (climaxOn) { SuspenseFX.flash(stage); SoundFX.gasp(); }
       }
 
       if (elapsed < maxTime) {
@@ -486,11 +499,14 @@ Isla</textarea>
 
     // Everyone else gets a little startled jump at the pop, so the moment
     // reads as something that just happened *to the whole flock*, not only
-    // to the winner.
+    // to the winner. A staggered squeak chorus sells the same beat in sound.
+    let squeakDelay = 0;
     displayOrder.forEach((entrant, i) => {
       if (entrant.name === result.winner) return;
       const wrapEl = document.getElementById(`wrap-${i}`);
       if (wrapEl) wrapEl.classList.add("startled");
+      squeakDelay += 40 + Math.random() * 50;
+      setTimeout(() => SoundFX.squeak(0.8 + Math.random() * 0.5), squeakDelay);
     });
 
     const winnerIdx = result.eligiblePool.indexOf(result.winner);
