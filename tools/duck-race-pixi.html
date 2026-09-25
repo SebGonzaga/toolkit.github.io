@@ -213,7 +213,7 @@ Isla</textarea>
           </div>
         </div>
       </div>
-      <div class="winner-banner" id="winnerBanner"></div>
+      <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
       <div class="history" id="historyList"></div>
     </div>
   </div>
@@ -302,7 +302,7 @@ const SoundKit = (() => {
   }
 
   async function init() {
-    const [quackUrl, splashUrl, splashBigUrl, tickUrl, goUrl, fanfareUrl, crowdUrl] = await Promise.all([
+    const [quackUrl, splashUrl, splashBigUrl, tickUrl, goUrl, fanfareUrl, crowdUrl, leadUrl, bumpUrl, cheerUrl] = await Promise.all([
       render(0.15, (c, d) => tone(c, d, 300, 0.09, { type: "sawtooth", gain: 0.5, glideTo: 160 })),
       render(0.15, (c, d) => noise(c, d, 0.12, { filterFreq: 1400, gain: 0.6 })),
       render(0.3, (c, d) => noise(c, d, 0.22, { filterFreq: 900, gain: 0.7 })),
@@ -310,6 +310,15 @@ const SoundKit = (() => {
       render(0.2, (c, d) => tone(c, d, 880, 0.15, { type: "square", gain: 0.5 })),
       render(1.3, (c, d) => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(c, d, f, 0.28, { type: "triangle", gain: 0.5, delay: i * 0.11 }))),
       render(2.6, (c, d) => noise(c, d, 2.5, { filterType: "lowpass", filterFreq: 900, gain: 0.35, fadeIn: 1.4 })),
+      // Two-tone "new leader" chime.
+      render(0.2, (c, d) => { tone(c, d, 880, 0.08, { type: "triangle", gain: 0.45 }); tone(c, d, 1175, 0.12, { type: "triangle", gain: 0.45, delay: 0.07 }); }),
+      // Low thump for a pack-surge micro-shake.
+      render(0.1, (c, d) => tone(c, d, 140, 0.08, { type: "sine", gain: 0.55, glideTo: 80 })),
+      // Crowd cheer burst for the victory beat, layered under the fanfare.
+      render(1.6, (c, d) => {
+        noise(c, d, 1.6, { filterType: "bandpass", filterFreq: 1400, gain: 0.4, fadeIn: 0.25 });
+        [420, 480, 460, 520].forEach((f, i) => tone(c, d, f, 0.7, { type: "sawtooth", gain: 0.18, glideTo: f + 300, delay: i * 0.08 }));
+      }),
     ]);
     howls.quack = new Howl({ src: [quackUrl], format: ["wav"], volume: 0.7 });
     howls.splash = new Howl({ src: [splashUrl], format: ["wav"], volume: 0.7 });
@@ -318,6 +327,9 @@ const SoundKit = (() => {
     howls.go = new Howl({ src: [goUrl], format: ["wav"], volume: 0.7 });
     howls.fanfare = new Howl({ src: [fanfareUrl], format: ["wav"], volume: 0.8 });
     howls.crowd = new Howl({ src: [crowdUrl], format: ["wav"], volume: 0.6 });
+    howls.lead = new Howl({ src: [leadUrl], format: ["wav"], volume: 0.5 });
+    howls.bump = new Howl({ src: [bumpUrl], format: ["wav"], volume: 0.5 });
+    howls.cheer = new Howl({ src: [cheerUrl], format: ["wav"], volume: 0.55 });
     Howler.mute(muted);
     ready = true;
   }
@@ -344,6 +356,9 @@ const SoundKit = (() => {
     beep(step) { if (ready) (step === "go" ? howls.go : howls.tick).play(); },
     fanfare() { if (ready) howls.fanfare.play(); },
     crowdSwell() { if (ready) return howls.crowd.play(), { stop: () => howls.crowd.stop() }; return { stop() {} }; },
+    leadChange() { if (ready && allowed("lead", 900)) howls.lead.play(); },
+    bump() { if (ready && allowed("bump", 300)) howls.bump.play(); },
+    cheer() { if (ready) howls.cheer.play(); },
   };
 })();
 
@@ -728,6 +743,7 @@ const DuckSprites = (() => {
           if (prevLeaderIdx !== -1) {
             spawnSplashFx(ducks[leaderIdx].container.x, ducks[leaderIdx].container.y, true);
             gsap.fromTo(ducks[leaderIdx].container.duckBody, { tint: 0xffffff }, { tint: ducks[leaderIdx].color, duration: 0.4 });
+            SoundKit.leadChange();
           }
           prevLeaderIdx = leaderIdx;
         }
@@ -765,6 +781,7 @@ const DuckSprites = (() => {
       if (ducks.length >= 3 && surgingCount / ducks.length >= 0.35 && now - lastGroupShake > 900) {
         lastGroupShake = now;
         SuspenseFX.microShake(stage);
+        SoundKit.bump();
       }
 
       if (virtualT >= maxTime) {
@@ -787,6 +804,7 @@ const DuckSprites = (() => {
     }
     gsap.fromTo(stage, { x: -6 }, { x: 0, duration: 0.38, ease: "elastic.out(1, 0.3)" });
     SoundKit.fanfare();
+    setTimeout(() => SoundKit.cheer(), 350);
     SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);

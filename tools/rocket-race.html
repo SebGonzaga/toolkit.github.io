@@ -245,7 +245,7 @@ Isla</textarea>
         <div class="planet" style="width:46px; height:46px; left:8%; top:14%; background:radial-gradient(circle at 32% 30%, #efb93c, #a9660f 75%); animation-duration:9s;"></div>
         <div class="planet no-ring" style="width:26px; height:26px; right:12%; top:22%; background:radial-gradient(circle at 35% 30%, #8fb9d8, #2c5b7a 75%); animation-duration:7s; animation-delay:-3s;"></div>
         <div class="stage-header">
-          <span class="status" id="statusText">Ready when you are</span>
+          <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
         <div class="field-stage">
@@ -262,7 +262,7 @@ Isla</textarea>
           </div>
         </div>
       </div>
-      <div class="winner-banner" id="winnerBanner"></div>
+      <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
       <div class="history" id="historyList"></div>
     </div>
   </div>

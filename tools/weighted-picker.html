@@ -112,13 +112,13 @@
     <div>
       <div class="stage" id="stage">
         <div class="stage-header">
-          <span class="status" id="statusText">Ready when you are</span>
+          <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
           <span class="clock" id="clock"></span>
         </div>
         <div class="ticket" id="ticket"><span class="big ghost" id="ticketName">?</span></div>
         <div class="hat" id="hat"></div>
       </div>
-      <div class="winner-banner" id="winnerBanner"></div>
+      <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
     </div>
   </div>
 </main>

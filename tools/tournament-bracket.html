@@ -115,7 +115,7 @@ Sana</textarea>
     <div>
       <div class="stage" id="stage">
         <div class="stage-header">
-          <span class="status" id="statusText">Ready when you are</span>
+          <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
           <div class="controls" id="controls" hidden>
             <button class="btn small" id="nextBtn">Play next match</button>
             <button class="btn small ghost" id="roundBtn">Play round</button>
@@ -126,7 +126,7 @@ Sana</textarea>
           <div class="empty-state"><div class="big">🏆</div>Add your names and build a bracket.</div>
         </div>
       </div>
-      <div class="winner-banner" id="winnerBanner"></div>
+      <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
     </div>
   </div>
 </main>

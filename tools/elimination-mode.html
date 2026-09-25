@@ -112,14 +112,14 @@ Sana</textarea>
     <div>
       <div class="stage" id="stage">
         <div class="stage-header">
-          <span class="status" id="statusText">Ready when you are</span>
+          <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
           <span class="clock" id="clock"></span>
           <span class="left" id="leftCount"></span>
         </div>
         <div class="board" id="board"></div>
         <div class="fallen" id="fallen"></div>
       </div>
-      <div class="winner-banner" id="winnerBanner"></div>
+      <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
     </div>
   </div>
 </main>
