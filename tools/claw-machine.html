@@ -49,6 +49,13 @@
     transition: box-shadow 0.3s ease;
   }
   .stage.projector .cabinet { background: linear-gradient(180deg, #3a2440, #241730); }
+  /* Contact shadow so the cabinet reads as standing on the floor, not
+     floating on the backdrop. */
+  .cabinet::after {
+    content: ""; position: absolute; left: 6%; right: 6%; bottom: -14px; height: 16px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.28), transparent 72%);
+    z-index: -1;
+  }
 
   .marquee {
     height: 40px; border-radius: 8px; background: linear-gradient(180deg, #ffe07a, #f5b93c);
@@ -78,6 +85,13 @@
   }
   .glass-shine { position: absolute; top: 0; left: 8%; width: 12%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.22), transparent); z-index: 7; pointer-events: none; }
   .glass-shine.second { left: 82%; width: 6%; opacity: 0.6; }
+  /* Overhead spotlight cone, like the little bulb every real claw machine
+     has lighting the pile from above. */
+  .spotlight {
+    position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+    width: 70%; height: 160px; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,244,214,0.16), transparent 70%);
+  }
 
   .rail { position: absolute; top: 14px; left: 5%; right: 5%; height: 8px; z-index: 3;
     background: linear-gradient(180deg, #dfe6ee, #9aa7ba); border-radius: 4px; box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
@@ -179,10 +193,37 @@
   @keyframes jostle { 0%,100% { transform: translateX(0) rotate(0); } 30% { transform: translateX(-3px) rotate(-6deg); } 70% { transform: translateX(3px) rotate(6deg); } }
   .plush.dropped-back { animation: plop 0.55s cubic-bezier(.5,0,.7,1); }
   @keyframes plop { 0% { transform: translateY(-46px) rotate(-14deg); } 60% { transform: translateY(4px) rotate(6deg); } 100% { transform: translateY(0) rotate(0); } }
+  /* The final release: the claw opens over the collection box and the toy
+     actually falls — real gravity, a bounce off the box floor, then rest —
+     instead of just disappearing. */
+  .plush.falling-in { animation: fallIn 0.6s cubic-bezier(.5,0,.75,1) forwards; }
+  @keyframes fallIn {
+    0% { transform: translateY(0) rotate(0deg) scale(1); }
+    70% { transform: translateY(52px) rotate(24deg) scale(0.92); }
+    85% { transform: translateY(40px) rotate(14deg) scale(0.9); }
+    100% { transform: translateY(48px) rotate(18deg) scale(0.88); }
+  }
 
   .chute-slot { position: absolute; left: 2%; bottom: 0; width: 15%; height: 44px; z-index: 3;
     background: linear-gradient(180deg, transparent, rgba(0,0,0,0.35)); border-radius: 0 0 0 4px; }
   .chute-slot::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(0,0,0,0.4); }
+
+  /* The collection box: a real, visible bin inside the glass box that the
+     claw drops the winner into — this is the moment the whole grab is
+     building toward, not just a fade-out. Walled on three sides, open on
+     top, so the toy is clearly seen landing and settling inside it. */
+  .collect-box {
+    position: absolute; left: 2%; bottom: 0; width: 17%; height: 98px; z-index: 3;
+    background: linear-gradient(180deg, rgba(8,14,24,0.55), rgba(8,14,24,0.88));
+    border-left: 3px solid #9aa7ba; border-right: 3px solid #9aa7ba; border-bottom: 3px solid #9aa7ba;
+    border-radius: 0 0 5px 5px;
+    box-shadow: inset 0 10px 14px rgba(0,0,0,0.55);
+  }
+  .collect-box::before {
+    content: "WIN"; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
+    font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 0.08em; color: rgba(255,255,255,0.45);
+  }
+  .collect-box.lit { box-shadow: inset 0 10px 14px rgba(0,0,0,0.4), inset 0 0 18px 4px rgba(255,221,120,0.55); }
 
   /* ---- Control panel + prize door under the glass box ---- */
   .control-panel {
@@ -199,6 +240,10 @@
   .go-button { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4fd06a, #1e8a3d); box-shadow: 0 3px 0 #0f5c26, inset 0 2px 3px rgba(255,255,255,0.4); transition: transform 0.1s ease, box-shadow 0.1s ease; }
   .go-button.pressed { transform: translateY(3px); box-shadow: 0 0 0 #0f5c26, inset 0 2px 3px rgba(255,255,255,0.4); }
   .coin-slot { width: 26px; height: 8px; border-radius: 3px; background: #2a2a2a; box-shadow: inset 0 1px 2px rgba(0,0,0,0.7); }
+  .credit-light { width: 7px; height: 7px; border-radius: 50%; background: #7a3b12; margin: 5px auto 0; }
+  .credit-light.idle { background: #ffce54; animation: creditBlink 1s step-end infinite; }
+  .credit-light.on { background: #ffce54; box-shadow: 0 0 5px 2px rgba(255,206,84,0.8); animation: none; }
+  @keyframes creditBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.15; } }
   .panel-label { font-family: var(--font-display); font-size: 0.62rem; font-weight: 700; color: #5a3a10; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; margin-top: 3px; }
 
   .prize-door {
@@ -298,7 +343,9 @@ Isla</textarea>
               </div>
             </div>
             <div class="chute-slot"></div>
+            <div class="collect-box" id="collectBox"></div>
             <div class="pile" id="pile"></div>
+            <div class="spotlight"></div>
             <div class="glass-shine"></div>
             <div class="glass-shine second"></div>
           </div>
@@ -308,7 +355,10 @@ Isla</textarea>
               <div class="joystick-well"><div class="stick" id="joystick"></div></div>
               <div class="panel-label">Move</div>
             </div>
-            <div class="coin-slot" title="1 credit"></div>
+            <div>
+              <div class="coin-slot" title="1 credit"></div>
+              <div class="credit-light idle" id="creditLight"></div>
+            </div>
             <div>
               <div class="go-button" id="goButton"></div>
               <div class="panel-label">Drop</div>
@@ -345,6 +395,8 @@ Isla</textarea>
   const joystick = document.getElementById("joystick");
   const goButton = document.getElementById("goButton");
   const prizeDoor = document.getElementById("prizeDoor");
+  const creditLight = document.getElementById("creditLight");
+  const collectBox = document.getElementById("collectBox");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
@@ -358,6 +410,7 @@ Isla</textarea>
   let plushPositions = []; // { name, xFrac, el }
 
   const rand = (a, b) => a + Math.random() * (b - a);
+  const CABLE_UP = 10; // resting (fully retracted) cable height
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
@@ -391,15 +444,18 @@ Isla</textarea>
     plushPositions = roster.map((name, i) => {
       const color = PALETTE[i % PALETTE.length];
       const face = FACES[i % FACES.length];
-      const xFrac = n === 1 ? 0.5 : Math.min(0.93, Math.max(0.07, (i + 0.5) / n + rand(-0.32, 0.32) / n));
+      // Keep the pile clear of the collection box's footprint (roughly the
+      // left 20% of the floor) so nothing sits inside it before it's won.
+      const xFrac = n === 1 ? 0.6 : Math.min(0.93, Math.max(0.24, 0.24 + (i + 0.5) / n * 0.69 + rand(-0.28, 0.28) / n));
       const rot = rand(-9, 9);
+      const bottom = rand(4, many ? 10 : 16);
       const el = document.createElement("div");
       el.className = "plush";
       el.id = `plush-${i}`;
       el.style.left = (xFrac * 100) + "%";
       el.style.marginLeft = (many ? -15 : -21) + "px";
       el.style.transform = `rotate(${rot}deg)`;
-      el.style.bottom = rand(4, many ? 10 : 16) + "px";
+      el.style.bottom = bottom + "px";
       el.innerHTML = `
         <div class="body" style="background:${color};">
           <div class="arm-l"></div><div class="arm-r"></div>
@@ -407,7 +463,7 @@ Isla</textarea>
         </div>
         <div class="tag">${escapeHtml(name)}</div>`;
       pile.appendChild(el);
-      return { name, xFrac, el };
+      return { name, xFrac, el, origBottom: bottom, origLeftPct: xFrac * 100, origMargin: many ? -15 : -21 };
     });
     return plushPositions;
   }
@@ -416,9 +472,63 @@ Isla</textarea>
     return plushPositions.find((p) => p.name === name);
   }
 
+  /**
+   * How far the cable actually needs to extend to reach a given toy —
+   * measured from that toy's real on-screen position, not a fixed depth —
+   * so the claw visibly reaches down further for a toy sitting low in the
+   * pile and stops short for one sitting up on top of the others.
+   */
+  function computeDropDepth(el) {
+    const glassRect = glassBox.getBoundingClientRect();
+    const toyRect = el.getBoundingClientRect();
+    const railTop = 18;              // matches .claw-rig's top offset
+    const reachToTip = 40;           // cable-bottom to prong-tip, roughly
+    const toyTopY = toyRect.top - glassRect.top;
+    const depth = toyTopY - railTop - reachToTip + toyRect.height * 0.3;
+    return Math.max(50, Math.min(glassBox.clientHeight - 30, depth));
+  }
+
   function tiltJoystick(dir) {
     // dir: -1 (left), 0 (center), 1 (right)
     joystick.style.transform = `rotate(${dir * 26}deg)`;
+  }
+
+  const BOX_FRAC = 0.10; // horizontal center of the collection box, as a rail fraction
+
+  /**
+   * Suspense beat #1: before ever touching a toy, the claw drifts and
+   * pauses over a couple of *other* candidates first, rocking slightly as
+   * if actually weighing them up, before finally settling toward the real
+   * target. The outcome never changes here — it's purely theatre so the
+   * claw reads as "choosing" instead of teleporting straight to the answer.
+   */
+  async function scanPile(entries, winnerEntry, toX, scanTime) {
+    if (scanTime < 0.4 || entries.length < 3) return;
+    statusText.textContent = "Choosing…";
+    const others = entries.filter((e) => e !== winnerEntry);
+    const stops = Math.min(2, others.length);
+    const chosen = RaceEngine.shuffle(others).slice(0, stops);
+    const perStop = scanTime / stops;
+    let cur = parseFloat(clawRig.style.left) || (glassBox.clientWidth * 0.5);
+    for (const c of chosen) {
+      const tx = toX(c.xFrac);
+      const dir = tx > cur ? 1 : -1;
+      tiltJoystick(dir);
+      clawRig.style.transition = `left ${perStop * 0.6}s ease-in-out`;
+      clawRig.style.left = tx + "px";
+      cur = tx;
+      SoundFX.tick(1);
+      await wait(perStop * 0.6 * 1000);
+      tiltJoystick(0);
+      // A little "hmm" rock over the candidate before moving on.
+      claw.style.transition = "transform 0.16s ease-in-out";
+      claw.style.transform = "rotate(-6deg)";
+      await wait(perStop * 0.2 * 1000);
+      claw.style.transform = "rotate(6deg)";
+      await wait(perStop * 0.14 * 1000);
+      claw.style.transform = "rotate(0deg)";
+      await wait(Math.max(0, perStop * 0.06 * 1000));
+    }
   }
 
   async function runGrab() {
@@ -429,6 +539,9 @@ Isla</textarea>
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
     prizeDoor.classList.remove("lit");
+    collectBox.classList.remove("lit");
+    creditLight.classList.remove("idle");
+    creditLight.classList.add("on");
     clock.classList.remove("hot");
     claw.classList.remove("grabbing", "fumbled");
     claw.classList.add("open");
@@ -443,117 +556,167 @@ Isla</textarea>
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
     const entries = buildPile(result.eligiblePool);
+    const winnerEntry = findEntry(result.winner);
 
     statusText.textContent = "Get ready…";
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Drop!"], null, glassBox);
-
-    // Decide whether this run gets a fumble (grabs the wrong toy first,
-    // drops it, then goes back for the real winner) — makes the win feel
-    // earned rather than mechanical, without ever changing who wins.
-    const fumble = entries.length > 2 && Math.random() < 0.35;
-    const winnerEntry = findEntry(result.winner);
-    const fumbleEntry = fumble ? entries.filter((e) => e.name !== result.winner)[Math.floor(Math.random() * (entries.length - 1))] : null;
 
     const boxW = glassBox.clientWidth;
     const railLeft = boxW * 0.06, railRight = boxW * 0.94;
     const toX = (xFrac) => railLeft + xFrac * (railRight - railLeft);
     const startLeft = boxW * 0.5;
+    const cableUp = CABLE_UP;
+    clawRig.style.left = startLeft + "px";
 
-    const cableDown = glassBox.clientHeight * 0.6;
-    const cableUp = 10;
+    // Time budget across the whole play: a scan to build suspense, a first
+    // grab that's *always* going to slip (the moment the person asked
+    // for — it has to fall once before it counts), then a second, secure
+    // grab that actually carries the winner to the box.
+    const scanTime = Math.min(3.2, Math.max(0.8, duration * 0.22));
+    const remaining = Math.max(2.2, duration - scanTime);
+    const attempt1Time = remaining * 0.36;
+    const attempt2Time = remaining * 0.64;
 
-    statusText.textContent = "Positioning…";
+    await scanPile(entries, winnerEntry, toX, scanTime);
 
-    const legs = fumble ? [fumbleEntry, winnerEntry] : [winnerEntry];
-    const perLeg = duration / (legs.length + 0.4); // leave the tail of the timer for the final lift/reveal
-    let currentLeft = startLeft;
+    // ---- Attempt 1: find the winner, grab it, and lose it. ----
+    const targetLeft1 = toX(winnerEntry.xFrac);
+    const cur1 = parseFloat(clawRig.style.left) || startLeft;
+    const dir1 = targetLeft1 > cur1 ? 1 : -1;
+    statusText.textContent = "Lining up…";
+    tiltJoystick(dir1);
+    clawRig.style.transition = `left ${attempt1Time * 0.35}s cubic-bezier(.4,.05,.2,1)`;
+    clawRig.style.left = targetLeft1 + "px";
+    SoundFX.whoosh(attempt1Time * 0.35, true, 0.03);
+    SoundFX.rattle(attempt1Time * 0.35);
+    await wait(attempt1Time * 0.35 * 1000);
+    tiltJoystick(0);
+    SoundFX.click();
 
-    for (let li = 0; li < legs.length; li++) {
-      const target = legs[li];
-      const targetLeft = toX(target.xFrac);
-      const dir = targetLeft > currentLeft ? 1 : -1;
+    statusText.textContent = "Dropping…";
+    const cableDown1 = computeDropDepth(winnerEntry.el);
+    clawCable.style.transition = `height ${attempt1Time * 0.2}s cubic-bezier(.55,0,.85,.3)`;
+    clawCable.style.height = (cableDown1 + 10) + "px";
+    await wait(attempt1Time * 0.2 * 1000);
+    clawCable.style.transition = `height ${attempt1Time * 0.08}s ease-out`;
+    clawCable.style.height = cableDown1 + "px";
+    SoundFX.thud();
+    await wait(attempt1Time * 0.08 * 1000);
 
-      // Travel across the rail to hover over the target (joystick leans
-      // the direction of travel, the way an operator would hold it over).
-      tiltJoystick(dir);
-      clawRig.style.transition = `left ${perLeg * 0.45}s cubic-bezier(.4,.05,.2,1)`;
-      clawRig.style.left = targetLeft + "px";
-      currentLeft = targetLeft;
-      SoundFX.whoosh(perLeg * 0.45, true, 0.03);
-      await wait(perLeg * 0.45 * 1000);
-      tiltJoystick(0);
-      SoundFX.click();
+    claw.classList.remove("open");
+    claw.classList.add("grabbing");
+    SoundFX.bump();
+    winnerEntry.el.classList.add("jostled");
+    setTimeout(() => winnerEntry.el.classList.remove("jostled"), 400);
+    await wait(220);
 
-      // Drop the cable down into the pile.
-      statusText.textContent = "Dropping…";
-      clawCable.style.transition = `height ${perLeg * 0.22}s cubic-bezier(.5,0,.2,1)`;
-      clawCable.style.height = cableDown + "px";
-      await wait(perLeg * 0.22 * 1000);
+    // Lift partway — enough to clear the pile and get everyone's hopes up —
+    // then the grip gives out. This is the guaranteed "mahuhulog muna" beat.
+    winnerEntry.el.classList.add("grabbed", "swinging");
+    statusText.textContent = "Lifting…";
+    const partialLift = cableDown1 * 0.4;
+    clawCable.style.transition = `height ${attempt1Time * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
+    clawCable.style.height = (cableDown1 - partialLift) + "px";
+    winnerEntry.el.style.transition = `bottom ${attempt1Time * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
+    winnerEntry.el.style.bottom = (partialLift + winnerEntry.origBottom) + "px";
+    await wait(attempt1Time * 0.2 * 1000);
 
-      // Grab.
-      claw.classList.remove("open");
-      claw.classList.add("grabbing");
-      SoundFX.bump();
-      target.el.classList.add("jostled");
-      setTimeout(() => target.el.classList.remove("jostled"), 400);
-      await wait(220);
+    statusText.textContent = "Uh oh…";
+    claw.classList.remove("grabbing");
+    claw.classList.add("fumbled");
+    winnerEntry.el.classList.remove("swinging", "grabbed");
+    SoundFX.sadTrombone();
+    winnerEntry.el.style.transition = "none";
+    winnerEntry.el.style.bottom = winnerEntry.origBottom + "px";
+    winnerEntry.el.classList.add("dropped-back");
+    setTimeout(() => winnerEntry.el.classList.remove("dropped-back"), 550);
+    await wait(300);
+    claw.classList.remove("fumbled");
+    claw.classList.add("open");
+    clawCable.style.transition = `height ${attempt1Time * 0.09}s ease-in`;
+    clawCable.style.height = (cableDown1 + 6) + "px";
+    await wait(attempt1Time * 0.09 * 1000);
 
-      const holds = li === legs.length - 1; // only the final leg ever holds
+    // ---- Attempt 2: back for the same one, this time for real. ----
+    statusText.textContent = "Trying again…";
+    await wait(260);
+    claw.classList.remove("open");
+    claw.classList.add("grabbing");
+    SoundFX.bump();
+    winnerEntry.el.classList.add("jostled");
+    setTimeout(() => winnerEntry.el.classList.remove("jostled"), 400);
+    await wait(220);
+    winnerEntry.el.classList.add("grabbed", "swinging");
 
-      if (holds) target.el.classList.add("grabbed", "swinging");
+    statusText.textContent = "Lifting…";
+    clawCable.style.transition = `height ${attempt2Time * 0.22}s cubic-bezier(.3,1.3,.4,1)`;
+    clawCable.style.height = Math.max(2, cableUp - 4) + "px";
+    winnerEntry.el.style.transition = `bottom ${attempt2Time * 0.22}s cubic-bezier(.3,1.3,.4,1)`;
+    winnerEntry.el.style.bottom = (cableDown1 - 2 + winnerEntry.origBottom) + "px";
+    await wait(attempt2Time * 0.22 * 1000);
+    clawCable.style.transition = `height ${attempt2Time * 0.04}s ease-out`;
+    clawCable.style.height = cableUp + "px";
+    winnerEntry.el.style.transition = `bottom ${attempt2Time * 0.04}s ease-out`;
+    winnerEntry.el.style.bottom = (cableDown1 - 6 + winnerEntry.origBottom) + "px";
+    await wait(attempt2Time * 0.04 * 1000);
 
-      // Rise back up.
-      statusText.textContent = holds ? "Lifting…" : "Lifting… uh oh";
-      clawCable.style.transition = `height ${perLeg * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
-      clawCable.style.height = cableUp + "px";
-      if (holds) {
-        target.el.style.transition = `bottom ${perLeg * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
-        target.el.style.bottom = (cableDown - 6) + "px";
-      }
-      await wait(perLeg * 0.2 * 1000);
-
-      if (!holds) {
-        // Fumble: the grip slips right as it clears the pile — the toy
-        // tumbles back down and the claw opens, empty, before trying again.
-        claw.classList.remove("grabbing");
-        claw.classList.add("fumbled");
-        SoundFX.sadTrombone();
-        target.el.classList.add("dropped-back");
-        setTimeout(() => target.el.classList.remove("dropped-back"), 550);
-        await wait(300);
-        claw.classList.remove("fumbled");
-        claw.classList.add("open");
-      }
-    }
-
-    // Final lift to the chute with the winner secured.
-    statusText.textContent = "Almost there…";
+    // Carry it across the rail to the collection box.
+    statusText.textContent = "Carrying it over…";
     clock.classList.add("hot");
+    const boxLeft = toX(BOX_FRAC);
     tiltJoystick(-1);
-    const chuteX = toX(0.03);
-    clawRig.style.transition = `left ${perLeg * 0.4}s cubic-bezier(.4,.05,.2,1)`;
-    clawRig.style.left = chuteX + "px";
-    winnerEntry.el.style.transition = `left ${perLeg * 0.4}s cubic-bezier(.4,.05,.2,1)`;
-    winnerEntry.el.style.left = "3%";
+    clawRig.style.transition = `left ${attempt2Time * 0.5}s cubic-bezier(.4,.05,.2,1)`;
+    clawRig.style.left = boxLeft + "px";
+    winnerEntry.el.style.transition = `left ${attempt2Time * 0.5}s cubic-bezier(.4,.05,.2,1)`;
+    winnerEntry.el.style.left = (BOX_FRAC * 100) + "%";
     winnerEntry.el.style.marginLeft = "0px";
-    SuspenseFX.flash(glassBox, 300);
-    await wait(perLeg * 0.4 * 1000);
+    SoundFX.whoosh(attempt2Time * 0.5, true, 0.05);
+    SoundFX.rattle(attempt2Time * 0.5);
+    await wait(attempt2Time * 0.5 * 1000);
     tiltJoystick(0);
 
-    finishGrab(result, winnerEntry);
+    // Lower it right over the box mouth before letting go — the last beat
+    // of "is it really going to make it?" suspense.
+    statusText.textContent = "Almost there…";
+    const overBoxDepth = Math.max(cableUp + 10, computeDropDepth(collectBox) - 10);
+    const liftAtBox = Math.max(0, cableDown1 - overBoxDepth);
+    clawCable.style.transition = `height ${attempt2Time * 0.14}s ease-in`;
+    clawCable.style.height = overBoxDepth + "px";
+    winnerEntry.el.style.transition = `bottom ${attempt2Time * 0.14}s ease-in`;
+    winnerEntry.el.style.bottom = (winnerEntry.origBottom + liftAtBox) + "px";
+    SuspenseFX.flash(glassBox, 250);
+    await wait(attempt2Time * 0.14 * 1000);
+
+    deliverToBox(result, winnerEntry);
   }
 
   function wait(ms) { return new Promise((res) => setTimeout(res, Math.max(0, ms))); }
 
-  function finishGrab(result, winnerEntry) {
-    grabbing = false;
-    clock.classList.remove("hot");
+  /** The claw finally lets go over the box: the toy actually falls, bounces
+   * once off the floor, and settles — only then does the win get called. */
+  function deliverToBox(result, winnerEntry) {
     claw.classList.remove("grabbing");
     claw.classList.add("open");
     winnerEntry.el.classList.remove("swinging");
-    winnerEntry.el.style.opacity = "0";
-    prizeDoor.classList.add("lit");
+    winnerEntry.el.style.transition = "none";
+    void winnerEntry.el.offsetWidth;
     SoundFX.drop();
+    winnerEntry.el.classList.add("falling-in");
+    collectBox.classList.add("lit");
+    clawCable.style.transition = "height 0.4s ease-in-out";
+    clawCable.style.height = CABLE_UP + "px";
+    setTimeout(() => {
+      SoundFX.thud();
+      finishGrab(result, winnerEntry);
+    }, 560);
+  }
+
+  function finishGrab(result, winnerEntry) {
+    grabbing = false;
+    clock.classList.remove("hot");
+    prizeDoor.classList.add("lit");
+    creditLight.classList.remove("on");
+    creditLight.classList.add("idle");
     SuspenseFX.shake(cabinet, 260);
     SuspenseFX.flash(cabinet, 400);
     SuspenseFX.winnerSpotlight(stage);
@@ -563,7 +726,7 @@ Isla</textarea>
     clock.textContent = "🧸";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🕹️ The claw drops ${escapeHtml(result.winner)} in the prize door!</span>`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🕹️ The claw calls out ${escapeHtml(result.winner)}!</span>`;
     winnerBanner.classList.add("show");
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
     const rect = prizeDoor.getBoundingClientRect();
