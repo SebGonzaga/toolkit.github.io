@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claw Machine Name Picker — Pick &amp; Race</title>
+<meta name="description" content="The claw creeps over the pile, drops, and grabs a name — will it hold on the way up?">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; position: sticky; top: 20px; }
+  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
+  .panel label:first-of-type { margin-top: 0; }
+  textarea { width: 100%; min-height: 140px; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical; }
+  input[type="range"] { width: 100%; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; font-size: 0.88rem; }
+  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+  .duration-val { font-family: var(--font-display); font-weight: 700; }
+
+  .stage {
+    border: var(--border); border-radius: var(--radius);
+    background: linear-gradient(180deg, #cfe0f5, #eef4fb);
+    padding: 16px;
+    min-height: 460px;
+    position: relative; overflow: hidden;
+  }
+  .stage.projector { background: #0e1a2b; }
+  .stage.projector .status { color: #fff; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--marker), 0 0 40px rgba(217,80,63,0.5) inset; }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 6; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; transition: color 0.2s ease; }
+  .stage-header .clock.hot { color: var(--marker); animation: clockPulse 0.5s ease-in-out infinite; }
+  @keyframes clockPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+
+  /* The cabinet: a glass box with the rail/claw riding along the top and
+     a pile of plush toys (one per name) sitting at the bottom. */
+  .cabinet {
+    position: relative; width: 100%; height: 420px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.05) 40%), #dceafb;
+    border: 4px solid var(--ink); border-radius: 14px;
+    overflow: hidden; z-index: 5;
+  }
+  .stage.projector .cabinet { background: #16233a; border-color: #fff; }
+
+  .rail { position: absolute; top: 26px; left: 6%; right: 6%; height: 6px; background: var(--ink); border-radius: 3px; z-index: 3; }
+  .stage.projector .rail { background: #fff; }
+  .rail::before, .rail::after { content: ""; position: absolute; top: -5px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); }
+  .rail::before { left: -8px; } .rail::after { right: -8px; }
+  .stage.projector .rail::before, .stage.projector .rail::after { background: #fff; }
+
+  .claw-rig { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); z-index: 4; transition: left 1s cubic-bezier(.4,.05,.2,1); }
+  .claw-cable { width: 3px; background: var(--ink-soft); margin: 0 auto; transition: height 0.6s cubic-bezier(.5,0,.2,1); }
+  .claw {
+    width: 46px; height: 40px; margin-top: -2px; position: relative;
+    transform-origin: top center; transition: transform 0.2s ease;
+  }
+  .claw .knuckle { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; background: var(--pencil); border: 2px solid var(--ink); border-radius: 4px; }
+  .claw .arm { position: absolute; top: 10px; width: 7px; height: 26px; background: var(--pencil); border: 2px solid var(--ink); border-radius: 3px; transform-origin: top center; transition: transform 0.35s cubic-bezier(.3,1.4,.5,1); }
+  .claw .arm.left { left: 6px; transform: rotate(-18deg); }
+  .claw .arm.right { right: 6px; transform: rotate(18deg); }
+  .claw.open .arm.left { transform: rotate(-42deg); }
+  .claw.open .arm.right { transform: rotate(42deg); }
+  .claw.grabbing .arm.left { transform: rotate(2deg); }
+  .claw.grabbing .arm.right { transform: rotate(-2deg); }
+  .claw.fumbled .arm.left { transform: rotate(-10deg); }
+  .claw.fumbled .arm.right { transform: rotate(10deg); }
+
+  /* The prize pile at the bottom of the cabinet */
+  .pile { position: absolute; left: 0; right: 0; bottom: 0; height: 66%; z-index: 2; }
+  .plush {
+    position: absolute; bottom: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transform-origin: bottom center; will-change: transform;
+  }
+  .plush .body {
+    width: 44px; height: 44px; border-radius: 45% 45% 50% 50% / 55% 55% 45% 45%;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    box-shadow: inset -6px -8px 0 rgba(0,0,0,0.12), inset 4px 4px 0 rgba(255,255,255,0.35);
+    border: 2px solid var(--ink);
+  }
+  .plush .body::before, .plush .body::after { content: ""; position: absolute; top: -6px; width: 12px; height: 14px; border-radius: 50%; background: inherit; border: 2px solid var(--ink); }
+  .plush .body::before { left: 2px; } .plush .body::after { right: 2px; }
+  .plush .face { position: relative; z-index: 2; font-size: 15px; line-height: 1; }
+  .plush .tag {
+    font-size: 0.72rem; font-weight: 600; text-align: center; max-width: 66px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    background: rgba(255,255,255,0.82); border-radius: 999px; padding: 1px 8px;
+  }
+  .many-names .plush .body { width: 32px; height: 32px; }
+  .many-names .plush .tag { font-size: 0.62rem; max-width: 48px; padding: 1px 6px; }
+
+  .plush.grabbed { z-index: 7; }
+  .plush.jostled { animation: jostle 0.4s ease; }
+  @keyframes jostle { 0%,100% { transform: translateX(0) rotate(0); } 30% { transform: translateX(-3px) rotate(-4deg); } 70% { transform: translateX(3px) rotate(4deg); } }
+  .plush.dropped-back { animation: plop 0.5s ease-in; }
+  @keyframes plop { 0% { transform: translateY(-40px) rotate(-10deg); opacity: 0.6; } 100% { transform: translateY(0) rotate(0); opacity: 1; } }
+
+  .chute { position: absolute; left: 8%; bottom: 0; width: 56px; height: 52px; z-index: 1;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.12)); border-radius: 0 0 0 12px; }
+
+  .glass-shine { position: absolute; top: 0; left: 10%; width: 14%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.35), transparent); z-index: 6; pointer-events: none; }
+
+  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .winner-banner.show { display: block; }
+  .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
+  .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
+
+  @media (max-width: 860px) {
+    .tool-wrap { grid-template-columns: 1fr; }
+    .panel { position: static; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .claw-rig, .claw-cable, .claw, .claw .arm, .plush, .clock.hot { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
+      <a href="slot-machine.html">Slot Machine</a>
+      <a href="spinning-wheel.html">Wheel</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin-top:28px;">Claw Machine Name Picker</h1>
+  <p>The claw creeps across the pile, drops down, and grabs a name. It might even fumble once before it locks on — nobody's really safe until it's over the chute.</p>
+
+  <div class="tool-wrap">
+    <div class="panel">
+      <label for="names">Names (one per line)</label>
+      <textarea id="names">Ava
+Liam
+Noor
+Diego
+Priya
+Mateo
+Yuki
+Isla</textarea>
+
+      <label for="duration">Grab length: <span class="duration-val" id="durationVal">7s</span></label>
+      <input type="range" id="duration" min="3" max="16" value="7">
+
+      <div class="toggle-row">
+        <input type="checkbox" id="noRepeat">
+        <label for="noRepeat" style="margin:0;">No repeats until everyone's had a turn</label>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="projector">
+        <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
+      </div>
+
+      <button class="btn marker" id="startBtn">Drop the claw</button>
+      <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
+    </div>
+
+    <div>
+      <div class="stage" id="stage">
+        <div class="stage-header">
+          <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
+          <span class="clock" id="clock">–</span>
+        </div>
+        <div class="cabinet" id="cabinet">
+          <div class="rail"></div>
+          <div class="claw-rig" id="clawRig">
+            <div class="claw-cable" id="clawCable" style="height:14px;"></div>
+            <div class="claw open" id="claw">
+              <div class="knuckle"></div>
+              <div class="arm left"></div>
+              <div class="arm right"></div>
+            </div>
+          </div>
+          <div class="chute"></div>
+          <div class="pile" id="pile"></div>
+          <div class="glass-shine"></div>
+        </div>
+      </div>
+      <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
+      <div class="history" id="historyList"></div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
+<script>
+  const namesEl = document.getElementById("names");
+  const durationEl = document.getElementById("duration");
+  const durationVal = document.getElementById("durationVal");
+  const noRepeatEl = document.getElementById("noRepeat");
+  const projectorEl = document.getElementById("projector");
+  const startBtn = document.getElementById("startBtn");
+  const resetHistoryBtn = document.getElementById("resetHistory");
+  const stage = document.getElementById("stage");
+  const cabinet = document.getElementById("cabinet");
+  const clawRig = document.getElementById("clawRig");
+  const clawCable = document.getElementById("clawCable");
+  const claw = document.getElementById("claw");
+  const pile = document.getElementById("pile");
+  const statusText = document.getElementById("statusText");
+  const clock = document.getElementById("clock");
+  const winnerBanner = document.getElementById("winnerBanner");
+  const historyList = document.getElementById("historyList");
+
+  const PALETTE = ["#d9503f", "#efb93c", "#35604a", "#8fb9d8", "#c98fd8", "#f5a35c"];
+  const FACES = ["🙂", "😺", "🐻", "🐼", "🦊", "🐰", "🐸", "🐵"];
+
+  let alreadyWon = [];
+  let grabbing = false;
+  let plushPositions = []; // { xFrac, name, color, face }
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
+  projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
+  resetHistoryBtn.addEventListener("click", () => { alreadyWon = []; renderHistory(); });
+
+  function getNames() {
+    return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function renderHistory() {
+    if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
+    historyList.innerHTML = "Already won this round: " +
+      alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  /**
+   * Lays plush toys out along the bottom of the cabinet on a loose,
+   * randomized single-ish layer (a bit of overlap/jitter reads as "a pile",
+   * not a tidy row) so any one of them can plausibly be the one the claw
+   * happens to land over.
+   */
+  function buildPile(roster, winnerName) {
+    pile.innerHTML = "";
+    const many = roster.length > 14;
+    pile.classList.toggle("many-names", many);
+    const n = roster.length;
+    plushPositions = roster.map((name, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      const face = FACES[i % FACES.length];
+      // Spread toys across the floor with jitter; keep a safe margin from
+      // the cabinet walls so a toy's tag never clips off-screen.
+      const xFrac = n === 1 ? 0.5 : Math.min(0.94, Math.max(0.06, (i + 0.5) / n + rand(-0.3, 0.3) / n));
+      const rot = rand(-10, 10);
+      const el = document.createElement("div");
+      el.className = "plush";
+      el.id = `plush-${i}`;
+      el.style.left = (xFrac * 100) + "%";
+      el.style.transform = `translateX(-50%) rotate(${rot}deg)`;
+      const size = many ? 32 : 44;
+      el.style.bottom = rand(0, size * 0.25) + "px";
+      el.innerHTML = `
+        <div class="body" style="background:${color};"><span class="face">${face}</span></div>
+        <div class="tag">${escapeHtml(name)}</div>`;
+      pile.appendChild(el);
+      return { name, xFrac, color, face, rot, el };
+    });
+    return plushPositions;
+  }
+
+  function findEntry(name) {
+    return plushPositions.find((p) => p.name === name);
+  }
+
+  async function runGrab() {
+    if (grabbing) return;
+    const roster = getNames();
+    if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
+    grabbing = true;
+    winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
+    clock.classList.remove("hot");
+    claw.classList.remove("grabbing", "fumbled");
+    claw.classList.add("open");
+    clawCable.style.height = "14px";
+    clawRig.style.left = "50%";
+
+    const duration = Number(durationEl.value);
+    const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
+    const entries = buildPile(result.eligiblePool, result.winner);
+
+    statusText.textContent = "Get ready…";
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Drop!"], null, cabinet);
+
+    // Decide whether this run gets a fumble (grabs the wrong toy first,
+    // drops it, then goes back for the real winner) — makes the win feel
+    // earned rather than mechanical, without ever changing who wins.
+    const fumble = entries.length > 2 && Math.random() < 0.35;
+    const winnerEntry = findEntry(result.winner);
+    const fumbleEntry = fumble ? entries.filter((e) => e.name !== result.winner)[Math.floor(Math.random() * (entries.length - 1))] : null;
+
+    const railW = cabinet.clientWidth;
+    const railLeft = railW * 0.06, railRight = railW * 0.94;
+    const toX = (xFrac) => railLeft + xFrac * (railRight - railLeft);
+
+    const cableDown = cabinet.clientHeight * 0.62;
+    const cableUp = 14;
+
+    statusText.textContent = "Positioning…";
+    SoundFX.whoosh(0.5, true, 0.05);
+
+    const legs = fumble ? [fumbleEntry, winnerEntry] : [winnerEntry];
+    const perLeg = duration / (legs.length + 0.4); // leave the tail of the timer for the final lift/reveal
+
+    for (let li = 0; li < legs.length; li++) {
+      const target = legs[li];
+      const isFinal = li === legs.length - 1;
+
+      // Travel across the rail to hover over the target.
+      clawRig.style.transition = `left ${perLeg * 0.45}s cubic-bezier(.4,.05,.2,1)`;
+      clawRig.style.left = toX(target.xFrac) + "px";
+      await wait(perLeg * 0.45 * 1000);
+      SoundFX.click();
+
+      // Drop the cable down into the pile.
+      statusText.textContent = "Dropping…";
+      clawCable.style.transition = `height ${perLeg * 0.22}s cubic-bezier(.5,0,.2,1)`;
+      clawCable.style.height = cableDown + "px";
+      SoundFX.whoosh(perLeg * 0.22, false, 0.02);
+      await wait(perLeg * 0.22 * 1000);
+
+      // Grab.
+      claw.classList.remove("open");
+      claw.classList.add("grabbing");
+      SoundFX.bump();
+      target.el.classList.add("jostled");
+      setTimeout(() => target.el.classList.remove("jostled"), 400);
+      await wait(220);
+
+      const holds = isFinal || !fumble; // the fumble leg never holds
+      if (holds) {
+        target.el.classList.add("grabbed");
+      }
+
+      // Rise back up.
+      statusText.textContent = holds ? "Lifting…" : "Lifting… uh oh";
+      clawCable.style.transition = `height ${perLeg * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
+      clawCable.style.height = cableUp + "px";
+      if (holds) target.el.style.transition = `bottom ${perLeg * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
+      if (holds) target.el.style.bottom = (cableDown - 10) + "px";
+      await wait(perLeg * 0.2 * 1000);
+
+      if (!holds) {
+        // Fumble: the grip slips right as it clears the pile — the toy
+        // tumbles back down and the claw opens, empty, before trying again.
+        claw.classList.remove("grabbing");
+        claw.classList.add("fumbled");
+        SoundFX.sadTrombone();
+        target.el.classList.add("dropped-back");
+        setTimeout(() => target.el.classList.remove("dropped-back"), 500);
+        await wait(260);
+        claw.classList.remove("fumbled");
+        claw.classList.add("open");
+      }
+    }
+
+    // Final lift to the chute with the winner secured.
+    statusText.textContent = "Almost there…";
+    clock.classList.add("hot");
+    clawRig.style.transition = `left ${perLeg * 0.4}s cubic-bezier(.4,.05,.2,1)`;
+    clawRig.style.left = toX(0.06) + "px";
+    winnerEntry.el.style.transition = `left ${perLeg * 0.4}s cubic-bezier(.4,.05,.2,1)`;
+    winnerEntry.el.style.left = (0.06 * 100) + "%";
+    SuspenseFX.flash(cabinet, 300);
+    await wait(perLeg * 0.4 * 1000);
+
+    finishGrab(result, winnerEntry);
+  }
+
+  function wait(ms) { return new Promise((res) => setTimeout(res, Math.max(0, ms))); }
+
+  function finishGrab(result, winnerEntry) {
+    grabbing = false;
+    clock.classList.remove("hot");
+    claw.classList.remove("grabbing");
+    claw.classList.add("open");
+    SoundFX.drop();
+    SuspenseFX.shake(cabinet, 260);
+    SuspenseFX.flash(cabinet, 400);
+    SuspenseFX.winnerSpotlight(stage);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    statusText.textContent = "Got it!";
+    clock.textContent = "🧸";
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🕹️ The claw drops ${escapeHtml(result.winner)} in the chute!</span>`;
+    winnerBanner.classList.add("show");
+    if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
+    const rect = (winnerEntry.el || cabinet).getBoundingClientRect();
+    SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
+  }
+
+  startBtn.addEventListener("click", runGrab);
+  buildPile(getNames(), null);
+</script>
+
+</body>
+</html>
