@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Claw Machine Name Picker — Pick &amp; Race</title>
-<meta name="description" content="The claw creeps over the pile, drops, and grabs a name — will it hold on the way up?">
+<meta name="description" content="A real arcade-style claw machine: the three-prong claw travels, drops, grips, and sometimes slips before it delivers a name to the chute.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
@@ -22,13 +22,13 @@
   .stage {
     border: var(--border); border-radius: var(--radius);
     background: linear-gradient(180deg, #cfe0f5, #eef4fb);
-    padding: 16px;
+    padding: 16px 16px 20px;
     min-height: 460px;
     position: relative; overflow: hidden;
   }
   .stage.projector { background: #0e1a2b; }
   .stage.projector .status { color: #fff; }
-  .stage.finished-glow { box-shadow: 0 0 0 4px var(--marker), 0 0 40px rgba(217,80,63,0.5) inset; }
+  .stage.finished-glow .cabinet { box-shadow: 0 0 0 3px var(--marker), 0 0 40px rgba(217,80,63,0.55); }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 6; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
@@ -36,72 +36,181 @@
   .stage-header .clock.hot { color: var(--marker); animation: clockPulse 0.5s ease-in-out infinite; }
   @keyframes clockPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.14); } }
 
-  /* The cabinet: a glass box with the rail/claw riding along the top and
-     a pile of plush toys (one per name) sitting at the bottom. */
+  /* ---- The cabinet: hood/marquee up top, glass playfield in the middle,
+     a control panel (joystick + button + coin slot) and prize door below.
+     Modeled loosely on a real standalone arcade claw machine so the game
+     reads as "a claw machine" at a glance, not an abstract picker. ---- */
   .cabinet {
-    position: relative; width: 100%; height: 420px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.05) 40%), #dceafb;
-    border: 4px solid var(--ink); border-radius: 14px;
+    position: relative; width: 100%; max-width: 480px; margin: 0 auto;
+    background: linear-gradient(180deg, #e64b3c, #c73a2d);
+    border-radius: 16px 16px 10px 10px;
+    padding: 10px 10px 14px;
+    box-shadow: 0 10px 0 rgba(0,0,0,0.12), 0 14px 22px rgba(0,0,0,0.18);
+    transition: box-shadow 0.3s ease;
+  }
+  .stage.projector .cabinet { background: linear-gradient(180deg, #3a2440, #241730); }
+
+  .marquee {
+    height: 40px; border-radius: 8px; background: linear-gradient(180deg, #ffe07a, #f5b93c);
+    border: 2px solid rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: var(--font-display); font-weight: 800; letter-spacing: 0.04em;
+    color: #5a3a10; font-size: 0.95rem; position: relative; overflow: hidden; z-index: 6;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .marquee .bulb { width: 6px; height: 6px; border-radius: 50%; background: #fff8dc; box-shadow: 0 0 4px 1px rgba(255,255,255,0.8); animation: bulbFlicker 1.4s ease-in-out infinite; }
+  .marquee .bulb:nth-child(odd) { animation-delay: 0.4s; }
+  @keyframes bulbFlicker { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  .glass-box {
+    margin-top: 8px; position: relative; height: 340px; border-radius: 6px;
+    background: linear-gradient(180deg, #1a2740 0%, #223354 55%, #2c4066 100%);
+    border: 6px solid #b8c4d6; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35), inset 0 30px 40px -20px rgba(0,0,0,0.5);
     overflow: hidden; z-index: 5;
   }
-  .stage.projector .cabinet { background: #16233a; border-color: #fff; }
+  .stage.projector .glass-box { border-color: #cfd8e6; }
 
-  .rail { position: absolute; top: 26px; left: 6%; right: 6%; height: 6px; background: var(--ink); border-radius: 3px; z-index: 3; }
-  .stage.projector .rail { background: #fff; }
-  .rail::before, .rail::after { content: ""; position: absolute; top: -5px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); }
+  /* faint back-wall panel lines for a sense of depth inside the box */
+  .glass-box::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 40px);
+    z-index: 1; pointer-events: none;
+  }
+  .glass-shine { position: absolute; top: 0; left: 8%; width: 12%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.22), transparent); z-index: 7; pointer-events: none; }
+  .glass-shine.second { left: 82%; width: 6%; opacity: 0.6; }
+
+  .rail { position: absolute; top: 14px; left: 5%; right: 5%; height: 8px; z-index: 3;
+    background: linear-gradient(180deg, #dfe6ee, #9aa7ba); border-radius: 4px; box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+  .rail::before, .rail::after { content: ""; position: absolute; top: -4px; width: 16px; height: 16px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #eef2f7, #8f9bae); }
   .rail::before { left: -8px; } .rail::after { right: -8px; }
-  .stage.projector .rail::before, .stage.projector .rail::after { background: #fff; }
 
-  .claw-rig { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); z-index: 4; transition: left 1s cubic-bezier(.4,.05,.2,1); }
-  .claw-cable { width: 3px; background: var(--ink-soft); margin: 0 auto; transition: height 0.6s cubic-bezier(.5,0,.2,1); }
+  .claw-rig { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); z-index: 4;
+    transition: left 1s cubic-bezier(.4,.05,.2,1); }
+  .claw-motor { width: 22px; height: 12px; margin: 0 auto; border-radius: 3px;
+    background: linear-gradient(180deg, #eef2f7, #97a4b8); box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+  .claw-cable {
+    width: 3px; margin: 0 auto; transition: height 0.6s cubic-bezier(.5,0,.2,1);
+    background: repeating-linear-gradient(180deg, #cfd8e6 0 3px, #7c8aa0 3px 6px);
+  }
   .claw {
-    width: 46px; height: 40px; margin-top: -2px; position: relative;
+    width: 52px; height: 46px; margin: -2px auto 0; position: relative;
     transform-origin: top center; transition: transform 0.2s ease;
   }
-  .claw .knuckle { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; background: var(--pencil); border: 2px solid var(--ink); border-radius: 4px; }
-  .claw .arm { position: absolute; top: 10px; width: 7px; height: 26px; background: var(--pencil); border: 2px solid var(--ink); border-radius: 3px; transform-origin: top center; transition: transform 0.35s cubic-bezier(.3,1.4,.5,1); }
-  .claw .arm.left { left: 6px; transform: rotate(-18deg); }
-  .claw .arm.right { right: 6px; transform: rotate(18deg); }
-  .claw.open .arm.left { transform: rotate(-42deg); }
-  .claw.open .arm.right { transform: rotate(42deg); }
-  .claw.grabbing .arm.left { transform: rotate(2deg); }
-  .claw.grabbing .arm.right { transform: rotate(-2deg); }
-  .claw.fumbled .arm.left { transform: rotate(-10deg); }
-  .claw.fumbled .arm.right { transform: rotate(10deg); }
+  .claw .knuckle {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 18px; height: 16px;
+    background: linear-gradient(180deg, #eef2f7, #98a5b9); border: 1px solid #5b6577; border-radius: 4px 4px 6px 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  /* Three metal prongs meeting under the knuckle, like a real claw-machine
+     grabber, instead of two simple arms. */
+  .claw .prong {
+    position: absolute; top: 13px; width: 6px; height: 30px;
+    background: linear-gradient(90deg, #c7d0dd, #8b96a8 55%, #626e82);
+    border: 1px solid #4a5566; border-radius: 3px;
+    transform-origin: top center; transition: transform 0.32s cubic-bezier(.3,1.4,.5,1);
+  }
+  .claw .prong::after {
+    content: ""; position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 7px solid #626e82;
+  }
+  .claw .prong.left { left: 8px; transform: rotate(-30deg); }
+  .claw .prong.right { right: 8px; transform: rotate(30deg); }
+  .claw .prong.back { left: 50%; margin-left: -3px; transform: rotate(0deg) translateY(2px) scale(0.92); opacity: 0.9; }
+  .claw.open .prong.left { transform: rotate(-52deg); }
+  .claw.open .prong.right { transform: rotate(52deg); }
+  .claw.open .prong.back { transform: rotate(0deg) translateY(-3px) scale(0.92); }
+  .claw.grabbing .prong.left { transform: rotate(-4deg); }
+  .claw.grabbing .prong.right { transform: rotate(4deg); }
+  .claw.grabbing .prong.back { transform: rotate(0deg) translateY(6px) scale(0.92); }
+  .claw.fumbled .prong.left { transform: rotate(-16deg); }
+  .claw.fumbled .prong.right { transform: rotate(16deg); }
+  .claw.fumbled .prong.back { transform: rotate(0deg) translateY(3px) scale(0.92); }
 
-  /* The prize pile at the bottom of the cabinet */
-  .pile { position: absolute; left: 0; right: 0; bottom: 0; height: 66%; z-index: 2; }
+  /* The prize pile at the bottom of the glass box */
+  .pile { position: absolute; left: 0; right: 0; bottom: 0; height: 58%; z-index: 2; }
+  .pile::after {
+    /* a hint of floor so the toys read as sitting on something solid */
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 10px;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.28));
+  }
   .plush {
-    position: absolute; bottom: 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
-    transform-origin: bottom center; will-change: transform;
+    position: absolute; bottom: 4px; display: flex; flex-direction: column; align-items: center;
+    transform-origin: bottom center; will-change: transform, bottom, left;
   }
   .plush .body {
-    width: 44px; height: 44px; border-radius: 45% 45% 50% 50% / 55% 55% 45% 45%;
-    display: flex; align-items: center; justify-content: center; position: relative;
-    box-shadow: inset -6px -8px 0 rgba(0,0,0,0.12), inset 4px 4px 0 rgba(255,255,255,0.35);
-    border: 2px solid var(--ink);
+    width: 42px; height: 40px; border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+    position: relative;
+    box-shadow: inset -7px -9px 0 rgba(0,0,0,0.16), inset 4px 5px 0 rgba(255,255,255,0.32), 0 3px 3px rgba(0,0,0,0.2);
   }
-  .plush .body::before, .plush .body::after { content: ""; position: absolute; top: -6px; width: 12px; height: 14px; border-radius: 50%; background: inherit; border: 2px solid var(--ink); }
-  .plush .body::before { left: 2px; } .plush .body::after { right: 2px; }
-  .plush .face { position: relative; z-index: 2; font-size: 15px; line-height: 1; }
+  /* rounded ears */
+  .plush .body::before, .plush .body::after {
+    content: ""; position: absolute; top: -8px; width: 15px; height: 16px; border-radius: 50%;
+    background: inherit; box-shadow: inset -3px -3px 0 rgba(0,0,0,0.14);
+  }
+  .plush .body::before { left: -1px; } .plush .body::after { right: -1px; }
+  /* stubby arms hanging at the sides */
+  .plush .arm-l, .plush .arm-r {
+    position: absolute; bottom: 2px; width: 10px; height: 16px; border-radius: 50%;
+    background: inherit; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.14); z-index: -1;
+  }
+  .plush .arm-l { left: -6px; transform: rotate(18deg); }
+  .plush .arm-r { right: -6px; transform: rotate(-18deg); }
+  .plush .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; }
   .plush .tag {
-    font-size: 0.72rem; font-weight: 600; text-align: center; max-width: 66px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    background: rgba(255,255,255,0.82); border-radius: 999px; padding: 1px 8px;
+    margin-top: 4px; font-size: 0.7rem; font-weight: 600; text-align: center; max-width: 64px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink);
+    background: rgba(255,255,255,0.88); border-radius: 999px; padding: 1px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
   }
-  .many-names .plush .body { width: 32px; height: 32px; }
-  .many-names .plush .tag { font-size: 0.62rem; max-width: 48px; padding: 1px 6px; }
+  .many-names .plush .body { width: 30px; height: 28px; }
+  .many-names .plush .body::before, .many-names .plush .body::after { width: 11px; height: 12px; top: -6px; }
+  .many-names .plush .arm-l, .many-names .plush .arm-r { width: 7px; height: 11px; }
+  .many-names .plush .face { font-size: 11px; }
+  .many-names .plush .tag { font-size: 0.6rem; max-width: 46px; padding: 1px 6px; }
 
-  .plush.grabbed { z-index: 7; }
+  .plush.grabbed { z-index: 8; }
+  /* Gentle pendulum sway while the claw carries a toy up and across — real
+     claw-machine prizes never hang perfectly still. */
+  .plush.swinging { animation: swing 0.9s ease-in-out infinite; }
+  @keyframes swing { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
   .plush.jostled { animation: jostle 0.4s ease; }
-  @keyframes jostle { 0%,100% { transform: translateX(0) rotate(0); } 30% { transform: translateX(-3px) rotate(-4deg); } 70% { transform: translateX(3px) rotate(4deg); } }
-  .plush.dropped-back { animation: plop 0.5s ease-in; }
-  @keyframes plop { 0% { transform: translateY(-40px) rotate(-10deg); opacity: 0.6; } 100% { transform: translateY(0) rotate(0); opacity: 1; } }
+  @keyframes jostle { 0%,100% { transform: translateX(0) rotate(0); } 30% { transform: translateX(-3px) rotate(-6deg); } 70% { transform: translateX(3px) rotate(6deg); } }
+  .plush.dropped-back { animation: plop 0.55s cubic-bezier(.5,0,.7,1); }
+  @keyframes plop { 0% { transform: translateY(-46px) rotate(-14deg); } 60% { transform: translateY(4px) rotate(6deg); } 100% { transform: translateY(0) rotate(0); } }
 
-  .chute { position: absolute; left: 8%; bottom: 0; width: 56px; height: 52px; z-index: 1;
-    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.12)); border-radius: 0 0 0 12px; }
+  .chute-slot { position: absolute; left: 2%; bottom: 0; width: 15%; height: 44px; z-index: 3;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.35)); border-radius: 0 0 0 4px; }
+  .chute-slot::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(0,0,0,0.4); }
 
-  .glass-shine { position: absolute; top: 0; left: 10%; width: 14%; height: 100%; background: linear-gradient(90deg, rgba(255,255,255,0.35), transparent); z-index: 6; pointer-events: none; }
+  /* ---- Control panel + prize door under the glass box ---- */
+  .control-panel {
+    margin-top: 8px; display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-radius: 6px;
+    background: linear-gradient(180deg, #f4c542, #e0a92c);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.35), inset 0 -3px 0 rgba(0,0,0,0.15);
+    position: relative; z-index: 5;
+  }
+  .joystick-well { width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #444, #111); position: relative; box-shadow: inset 0 3px 6px rgba(0,0,0,0.6); }
+  .joystick-well .stick { position: absolute; left: 50%; top: 50%; width: 8px; height: 22px; margin-left: -4px; margin-top: -26px;
+    background: linear-gradient(90deg, #cc2b2b, #8f1e1e); border-radius: 4px; transform-origin: bottom center; transition: transform 0.5s ease; }
+  .joystick-well .stick::after { content: ""; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e35d5d, #a11e1e); }
+  .go-button { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #4fd06a, #1e8a3d); box-shadow: 0 3px 0 #0f5c26, inset 0 2px 3px rgba(255,255,255,0.4); transition: transform 0.1s ease, box-shadow 0.1s ease; }
+  .go-button.pressed { transform: translateY(3px); box-shadow: 0 0 0 #0f5c26, inset 0 2px 3px rgba(255,255,255,0.4); }
+  .coin-slot { width: 26px; height: 8px; border-radius: 3px; background: #2a2a2a; box-shadow: inset 0 1px 2px rgba(0,0,0,0.7); }
+  .panel-label { font-family: var(--font-display); font-size: 0.62rem; font-weight: 700; color: #5a3a10; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; margin-top: 3px; }
+
+  .prize-door {
+    margin-top: 6px; height: 26px; border-radius: 4px; background: linear-gradient(180deg, #2b2b2b, #111);
+    display: flex; align-items: center; justify-content: center; position: relative; z-index: 5;
+    box-shadow: inset 0 2px 3px rgba(0,0,0,0.6);
+  }
+  .prize-door::before { content: "PRIZE DOOR"; font-family: var(--font-display); font-size: 0.55rem; letter-spacing: 0.08em; color: #9aa0a8; }
+  .prize-door.lit { box-shadow: inset 0 0 12px 3px rgba(255,221,120,0.7); }
+
+  .legs { display: flex; justify-content: space-between; padding: 0 18px; margin-top: 2px; }
+  .legs::before, .legs::after { content: ""; width: 14px; height: 16px; background: linear-gradient(180deg, #b23628, #8f291f); border-radius: 0 0 4px 4px; }
 
   .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
   @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -114,7 +223,7 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .claw-rig, .claw-cable, .claw, .claw .arm, .plush, .clock.hot { animation: none !important; transition: none !important; }
+    .claw-rig, .claw-cable, .claw, .claw .prong, .plush, .clock.hot, .marquee .bulb, .joystick-well .stick { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -134,7 +243,7 @@
 
 <main class="wrap">
   <h1 style="margin-top:28px;">Claw Machine Name Picker</h1>
-  <p>The claw creeps across the pile, drops down, and grabs a name. It might even fumble once before it locks on — nobody's really safe until it's over the chute.</p>
+  <p>A real-feeling arcade claw: it travels across the rail, drops into the pile, and grips with three prongs. Its hold isn't always perfect — it can lose a toy on the way up before it finally lands the one that counts.</p>
 
   <div class="tool-wrap">
     <div class="panel">
@@ -170,19 +279,43 @@ Isla</textarea>
           <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
+
         <div class="cabinet" id="cabinet">
-          <div class="rail"></div>
-          <div class="claw-rig" id="clawRig">
-            <div class="claw-cable" id="clawCable" style="height:14px;"></div>
-            <div class="claw open" id="claw">
-              <div class="knuckle"></div>
-              <div class="arm left"></div>
-              <div class="arm right"></div>
+          <div class="marquee">
+            <span class="bulb"></span>CLAW MACHINE<span class="bulb"></span>
+          </div>
+
+          <div class="glass-box" id="glassBox">
+            <div class="rail"></div>
+            <div class="claw-rig" id="clawRig">
+              <div class="claw-motor"></div>
+              <div class="claw-cable" id="clawCable" style="height:10px;"></div>
+              <div class="claw open" id="claw">
+                <div class="knuckle"></div>
+                <div class="prong left"></div>
+                <div class="prong back"></div>
+                <div class="prong right"></div>
+              </div>
+            </div>
+            <div class="chute-slot"></div>
+            <div class="pile" id="pile"></div>
+            <div class="glass-shine"></div>
+            <div class="glass-shine second"></div>
+          </div>
+
+          <div class="control-panel">
+            <div>
+              <div class="joystick-well"><div class="stick" id="joystick"></div></div>
+              <div class="panel-label">Move</div>
+            </div>
+            <div class="coin-slot" title="1 credit"></div>
+            <div>
+              <div class="go-button" id="goButton"></div>
+              <div class="panel-label">Drop</div>
             </div>
           </div>
-          <div class="chute"></div>
-          <div class="pile" id="pile"></div>
-          <div class="glass-shine"></div>
+          <div class="prize-door" id="prizeDoor"></div>
+          <div class="legs"></div>
         </div>
       </div>
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
@@ -204,10 +337,14 @@ Isla</textarea>
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
   const cabinet = document.getElementById("cabinet");
+  const glassBox = document.getElementById("glassBox");
   const clawRig = document.getElementById("clawRig");
   const clawCable = document.getElementById("clawCable");
   const claw = document.getElementById("claw");
   const pile = document.getElementById("pile");
+  const joystick = document.getElementById("joystick");
+  const goButton = document.getElementById("goButton");
+  const prizeDoor = document.getElementById("prizeDoor");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
@@ -218,7 +355,7 @@ Isla</textarea>
 
   let alreadyWon = [];
   let grabbing = false;
-  let plushPositions = []; // { xFrac, name, color, face }
+  let plushPositions = []; // { name, xFrac, el }
 
   const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -241,12 +378,12 @@ Isla</textarea>
   }
 
   /**
-   * Lays plush toys out along the bottom of the cabinet on a loose,
+   * Lays plush toys out along the bottom of the glass box on a loose,
    * randomized single-ish layer (a bit of overlap/jitter reads as "a pile",
    * not a tidy row) so any one of them can plausibly be the one the claw
    * happens to land over.
    */
-  function buildPile(roster, winnerName) {
+  function buildPile(roster) {
     pile.innerHTML = "";
     const many = roster.length > 14;
     pile.classList.toggle("many-names", many);
@@ -254,28 +391,34 @@ Isla</textarea>
     plushPositions = roster.map((name, i) => {
       const color = PALETTE[i % PALETTE.length];
       const face = FACES[i % FACES.length];
-      // Spread toys across the floor with jitter; keep a safe margin from
-      // the cabinet walls so a toy's tag never clips off-screen.
-      const xFrac = n === 1 ? 0.5 : Math.min(0.94, Math.max(0.06, (i + 0.5) / n + rand(-0.3, 0.3) / n));
-      const rot = rand(-10, 10);
+      const xFrac = n === 1 ? 0.5 : Math.min(0.93, Math.max(0.07, (i + 0.5) / n + rand(-0.32, 0.32) / n));
+      const rot = rand(-9, 9);
       const el = document.createElement("div");
       el.className = "plush";
       el.id = `plush-${i}`;
       el.style.left = (xFrac * 100) + "%";
-      el.style.transform = `translateX(-50%) rotate(${rot}deg)`;
-      const size = many ? 32 : 44;
-      el.style.bottom = rand(0, size * 0.25) + "px";
+      el.style.marginLeft = (many ? -15 : -21) + "px";
+      el.style.transform = `rotate(${rot}deg)`;
+      el.style.bottom = rand(4, many ? 10 : 16) + "px";
       el.innerHTML = `
-        <div class="body" style="background:${color};"><span class="face">${face}</span></div>
+        <div class="body" style="background:${color};">
+          <div class="arm-l"></div><div class="arm-r"></div>
+          <span class="face">${face}</span>
+        </div>
         <div class="tag">${escapeHtml(name)}</div>`;
       pile.appendChild(el);
-      return { name, xFrac, color, face, rot, el };
+      return { name, xFrac, el };
     });
     return plushPositions;
   }
 
   function findEntry(name) {
     return plushPositions.find((p) => p.name === name);
+  }
+
+  function tiltJoystick(dir) {
+    // dir: -1 (left), 0 (center), 1 (right)
+    joystick.style.transform = `rotate(${dir * 26}deg)`;
   }
 
   async function runGrab() {
@@ -285,18 +428,24 @@ Isla</textarea>
     grabbing = true;
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
+    prizeDoor.classList.remove("lit");
     clock.classList.remove("hot");
     claw.classList.remove("grabbing", "fumbled");
     claw.classList.add("open");
-    clawCable.style.height = "14px";
+    clawCable.style.height = "10px";
     clawRig.style.left = "50%";
+    tiltJoystick(0);
+
+    goButton.classList.add("pressed");
+    SoundFX.click();
+    setTimeout(() => goButton.classList.remove("pressed"), 180);
 
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
-    const entries = buildPile(result.eligiblePool, result.winner);
+    const entries = buildPile(result.eligiblePool);
 
     statusText.textContent = "Get ready…";
-    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Drop!"], null, cabinet);
+    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Drop!"], null, glassBox);
 
     // Decide whether this run gets a fumble (grabs the wrong toy first,
     // drops it, then goes back for the real winner) — makes the win feel
@@ -305,34 +454,40 @@ Isla</textarea>
     const winnerEntry = findEntry(result.winner);
     const fumbleEntry = fumble ? entries.filter((e) => e.name !== result.winner)[Math.floor(Math.random() * (entries.length - 1))] : null;
 
-    const railW = cabinet.clientWidth;
-    const railLeft = railW * 0.06, railRight = railW * 0.94;
+    const boxW = glassBox.clientWidth;
+    const railLeft = boxW * 0.06, railRight = boxW * 0.94;
     const toX = (xFrac) => railLeft + xFrac * (railRight - railLeft);
+    const startLeft = boxW * 0.5;
 
-    const cableDown = cabinet.clientHeight * 0.62;
-    const cableUp = 14;
+    const cableDown = glassBox.clientHeight * 0.6;
+    const cableUp = 10;
 
     statusText.textContent = "Positioning…";
-    SoundFX.whoosh(0.5, true, 0.05);
 
     const legs = fumble ? [fumbleEntry, winnerEntry] : [winnerEntry];
     const perLeg = duration / (legs.length + 0.4); // leave the tail of the timer for the final lift/reveal
+    let currentLeft = startLeft;
 
     for (let li = 0; li < legs.length; li++) {
       const target = legs[li];
-      const isFinal = li === legs.length - 1;
+      const targetLeft = toX(target.xFrac);
+      const dir = targetLeft > currentLeft ? 1 : -1;
 
-      // Travel across the rail to hover over the target.
+      // Travel across the rail to hover over the target (joystick leans
+      // the direction of travel, the way an operator would hold it over).
+      tiltJoystick(dir);
       clawRig.style.transition = `left ${perLeg * 0.45}s cubic-bezier(.4,.05,.2,1)`;
-      clawRig.style.left = toX(target.xFrac) + "px";
+      clawRig.style.left = targetLeft + "px";
+      currentLeft = targetLeft;
+      SoundFX.whoosh(perLeg * 0.45, true, 0.03);
       await wait(perLeg * 0.45 * 1000);
+      tiltJoystick(0);
       SoundFX.click();
 
       // Drop the cable down into the pile.
       statusText.textContent = "Dropping…";
       clawCable.style.transition = `height ${perLeg * 0.22}s cubic-bezier(.5,0,.2,1)`;
       clawCable.style.height = cableDown + "px";
-      SoundFX.whoosh(perLeg * 0.22, false, 0.02);
       await wait(perLeg * 0.22 * 1000);
 
       // Grab.
@@ -343,17 +498,18 @@ Isla</textarea>
       setTimeout(() => target.el.classList.remove("jostled"), 400);
       await wait(220);
 
-      const holds = isFinal || !fumble; // the fumble leg never holds
-      if (holds) {
-        target.el.classList.add("grabbed");
-      }
+      const holds = li === legs.length - 1; // only the final leg ever holds
+
+      if (holds) target.el.classList.add("grabbed", "swinging");
 
       // Rise back up.
       statusText.textContent = holds ? "Lifting…" : "Lifting… uh oh";
       clawCable.style.transition = `height ${perLeg * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
       clawCable.style.height = cableUp + "px";
-      if (holds) target.el.style.transition = `bottom ${perLeg * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
-      if (holds) target.el.style.bottom = (cableDown - 10) + "px";
+      if (holds) {
+        target.el.style.transition = `bottom ${perLeg * 0.2}s cubic-bezier(.3,1.2,.4,1)`;
+        target.el.style.bottom = (cableDown - 6) + "px";
+      }
       await wait(perLeg * 0.2 * 1000);
 
       if (!holds) {
@@ -363,8 +519,8 @@ Isla</textarea>
         claw.classList.add("fumbled");
         SoundFX.sadTrombone();
         target.el.classList.add("dropped-back");
-        setTimeout(() => target.el.classList.remove("dropped-back"), 500);
-        await wait(260);
+        setTimeout(() => target.el.classList.remove("dropped-back"), 550);
+        await wait(300);
         claw.classList.remove("fumbled");
         claw.classList.add("open");
       }
@@ -373,12 +529,16 @@ Isla</textarea>
     // Final lift to the chute with the winner secured.
     statusText.textContent = "Almost there…";
     clock.classList.add("hot");
+    tiltJoystick(-1);
+    const chuteX = toX(0.03);
     clawRig.style.transition = `left ${perLeg * 0.4}s cubic-bezier(.4,.05,.2,1)`;
-    clawRig.style.left = toX(0.06) + "px";
+    clawRig.style.left = chuteX + "px";
     winnerEntry.el.style.transition = `left ${perLeg * 0.4}s cubic-bezier(.4,.05,.2,1)`;
-    winnerEntry.el.style.left = (0.06 * 100) + "%";
-    SuspenseFX.flash(cabinet, 300);
+    winnerEntry.el.style.left = "3%";
+    winnerEntry.el.style.marginLeft = "0px";
+    SuspenseFX.flash(glassBox, 300);
     await wait(perLeg * 0.4 * 1000);
+    tiltJoystick(0);
 
     finishGrab(result, winnerEntry);
   }
@@ -390,6 +550,9 @@ Isla</textarea>
     clock.classList.remove("hot");
     claw.classList.remove("grabbing");
     claw.classList.add("open");
+    winnerEntry.el.classList.remove("swinging");
+    winnerEntry.el.style.opacity = "0";
+    prizeDoor.classList.add("lit");
     SoundFX.drop();
     SuspenseFX.shake(cabinet, 260);
     SuspenseFX.flash(cabinet, 400);
@@ -400,15 +563,15 @@ Isla</textarea>
     clock.textContent = "🧸";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🕹️ The claw drops ${escapeHtml(result.winner)} in the chute!</span>`;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🕹️ The claw drops ${escapeHtml(result.winner)} in the prize door!</span>`;
     winnerBanner.classList.add("show");
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
-    const rect = (winnerEntry.el || cabinet).getBoundingClientRect();
+    const rect = prizeDoor.getBoundingClientRect();
     SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
   }
 
   startBtn.addEventListener("click", runGrab);
-  buildPile(getNames(), null);
+  buildPile(getNames());
 </script>
 
 </body>
