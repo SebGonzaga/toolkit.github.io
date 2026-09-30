@@ -60,6 +60,7 @@
     new MutationObserver(function () {
       var status = ins.getAttribute("data-ad-status");
       if (status === "unfilled") node.classList.remove("is-shown");
+      else if (status === "filled") node.classList.add("is-shown");
     }).observe(ins, { attributes: true, attributeFilter: ["data-ad-status"] });
     return ins;
   }
@@ -82,6 +83,12 @@
     ins.dataset.adPushed = "1";
     node.classList.add("is-shown");                    // needs real width before push
     try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* ignore */ }
+    // No ad back after a few seconds (account not approved yet, no inventory,
+    // blocker...)? Collapse the space so visitors never see an empty gap.
+    // If an ad does arrive later, the observer above brings the slot back.
+    setTimeout(function () {
+      if (ins.getAttribute("data-ad-status") !== "filled") node.classList.remove("is-shown");
+    }, 4000);
   }
 
   function start() {
