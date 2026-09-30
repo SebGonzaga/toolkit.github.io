@@ -1,7 +1,7 @@
 /* ==========================================================================
    Pick & Race — AdSense helper (display ads only)
 
-   1. Put your IDs in the CONFIG block below (the ONLY place they live).
+   1. Your IDs live in the CONFIG block below (the ONLY place they are set).
    2. Pages just contain:  <aside class="ad-slot" data-ad="tool-bottom"></aside>
       This file builds the label + <ins> unit, loads AdSense once, and
       initialises each slot exactly once, only when it is near the screen.
@@ -14,11 +14,11 @@
   "use strict";
 
   /* ------------------------------ CONFIG ------------------------------ */
-  var CLIENT = "ca-pub-XXXXXXXXXXXXXXXX";          // <-- your AdSense publisher ID
+  var CLIENT = "ca-pub-8362200361779290";          // your AdSense publisher ID
   var SLOTS = {                                     // <-- your ad unit slot IDs
-    "home":        "XXXXXXXXXX",   // home page, below the hero
-    "tool-top":    "XXXXXXXXXX",   // race pages, above the race area
-    "tool-bottom": "XXXXXXXXXX"    // every tool, below the stage / results
+    "home":        "5369012132",   // home page, below the hero
+    "tool-top":    "7201802700",   // race pages, above the race area
+    "tool-bottom": "9879013494"    // every tool, below the stage / results
   };
   /* -------------------------------------------------------------------- */
 
@@ -66,7 +66,8 @@
 
   var scriptRequested = false;
   function loadScript() {
-    if (scriptRequested || window.__prAdScript) return;
+    // skip if the AdSense tag is already on the page (e.g. added for site verification)
+    if (scriptRequested || window.__prAdScript || document.querySelector('script[src*="adsbygoogle.js"]')) return;
     scriptRequested = window.__prAdScript = true;
     var s = document.createElement("script");
     s.async = true;
