@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Weighted Name Picker — Pick &amp; Race</title>
 <meta name="description" content="Give some names better odds without anyone seeing the numbers. The stage looks perfectly even; the weights stay in your panel.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,6 +69,8 @@
   @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } .panel { position: static; } }
   @media (prefers-reduced-motion: reduce) { .chip { transition: none !important; } }
 </style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
 </head>
 <body>
 
@@ -121,6 +123,7 @@
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
     </div>
   </div>
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>

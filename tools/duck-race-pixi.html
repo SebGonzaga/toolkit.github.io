@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Duck Race (PixiJS Edition) — Pick &amp; Race</title>
 <meta name="description" content="Same duck race, rebuilt on PixiJS + GSAP + Howler.js instead of DOM/CSS.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -142,6 +142,8 @@
     .control-bar .btns .btn { flex: 1; }
   }
 </style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
 </head>
 <body>
 
@@ -161,6 +163,8 @@
 <main class="wrap wide-stage">
   <h1 style="margin-top:28px;">Duck Race Name Picker — PixiJS Edition</h1>
   <p>Identical race logic and rules as the original, rebuilt on the PixiJS / GSAP / Howler.js stack.</p>
+
+  <aside class="ad-slot" data-ad="tool-top" aria-label="Advertisement"></aside>
 
   <div class="tool-wrap">
     <div class="stack-note">
@@ -217,6 +221,7 @@ Isla</textarea>
       <div class="history" id="historyList"></div>
     </div>
   </div>
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>

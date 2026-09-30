@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Turtle Race Name Picker — Pick &amp; Race</title>
 <meta name="description" content="Deliberately, comedically slow — turtles decide who goes first.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,6 +131,8 @@
     .field-token, .turtle3d, .t-leg, .field-decor .decor { animation: none !important; transition: none !important; transform: none !important; }
   }
 </style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
 </head>
 <body>
 
@@ -152,6 +154,8 @@
 <main class="wrap">
   <h1 style="margin-top:28px;">Turtle Race Name Picker</h1>
   <p>Same fair pick, delivered as slowly and dramatically as possible. Great for building suspense.</p>
+
+  <aside class="ad-slot" data-ad="tool-top" aria-label="Advertisement"></aside>
 
   <div class="tool-wrap">
     <div class="panel">
@@ -210,6 +214,7 @@ Isla</textarea>
       <div class="history" id="historyList"></div>
     </div>
   </div>
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>

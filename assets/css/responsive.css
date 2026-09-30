@@ -1,0 +1,197 @@
+/* ==========================================================================
+   Pick & Race — responsive layer
+   Loaded LAST on every page (after each tool's inline <style>), so it can
+   refine per-tool layout without editing every file. Desktop look is
+   unchanged; everything here only kicks in on smaller / touch screens,
+   except a few safe fluid-sizing fixes noted inline.
+   ========================================================================== */
+
+:root { --gutter: clamp(14px, 4vw, 24px); }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* `clip` (not `hidden`) so stray absolutely-positioned effects (sparkles,
+   confetti) can't cause sideways scrolling, without breaking sticky panels. */
+body { overflow-x: clip; }
+
+img { max-width: 100%; height: auto; }
+
+/* Removes the double-tap-zoom delay so taps feel instant on phones. */
+a, button, .btn, summary, label, select, input, textarea, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* -- page gutters (also clears notches in landscape) ------------------- */
+.wrap {
+  padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+}
+
+/* -- nav: wraps instead of overflowing --------------------------------- */
+.site-nav .wrap {
+  height: auto;
+  min-height: 68px;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.site-nav nav { display: flex; flex-wrap: wrap; gap: 0 20px; }
+.site-nav nav a { margin-left: 0; padding: 10px 0; }
+
+/* -- shared card grid / footer ----------------------------------------- */
+.tool-grid { grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); }
+.site-footer { padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+
+/* Long names should wrap, never push the layout wider. */
+.winner-banner, .result-banner, .champ-name, .wb-name { overflow-wrap: anywhere; }
+
+/* Floating sound button: respect notches/home bar. */
+body .sfx-fab {
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+}
+
+/* -- wheels: scale down with the screen instead of overflowing ---------- */
+.wheel-wrap { max-width: 100%; height: auto; aspect-ratio: 1 / 1; }
+svg#wheel { height: auto; aspect-ratio: 1 / 1; }
+
+/* ==========================================================================
+   Tool pages: sidebar + stage
+   ========================================================================== */
+
+.tool-wrap { grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); }
+.tool-wrap > * { min-width: 0; }
+
+/* Tablets & below: stack (was 860px; the slot machine needs the extra room) */
+@media (max-width: 940px) {
+  .tool-wrap { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 20px 0 48px; }
+  .panel { position: static; }
+  .stage { min-height: 340px; }
+
+  /* iOS Safari zooms the page when a focused field is under 16px. */
+  textarea, input[type="text"], input[type="number"], select { font-size: 16px !important; }
+
+  /* Balloon flight area / dvh-aware heights (fallback = original value) */
+  .flight-area { height: clamp(320px, 62vh, 420px); }
+  .flight-area { height: clamp(320px, 62dvh, 420px); }
+}
+
+/* Duck / turtle / rocket race controls */
+@media (max-width: 860px) {
+  .control-bar input[type="range"] { width: 100%; min-width: 120px; }
+  .control-bar .grp:not(.grow) { flex: 1 1 140px; }
+}
+
+/* ==========================================================================
+   Phones
+   ========================================================================== */
+@media (max-width: 560px) {
+  .site-nav .wrap { min-height: 0; }
+  /* one swipeable row instead of a 2-3 line wrapped block */
+  .site-nav nav {
+    flex: 1 1 100%; flex-wrap: nowrap; gap: 0 18px; white-space: nowrap;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter);
+  }
+  .site-nav nav::-webkit-scrollbar { display: none; }
+  .site-nav nav a { flex: none; }
+  .brand { font-size: 1.15rem; }
+
+  .stage { padding: 14px; }
+  .panel { padding: 14px; }
+  .control-bar { padding: 12px; }
+  textarea { min-height: 110px; }
+
+  h1 { font-size: clamp(1.6rem, 7vw, 2rem); }
+
+  /* index hero */
+  .hero { padding: 24px 0 24px; gap: 24px; }
+  .hero .cta-row .btn { flex: 1 1 100%; justify-content: center; }
+  .hero .stat-line { flex-wrap: wrap; gap: 6px 18px; }
+  .tool-grid { gap: 14px; margin: 24px 0 48px; }
+
+  /* leave room so the floating sound button never covers footer text */
+  .site-footer { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+
+  /* wheels */
+  .hub { width: 52px; height: 52px; margin: -26px 0 0 -26px; font-size: 1.3rem; }
+  .result-banner .ans { font-size: 1.6rem; }
+
+  /* slot machine: 3 reels + lever must fit ~300px */
+  .machine { flex-wrap: nowrap; gap: 6px; padding: 12px 12px 18px; margin-top: 30px; }
+  .reel-window { width: min(90px, 14vw); }
+  .reel-window.name-reel { width: min(190px, 30vw); }
+  .reel-item { font-size: clamp(1.5rem, 8vw, 2.2rem); }
+  .reel-item.name-item { font-size: clamp(0.95rem, 4vw, 1.3rem); padding: 0 4px; }
+  .lever .stick { height: 46px; }
+
+  /* mystery card flip */
+  .card-arena { gap: 14px; min-height: 260px; }
+  .deck-pile { width: 52px; height: 73px; }
+  .card-slot { width: min(150px, 38vw); height: auto; aspect-ratio: 190 / 260; }
+
+  /* team generator / ticket / bracket */
+  .team-grid { grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); }
+  .ticket { padding: 14px 16px; }
+  .round { min-width: 148px; }
+  .bracket-scroll { -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+  .round { scroll-snap-align: start; }
+}
+
+/* ==========================================================================
+   Touch devices: comfortable tap targets (~44px)
+   ========================================================================== */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn.small { min-height: 44px; }
+  .filters button, .presets button { min-height: 44px; padding-left: 16px; padding-right: 16px; }
+  .toggle-row, .control-bar .toggle { min-height: 44px; }
+  input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; }
+  .stepper button { flex-basis: 44px; height: 44px; }
+  .wt button { width: 36px; height: 40px; }
+  .rm { width: 40px; height: 40px; }
+  .seg label { padding-top: 12px; padding-bottom: 12px; }
+}
+
+/* ==========================================================================
+   Landscape phones: short viewports shouldn't get a taller-than-screen stage
+   ========================================================================== */
+@media (max-height: 520px) and (orientation: landscape) {
+  .field:not(.many-names) { height: clamp(220px, 68vh, 400px); }
+  .field:not(.many-names) { height: clamp(220px, 68dvh, 400px); }
+  .stage { min-height: 280px; }
+  .wheel-wrap { width: min(260px, 70vh); }
+}
+
+/* ==========================================================================
+   Advertising slots (see assets/js/ads.js)
+   Ads live only BETWEEN page sections — never inside a stage, control bar
+   or panel — with generous space on every side so they can't be tapped by
+   accident while playing. Hidden (zero height) until an ad is actually shown.
+   ========================================================================== */
+.ad-slot {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  overflow: hidden;            /* an ad can never cause sideways scrolling */
+  clear: both;
+}
+.ad-slot:not(.is-shown) { height: 0; margin: 0; visibility: hidden; }
+.ad-slot.is-shown { margin: clamp(36px, 6vw, 56px) auto; }
+.ad-slot .ad-label {
+  font: 600 0.68rem/1 var(--font-body);
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+}
+.ad-slot ins.adsbygoogle { display: block; width: 100%; min-height: 90px; }
+.ad-slot ins.adsbygoogle[data-ad-status="unfilled"] { display: none; }
+.ad-preview {
+  min-height: 120px; display: flex; align-items: center; justify-content: center;
+  border: 2px dashed var(--ink-soft); border-radius: var(--radius);
+  color: var(--ink-soft); font-size: 0.85rem;
+}
+/* Sound button steps aside while an ad is on screen so it never covers one. */
+body.ad-in-view .sfx-fab { opacity: 0; pointer-events: none; }

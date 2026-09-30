@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spaceship Shootdown Name Picker — Duel &amp; Decide</title>
 <meta name="description" content="Type or paste a class list, pick a battle length, and let spaceships duel it out until only one is left flying.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -188,6 +188,8 @@
        correctly placed even with reduced motion on. */
   }
 </style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
 </head>
 <body>
 
@@ -208,6 +210,8 @@
 <main class="wrap">
   <h1 style="margin-top:28px;">Spaceship Shootdown Name Picker</h1>
   <p>Paste your roster, set a battle length, and let the fleet duel it out — the last ship flying gets picked. Works for 2 names or 40.</p>
+
+  <aside class="ad-slot" data-ad="tool-top" aria-label="Advertisement"></aside>
 
   <div class="tool-wrap">
     <div class="panel">
@@ -266,6 +270,7 @@ Isla</textarea>
       <div class="history" id="historyList"></div>
     </div>
   </div>
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>

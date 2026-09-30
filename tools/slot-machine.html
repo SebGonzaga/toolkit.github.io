@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Slot Machine Name Picker — Pick &amp; Race</title>
 <meta name="description" content="Pull the lever — reels spin and lock in a name.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,6 +85,8 @@
     .reel-strip, .bulb, .reel-window { transition: none !important; animation: none !important; }
   }
 </style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
 </head>
 <body>
 
@@ -151,6 +153,7 @@ Isla</textarea>
       <div class="history" id="historyList"></div>
     </div>
   </div>
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>

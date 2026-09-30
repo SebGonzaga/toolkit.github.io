@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spinning Wheel Name Picker — Pick &amp; Race</title>
 <meta name="description" content="Spin a wheel of names — powered by the same fair engine as the duck race.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,6 +40,8 @@
   @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: reduce) { .pointer, .wheel-glow { transition: none !important; } }
 </style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
 </head>
 <body>
 
@@ -81,6 +83,7 @@ Mateo</textarea>
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
     </div>
   </div>
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>

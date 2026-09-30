@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Elimination Name Picker — Pick &amp; Race</title>
 <meta name="description" content="Names drop out one by one until a single survivor is left. Auto-play for the drama, or click to cut each name yourself.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,6 +60,8 @@
   @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } .panel { position: static; } .board { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } }
   @media (prefers-reduced-motion: reduce) { .tile, .tile.survivor { transition: none !important; animation: none !important; } }
 </style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
 </head>
 <body>
 
@@ -122,6 +124,7 @@ Sana</textarea>
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
     </div>
   </div>
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <script src="../assets/js/race-engine.js"></script>
