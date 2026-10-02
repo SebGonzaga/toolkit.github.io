@@ -195,3 +195,20 @@ svg#wheel { height: auto; aspect-ratio: 1 / 1; }
 }
 /* Sound button steps aside while an ad is on screen so it never covers one. */
 body.ad-in-view .sfx-fab { opacity: 0; pointer-events: none; }
+
+/* ==========================================================================
+   Written content under each tool + static pages (About, Privacy)
+   ========================================================================== */
+.about-tool, .doc-page { max-width: 760px; margin: 8px 0 0; padding: 8px 0 8px; }
+.about-tool { margin-top: 24px; border-top: 2px solid var(--ink); padding-top: 28px; }
+.about-tool h2, .doc-page h1 { margin-bottom: 0.5em; }
+.about-tool h3, .doc-page h2 { font-size: 1.1rem; margin: 1.4em 0 0.5em; }
+.about-tool ul, .doc-page ul { margin: 0 0 1em; padding-left: 1.25em; color: var(--ink-soft); max-width: 62ch; }
+.about-tool li, .doc-page li { margin-bottom: 0.35em; }
+.about-tool dt { font-weight: 700; color: var(--ink); margin-top: 0.9em; }
+.about-tool dd { margin: 0.2em 0 0; color: var(--ink-soft); max-width: 62ch; }
+.about-more { margin-top: 1.6em; font-size: 0.9rem; }
+.site-footer a { text-decoration: underline; }
+.doc-page { padding-bottom: 56px; }
+.doc-page p { max-width: 68ch; }
+.doc-page, .about-tool { overflow-wrap: anywhere; }

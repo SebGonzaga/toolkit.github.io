@@ -24,10 +24,10 @@
 
   var isPlaceholder = function (v) { return /X{6,}/.test(v); };
   var preview = /[?&]adpreview\b/.test(location.search);
-  var live = !isPlaceholder(CLIENT);
+  var live = !isPlaceholder(CLIENT) && !preview;   // ?adpreview always shows dashed boxes, never real ads
 
   var nodes = Array.prototype.slice.call(document.querySelectorAll(".ad-slot[data-ad]"));
-  if (!nodes.length || (!live && !preview)) return;   // placeholders: stay invisible
+  if (!nodes.length || (!live && !preview)) return;   // placeholder IDs: stay invisible
 
   function build(node) {
     if (node.dataset.adBuilt) return null;             // never build twice
