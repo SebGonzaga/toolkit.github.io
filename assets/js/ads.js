@@ -1,7 +1,7 @@
 /* ==========================================================================
    Pick & Race — ad helper (display ads only)
 
-   One switch decides which network is used:  PROVIDER = "adsterra" | "adsense"
+   One switch decides which network is used:  PROVIDER = "none" | "adsterra" | "adsense"
    Both networks' IDs live in the CONFIG block below (the ONLY place they are set).
 
    Pages just contain:  <aside class="ad-slot" data-ad="tool-bottom"></aside>
@@ -19,7 +19,7 @@
   "use strict";
 
   /* ------------------------------ CONFIG ------------------------------ */
-  var PROVIDER = "adsterra";                        // <-- switch to "adsense" once approved on your own domain
+  var PROVIDER = "none";                            // "none" = no ads at all. Use "adsterra" or "adsense" to turn ads on
 
   var ADSTERRA = {
     host: "https://bauval.org",
@@ -38,6 +38,8 @@
     "tool-bottom": "9879013494"    // every tool, below the stage / results
   };
   /* -------------------------------------------------------------------- */
+
+  if (PROVIDER === "none") return;                 // ads are switched off: do nothing
 
   var ADSENSE = PROVIDER === "adsense";
   var isPlaceholder = function (v) { return /X{6,}/.test(v); };
