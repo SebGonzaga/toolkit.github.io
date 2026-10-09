@@ -19,7 +19,7 @@
   "use strict";
 
   /* ------------------------------ CONFIG ------------------------------ */
-  var PROVIDER = "none";                            // "none" = no ads at all. Use "adsterra" or "adsense" to turn ads on
+  var PROVIDER = "adsterra";                        // "none" = no ads at all. Use "adsterra" or "adsense" to turn ads on
 
   var ADSTERRA = {
     host: "https://bauval.org",
