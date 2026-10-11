@@ -1,0 +1,5 @@
+{
+  "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "www.pickanamegames.com" }], "destination": "https://pickanamegames.com/:path*", "permanent": true }
+  ]
+}
