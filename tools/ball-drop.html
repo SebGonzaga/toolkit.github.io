@@ -489,7 +489,7 @@ Isla</textarea>
               const nx = dx / dist, ny = dy / dist, vn = vx * nx + vy * ny;
               if (vn < 0) {
                 vx -= (1 + REST) * vn * nx; vy -= (1 + REST) * vn * ny;
-                vx += rand(-38, 38) * (bR / 13 + 0.4);       // a kick from THIS impact only
+                vx += rand(-55, 55) * (bR / 13 + 0.4);       // a kick from THIS impact only
                 hits.push({ t, p, speed: -vn });
               }
               const o = COMB - dist; x += nx * o; y += ny * o;
@@ -628,7 +628,7 @@ Isla</textarea>
 
   function pegImpact(p, speed, loud) {
     p.litAt = now;
-    sparks(p.x, p.y, "#ffd24a", clamp(Math.round(speed / 220), 2, 7), 220);
+    sparks(p.x, p.y, "#ffd24a", clamp(Math.round(speed / 150), 3, 11), 280);
     if (loud) {
       pegsHit++;
       if (now - lastPingAt > 0.035) {
@@ -636,9 +636,40 @@ Isla</textarea>
         fx("plinkoPeg", Math.floor(clamp((p.x - L) / FW, 0, 0.999) * 9) + (Math.random() < 0.5 ? 0 : 1), clamp(speed / 1400, 0.2, 1));
         lastPingAt = now;
       }
-      ball.squash = 0.32;
-      if (!reduceMotion && p.row >= cfg.rows - 3) shakeAmt = Math.max(shakeAmt, 2.2);
+      ball.squash = clamp(0.28 + speed / 2600, 0.3, 0.55);
+      if (speed > 650) ring(p.x, p.y, "#ffd24a", 4, 10 + Math.min(18, speed / 90), 0.28);   // hard hits flash a shockwave
+      if (!reduceMotion) shakeAmt = Math.max(shakeAmt, p.row >= cfg.rows - 3 ? 3.4 : clamp(speed / 650, 0.5, 2.6));
     }
+  }
+
+  // Near the end the ball sometimes goes off-line before it settles on the winner.
+  // It is NOT random every time: ~30% of drops stay calm, the rest pick one style.
+  // Every style fades to zero offset at both ends of the funnel, so the result never changes.
+  function planChaos() {
+    const r = Math.random(), bw = cfg.binW;
+    const kind = r < 0.30 ? "calm" : r < 0.50 ? "teeter" : r < 0.70 ? "swing" : r < 0.90 ? "zigzag" : "scatter";
+    const maxAmp = Math.min(FW * 0.34, bw * 3.4);
+    return {
+      kind,
+      dir: Math.random() < 0.5 ? -1 : 1,
+      amp: kind === "teeter" ? Math.min(bw * 0.95, 70) : clamp(bw * rand(1.6, 3.2), 40, maxAmp),
+      freq: rand(1.4, 3.2),
+      ph1: rand(0, 6.28), ph2: rand(0, 6.28), f2: rand(2.6, 4.6),
+      active: false
+    };
+  }
+  // x / y offset of the ball while it crosses the funnel; p goes 0..1 from neck top to dividers.
+  function chaosOffset(c, p) {
+    if (!c || c.kind === "calm") return { dx: 0, dy: 0 };
+    const sp = Math.sin(Math.PI * clamp(p, 0, 1));
+    const env = Math.pow(sp, 0.7);
+    let dx = 0;
+    if (c.kind === "teeter") dx = c.dir * c.amp * sp;
+    else if (c.kind === "swing") dx = c.dir * c.amp * Math.sin(Math.PI * 2 * c.freq * p + c.ph1) * env;
+    else if (c.kind === "zigzag") dx = c.amp * (2 / Math.PI) * Math.asin(Math.sin(Math.PI * 2 * c.freq * p + c.ph1)) * env;
+    else dx = c.amp * 0.6 * (Math.sin(Math.PI * 2 * c.freq * p + c.ph1) + Math.sin(Math.PI * 2 * c.f2 * p + c.ph2)) * env;
+    const dy = c.kind === "teeter" ? 0 : -Math.abs(Math.sin(Math.PI * c.freq * p * 2 + c.ph2)) * c.amp * 0.16 * env;   // little hops
+    return { dx, dy };
   }
 
   function startDrop() {
@@ -678,10 +709,7 @@ Isla</textarea>
       gateTarget = 1;
       play = makePlayer(sim, duration, performance.now() / 1000 + 0.12, targetX, false);
       play.result = result; play.idx = idx;
-      // Teeter: in the funnel the ball drifts toward a neighbouring lane before swinging back.
-      const nb = []; if (idx > 0) nb.push(-1); if (idx < result.eligiblePool.length - 1) nb.push(1);
-      play.decoyDir = nb[(Math.random() * nb.length) | 0] || 0;
-      play.decoyAmp = Math.min(cfg.binW * 0.95, 70);
+      play.chaos = planChaos();
       statusText.textContent = "Dropping…";
       fx("plinkoGate");
     };
@@ -752,14 +780,23 @@ Isla</textarea>
           statusText.textContent = "Here it comes…";
           fx("plinkoSuspense", pl.tailReal + 1.0);
         }
-        let bx = pl.x;
+        let bx = pl.x, by = pl.y;
+        pl.chaos.active = false;
         if (pl.y > NECK_TOP && pl.y < DIV_TOP) {
           const p = (pl.y - NECK_TOP) / (DIV_TOP - NECK_TOP);
-          bx += pl.decoyDir * pl.decoyAmp * Math.sin(Math.PI * clamp(p, 0, 1));
+          const o = chaosOffset(pl.chaos, p);
+          bx = clamp(bx + o.dx, L + cfg.bR, R - cfg.bR); by += o.dy;
+          if (pl.chaos.kind !== "calm" && pl.chaos.kind !== "teeter" && p > 0.04 && p < 0.96) {
+            // wild flight: colourful streak, rumble and a ticking sound as it whips around
+            pl.chaos.active = true;
+            sparks(bx, by, pl.chaos.kind === "scatter" ? "#ff7ad9" : "#7ae8ff", 2, 170);
+            if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 1.8);
+            ball.squash = Math.max(ball.squash, 0.18);
+          }
         }
         ball.spin += ((bx - ball.x) / cfg.bR);
-        ball.x = bx; ball.y = pl.y; ball.vx = pl.vx; ball.vy = pl.vy;
-        ball.trail.push({ x: bx, y: pl.y, t: now });
+        ball.x = bx; ball.y = by; ball.vx = pl.vx; ball.vy = pl.vy;
+        ball.trail.push({ x: bx, y: by, t: now });
         while (ball.trail.length && now - ball.trail[0].t > 0.32) ball.trail.shift();
         // roulette ticks as the ball crosses lane dividers
         if (pl.tail && pl.y > NECK_TOP - 30) {
@@ -778,8 +815,9 @@ Isla</textarea>
         if (onFloor && !pl.wasFloor) {
           const k = pl.floorHits || 0; pl.floorHits = k + 1;
           fx("plinkoLand", k);
-          sparks(bx, LANE_FLOOR - 2, "#ffe08a", k === 0 ? 8 : 3, 180);
-          if (!reduceMotion) shakeAmt = Math.max(shakeAmt, Math.max(0.8, 3 - k));
+          sparks(bx, LANE_FLOOR - 2, "#ffe08a", k === 0 ? 16 : 5, 260);
+          if (k === 0) ring(bx, LANE_FLOOR - 4, "#ffe08a", 6, 46, 0.4);
+          if (!reduceMotion) shakeAmt = Math.max(shakeAmt, Math.max(1.2, 5 - k * 1.5));
         }
         pl.wasFloor = onFloor;
         while (pl.hi < pl.sim.hits.length && pl.sim.hits[pl.hi].rt <= pl.el) { const h = pl.sim.hits[pl.hi++]; pegImpact(h.p, h.speed, true); }
