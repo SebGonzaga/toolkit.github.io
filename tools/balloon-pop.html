@@ -98,6 +98,12 @@
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
   .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
 
+  /* Pop effects: expanding shockwave ring + rubber shreds (spawned from JS). */
+  .pop-ring { position: fixed; z-index: 999; pointer-events: none; border-radius: 50%; border: 5px solid rgba(255,255,255,0.95); box-shadow: 0 0 22px rgba(255,210,74,0.9), 0 0 0 3px rgba(217,80,63,0.55); }
+  .pop-shred { position: fixed; z-index: 999; pointer-events: none; border-radius: 60% 40% 70% 30%; }
+  .balloon-wrap.danger .balloon-token { animation: dangerThrob 0.32s ease-in-out infinite; }
+  @keyframes dangerThrob { 0%,100% { opacity: 1; } 50% { opacity: 0.88; } }
+
   @media (max-width: 860px) {
     .tool-wrap { grid-template-columns: 1fr; }
     .panel { position: static; }
@@ -317,6 +323,40 @@ Isla</textarea>
     anim.onfinish = () => el.remove();
   }
 
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /** Big pop: shockwave ring plus a spray of coloured rubber shreds that fly out and fall. */
+  function popBlast(x, y, color) {
+    const ring = document.createElement("div");
+    ring.className = "pop-ring";
+    ring.style.cssText += `left:${x - 20}px; top:${y - 20}px; width:40px; height:40px;`;
+    document.body.appendChild(ring);
+    const ra = ring.animate(
+      [{ transform: "scale(0.4)", opacity: 1 }, { transform: "scale(7)", opacity: 0 }],
+      { duration: 650, easing: "cubic-bezier(.1,.7,.3,1)" }
+    );
+    ra.onfinish = () => ring.remove();
+    if (reduceMotion) return;
+    for (let i = 0; i < 26; i++) {
+      const sh = document.createElement("div");
+      sh.className = "pop-shred";
+      const w = 6 + Math.random() * 12, h = 4 + Math.random() * 8;
+      sh.style.cssText += `left:${x}px; top:${y}px; width:${w}px; height:${h}px; background:${Math.random() < 0.8 ? color : "#fff"};`;
+      document.body.appendChild(sh);
+      const a = Math.random() * Math.PI * 2, d = 70 + Math.random() * 190;
+      const dx = Math.cos(a) * d, dy = Math.sin(a) * d - 40;
+      const an = sh.animate(
+        [
+          { transform: "translate(0,0) rotate(0deg)", opacity: 1, offset: 0 },
+          { transform: `translate(${dx}px, ${dy}px) rotate(${rand(-360, 360)}deg)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(${dx * 1.15}px, ${dy + 160 + Math.random() * 120}px) rotate(${rand(-540, 540)}deg)`, opacity: 0, offset: 1 },
+        ],
+        { duration: 750 + Math.random() * 600, easing: "ease-out" }
+      );
+      an.onfinish = () => sh.remove();
+    }
+  }
+
   /**
    * Lays balloons out on a rough grid of "home" positions (so a big roster
    * doesn't all pile into the same spot), each with its own random flight
@@ -360,6 +400,9 @@ Isla</textarea>
         color,
         lastTrail: 0,
         wentDanger: false,
+        // Late-race "flies off" state: only ~60% of balloons are restless, so it isn't random every time.
+        restless: Math.random() < 0.6,
+        dx: 0, dy: 0, dvx: 0, dvy: 0, nextDart: rand(0.2, 1.2), tiltPh: rand(0, 6.28),
       };
     });
   }
@@ -395,11 +438,13 @@ Isla</textarea>
     let lastGroupShake = 0;
     let climaxOn = false;
     let lastHeartbeat = 0;
+    let lastNow = performance.now(), lastWhoosh = 0, lastRumble = 0;
     const many = displayOrder.length > 14;
     const showTrails = !many; // keep the sky readable when the roster is big
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastNow) / 1000)); lastNow = now;
       clock.textContent = Math.max(0, maxTime - elapsed).toFixed(1) + "s"; // maxTime == the slider value (engine guarantees it)
 
       const areaW = flightArea.clientWidth, areaH = flightArea.clientHeight;
@@ -437,11 +482,34 @@ Isla</textarea>
         // Clamped to the FULL margin (not half) so the balloon's whole
         // silhouette — including the name tag — never slips past the edge
         // of the visible box, even mid-swing.
-        const x = Math.min(areaW - marginX, Math.max(marginX, baseX + xOff));
-        const y = Math.min(areaH - marginY, Math.max(marginY, baseY + yOff));
+        // Late-race darts: once a restless balloon is well inflated it randomly
+        // whips off in a new direction and a spring pulls it back. Gaps are
+        // random and shrink as it swells, so it's lively but never constant.
+        if (!reduceMotion && !winnerPopped) {
+          if (home.restless && progress > 0.5 && elapsed >= home.nextDart) {
+            const power = 0.6 + progress * 0.9;
+            const ang = rand(0, Math.PI * 2), sp = rand(300, 560) * power * Math.max(0.6, areaW / 640);
+            home.dvx += Math.cos(ang) * sp; home.dvy += Math.sin(ang) * sp * 0.75;
+            home.nextDart = elapsed + rand(0.6, 1.9) * (1.25 - progress * 0.6);
+            if (now - lastWhoosh > 220) { lastWhoosh = now; SoundFX.slideWhistle(650 + Math.random() * 500, 1600, 0.14, 0.05); }
+          }
+          home.dvx += (-home.dx * 34 - home.dvx * 5) * dt; home.dvy += (-home.dy * 34 - home.dvy * 5) * dt;
+          home.dx += home.dvx * dt; home.dy += home.dvy * dt;
+          const lim = areaW * 0.28; home.dx = Math.max(-lim, Math.min(lim, home.dx)); home.dy = Math.max(-lim * 0.7, Math.min(lim * 0.7, home.dy));
+        }
+        const x = Math.min(areaW - marginX, Math.max(marginX, baseX + xOff + home.dx));
+        const y = Math.min(areaH - marginY, Math.max(marginY, baseY + yOff + home.dy));
         wrapEl.style.left = x + "px";
         wrapEl.style.top = y + "px";
-        el.style.transform = `scale(${scale.toFixed(3)})`;
+        // Intensity: the balloon breathes faster, shivers and flushes as it swells.
+        let tScale = scale, tilt = 0;
+        if (!reduceMotion) {
+          const p2 = progress * progress;
+          tScale = scale * (1 + 0.04 * p2 * Math.sin(elapsed * (7 + progress * 20)));
+          tilt = Math.sin(elapsed * (9 + progress * 22) + home.tiltPh) * (1 + p2 * 9) * (progress > 0.4 ? 1 : 0);
+        }
+        el.style.transform = `scale(${tScale.toFixed(3)}) rotate(${tilt.toFixed(2)}deg)`;
+        if (!many) el.style.filter = progress > 0.4 ? `saturate(${(1 + progress * 0.7).toFixed(2)}) brightness(${(1 + progress * 0.1).toFixed(2)})` : "";
 
         const surging = scale - prevScale > 0.008;
         wrapEl.classList.toggle("surging", surging);
@@ -469,6 +537,8 @@ Isla</textarea>
           el.style.transform = `scale(${POP_SCALE.toFixed(2)})`;
           wrapEl.classList.add("popped");
           SoundFX.balloonPop();
+          const pr = wrapEl.getBoundingClientRect();
+          popBlast(pr.left + pr.width / 2, pr.top + pr.height * 0.35, home.color);
         }
         if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
@@ -492,11 +562,17 @@ Isla</textarea>
       // closer to popping, so the tension builds in the ears as well as
       // on screen.
       if (leaderProgress > 0.45 && !winnerPopped) {
-        const gap = 620 - leaderProgress * 420;
+        const gap = 560 - leaderProgress * 430;
         if (now - lastHeartbeat > gap) {
           lastHeartbeat = now;
           SoundFX.squeak(1 + leaderProgress * 0.75);
         }
+      }
+
+      // The whole stage rumbles harder the closer the leader gets to popping.
+      if (!reduceMotion && leaderProgress > 0.8 && !winnerPopped) {
+        const rGap = 700 - (leaderProgress - 0.8) * 2600;
+        if (now - lastRumble > Math.max(220, rGap)) { lastRumble = now; SuspenseFX.microShake(stage); }
       }
 
       // Climax mode: once the leader is deep in the danger zone, the whole
@@ -523,7 +599,7 @@ Isla</textarea>
     racing = false;
     stage.classList.remove("climax");
     clock.classList.remove("hot");
-    SuspenseFX.shake(stage, 300);
+    SuspenseFX.shake(stage, 520);
     SuspenseFX.flash(stage, 400);
     SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
@@ -552,6 +628,19 @@ Isla</textarea>
     const winnerIdx = result.eligiblePool.indexOf(result.winner);
     const winnerEl = document.getElementById(`wrap-${winnerIdx}`);
     const rect = (winnerEl || stage).getBoundingClientRect();
+    // Pop shockwave: every other balloon gets blown back from the winner, then settles.
+    if (!reduceMotion && winnerEl) {
+      const wx = rect.left + rect.width / 2, wy = rect.top + rect.height / 2;
+      displayOrder.forEach((entrant, i) => {
+        if (entrant.name === result.winner) return;
+        const w = document.getElementById(`wrap-${i}`); if (!w || !w.animate) return;
+        const r = w.getBoundingClientRect();
+        let vx = r.left + r.width / 2 - wx, vy = r.top + r.height / 2 - wy;
+        const len = Math.hypot(vx, vy) || 1, push = Math.max(10, 90 - len * 0.12);
+        vx = vx / len * push; vy = vy / len * push;
+        w.animate([{ translate: "0 0" }, { translate: `${vx}px ${vy}px`, offset: 0.22 }, { translate: "0 0" }], { duration: 800, easing: "ease-out" });
+      });
+    }
     SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
   }
 

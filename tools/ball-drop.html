@@ -548,8 +548,10 @@ Isla</textarea>
     const rawPre = clamp(sim.slowT, 0.05, sim.rawDuration - 0.05);
     const rawTail = sim.rawDuration - rawPre;
     const pl = { sim, duration, startAt, targetX, isGhost, preReal, tailReal, rawPre, rawTail, tail: false, lastBin: -1, si: 0, hi: 0, x: 0, y: 0, vx: 0, vy: 0, done: false };
-    pl.toRaw = (el) => (el <= preReal ? (el / preReal) * rawPre : rawPre + Math.min(1, (el - preReal) / tailReal) * rawTail);
-    pl.toReal = (rt) => (rt <= rawPre ? (rt / rawPre) * preReal : preReal + ((rt - rawPre) / rawTail) * tailReal);
+    // The tail decelerates (ease-out power curve): slow-mo that keeps getting slower, a near-freeze at the end.
+    const CRAWL = 1.8;
+    pl.toRaw = (el) => (el <= preReal ? (el / preReal) * rawPre : rawPre + (1 - Math.pow(1 - Math.min(1, (el - preReal) / tailReal), CRAWL)) * rawTail);
+    pl.toReal = (rt) => (rt <= rawPre ? (rt / rawPre) * preReal : preReal + (1 - Math.pow(Math.max(0, 1 - (rt - rawPre) / rawTail), 1 / CRAWL)) * tailReal);
     sim.hits.forEach((h) => { h.rt = pl.toReal(h.t); });
     return pl;
   }
@@ -645,22 +647,35 @@ Isla</textarea>
   // Near the end the ball sometimes goes off-line before it settles on the winner.
   // It is NOT random every time: ~30% of drops stay calm, the rest pick one style.
   // Every style fades to zero offset at both ends of the funnel, so the result never changes.
-  function planChaos() {
+  function planChaos(targetX) {
     const r = Math.random(), bw = cfg.binW;
-    const kind = r < 0.30 ? "calm" : r < 0.50 ? "teeter" : r < 0.70 ? "swing" : r < 0.90 ? "zigzag" : "scatter";
+    const kind = r < 0.08 ? "calm" : r < 0.16 ? "teeter" : r < 0.26 ? "swing" : r < 0.38 ? "zigzag" : r < 0.50 ? "scatter" : "far";
     const maxAmp = Math.min(FW * 0.34, bw * 3.4);
+    // "far": after the slow-mo crawl the ball suddenly rockets toward the far side of the board, then swings back.
+    const farDir = (targetX - L) > (R - targetX) ? -1 : 1;
+    const room = farDir < 0 ? targetX - L - cfg.bR : R - cfg.bR - targetX;
     return {
       kind,
-      dir: Math.random() < 0.5 ? -1 : 1,
-      amp: kind === "teeter" ? Math.min(bw * 0.95, 70) : clamp(bw * rand(1.6, 3.2), 40, maxAmp),
+      dir: kind === "far" ? farDir : (Math.random() < 0.5 ? -1 : 1),
+      amp: kind === "far" ? clamp(room * rand(0.75, 1), bw * 2, FW * 0.46) : kind === "teeter" ? Math.min(bw * 0.95, 70) : clamp(bw * rand(1.6, 3.2), 40, maxAmp),
+      s1: false, s2: false, s3: false,
       freq: rand(1.4, 3.2),
       ph1: rand(0, 6.28), ph2: rand(0, 6.28), f2: rand(2.6, 4.6),
       active: false
     };
   }
   // x / y offset of the ball while it crosses the funnel; p goes 0..1 from neck top to dividers.
-  function chaosOffset(c, p) {
+  function chaosOffset(c, p, tNeck) {
     if (!c || c.kind === "calm") return { dx: 0, dy: 0 };
+    if (c.kind === "far") {
+      // Hang in the crawl, dash far out, hold, then swing back. Driven by whichever is
+      // further along, funnel depth or real seconds, so the dash is fast even in slow-mo.
+      const u = Math.max(clamp(p, 0, 1), clamp(tNeck / 1.6, 0, 1));
+      const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+      const k = ss(0.18, 0.30, u) - ss(0.70, 0.94, u);
+      const hop = -Math.sin(Math.PI * clamp((u - 0.18) / 0.76, 0, 1)) * 16;
+      return { dx: c.dir * c.amp * k, dy: hop, k, u };
+    }
     const sp = Math.sin(Math.PI * clamp(p, 0, 1));
     const env = Math.pow(sp, 0.7);
     let dx = 0;
@@ -709,7 +724,7 @@ Isla</textarea>
       gateTarget = 1;
       play = makePlayer(sim, duration, performance.now() / 1000 + 0.12, targetX, false);
       play.result = result; play.idx = idx;
-      play.chaos = planChaos();
+      play.chaos = planChaos(targetX);
       statusText.textContent = "Dropping…";
       fx("plinkoGate");
     };
@@ -784,8 +799,18 @@ Isla</textarea>
         pl.chaos.active = false;
         if (pl.y > NECK_TOP && pl.y < DIV_TOP) {
           const p = (pl.y - NECK_TOP) / (DIV_TOP - NECK_TOP);
-          const o = chaosOffset(pl.chaos, p);
+          if (pl.neckAt === undefined) pl.neckAt = now;
+          const o = chaosOffset(pl.chaos, p, now - pl.neckAt);
           bx = clamp(bx + o.dx, L + cfg.bR, R - cfg.bR); by += o.dy;
+          const c = pl.chaos;
+          if (c.kind === "far") {
+            // punctuate the dash: whoosh + shockwave as it launches, a thud at the far end, whoosh on the way back
+            if (!c.s1 && o.u > 0.19) { c.s1 = true; fx("slideWhistle", 500, 2200, 0.28, 0.12); ring(bx, by, "#7ae8ff", 6, 60, 0.35); sparks(bx, by, "#ffffff", 14, 340); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 5); }
+            if (!c.s2 && o.u > 0.31) { c.s2 = true; fx("plinkoLand", 0); ring(bx, by, "#ffe08a", 6, 50, 0.4); sparks(bx, by, "#ff7ad9", 12, 260); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 4); }
+            if (!c.s3 && o.u > 0.72) { c.s3 = true; fx("slideWhistle", 1900, 600, 0.35, 0.1); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 3); }
+            const fast = Math.abs(o.k - (c.lastK || 0)) > 0.004; c.lastK = o.k;
+            if (fast) { sparks(bx, by, "#7ae8ff", 4, 220); ball.squash = Math.max(ball.squash, 0.3); }
+          }
           if (pl.chaos.kind !== "calm" && pl.chaos.kind !== "teeter" && p > 0.04 && p < 0.96) {
             // wild flight: colourful streak, rumble and a ticking sound as it whips around
             pl.chaos.active = true;
@@ -1047,6 +1072,16 @@ Isla</textarea>
       // dim only the area above the bins, so the names stay bright and readable
       const clipY = Math.max(0, Math.min(H, H / 2 + (DIV_TOP - 4 - cam.y) * cam.z));
       ctx.fillStyle = sg; ctx.fillRect(0, 0, W, clipY);
+      // slow-mo look: cool tint, letterbox bars sliding in, and a label
+      ctx.fillStyle = `rgba(40,70,160,${(0.10 * suspense).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+      const bar = 26 * suspense;
+      ctx.fillStyle = "#04020c"; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+      if (suspense > 0.6 && mode === "drop") {
+        ctx.save(); ctx.globalAlpha = (suspense - 0.6) / 0.4 * (0.6 + 0.4 * Math.sin(now * 5));
+        ctx.font = '800 15px "Baloo 2",sans-serif'; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "#9fd8ff"; ctx.fillText("◀◀  SLOW-MO  ▶▶", W / 2, H - bar / 2 - 1);
+        ctx.restore();
+      }
       const beat = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * (mode === "hold" ? 12 : 7.5));
       const hg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8);
       hg.addColorStop(0, "rgba(255,40,70,0)"); hg.addColorStop(1, `rgba(255,40,70,${(0.22 * suspense * beat).toFixed(3)})`);
