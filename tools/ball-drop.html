@@ -3,13 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="canonical" href="https://pickanamegames.com/tools/ball-drop.html">
+<meta property="og:url" content="https://pickanamegames.com/tools/ball-drop.html">
+<meta property="og:site_name" content="Pick &amp; Race">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2748%27 fill=%27%23efb93c%27/%3E%3Ctext x=%2750%27 y=%2766%27 font-size=%2756%27 text-anchor=%27middle%27%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E">
+<meta name="google-adsense-account" content="ca-pub-8362200361779290">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8362200361779290" crossorigin="anonymous"></script>
 <title>Ball Drop Name Picker — Pick &amp; Race</title>
 <meta name="description" content="A ball tumbles through a field of pegs and lands in a name slot — Plinko-style random picking.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
 <style>
-  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .tool-wrap { display: grid; grid-template-columns: 300px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
   .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; position: sticky; top: 20px; }
   .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
   .panel label:first-of-type { margin-top: 0; }
@@ -18,74 +24,34 @@
   .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; font-size: 0.88rem; }
   .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
   .duration-val { font-family: var(--font-display); font-weight: 700; }
+  .name-count { font-size: 0.78rem; color: var(--ink-soft); margin-top: 4px; }
 
+  /* ---------- Arcade cabinet ---------- */
   .stage {
-    border: var(--border); border-radius: var(--radius);
-    background: linear-gradient(180deg, #e7e0f2, #f4f0fa);
-    padding: 16px;
-    min-height: 460px;
-    position: relative;
-    transition: transform 0.3s ease;
+    position: relative; border: var(--border); border-radius: 22px;
+    background: linear-gradient(180deg, #2a1f4d, #140e2b);
+    padding: 12px; box-shadow: 0 8px 0 var(--ink), 0 0 0 5px #3a2d6b inset;
+    overflow: hidden;
   }
-  .stage.projector { background: #171226; }
-  .stage.projector .slot-name { color: #fff; }
-  .stage.projector .peg { fill: rgba(255,255,255,0.35); }
-  .stage.projector .slot { background: rgba(255,255,255,0.08); }
-  .stage.zoom { transform: scale(1.02); }
-  .stage.finished-glow { box-shadow: 0 0 0 4px var(--marker), 0 0 40px rgba(217,80,63,0.5) inset; }
+  .stage.projector { background: #05030d; }
+  .stage.finished-glow { box-shadow: 0 8px 0 var(--ink), 0 0 0 5px #ffd24a inset, 0 0 50px rgba(255,210,74,0.45); }
+  .cab-screen {
+    position: relative; border-radius: 14px; overflow: hidden;
+    border: 3px solid #0a0618; background: #0b0720;
+    box-shadow: 0 0 0 3px #4b3b86, inset 0 0 30px rgba(0,0,0,0.6);
+  }
+  #cab { display: block; width: 100%; height: auto; aspect-ratio: 900 / 760; }
+  .cab-hud {
+    position: absolute; left: 0; right: 0; top: 0; padding: 8px 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-family: var(--font-display); font-weight: 700; color: #fff; pointer-events: none;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.5);
+  }
+  .cab-hud .status { font-size: 1.05rem; }
+  .cab-hud .clock { font-size: 1.35rem; font-variant-numeric: tabular-nums; color: #ffd24a; }
+  .hud-pill { background: rgba(10,6,24,0.65); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 2px 12px; }
 
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
-  .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
-  .stage.projector .stage-header .clock { color: var(--pencil); }
-
-  .board { position: relative; height: 300px; margin: 0 4px; overflow: hidden; transition: transform 0.4s ease; }
-  .board.zoom { transform: scale(1.03); }
-  .pegs { position: absolute; inset: 0; }
-  .peg { fill: rgba(30,42,69,0.35); transition: fill 0.12s ease, r 0.12s ease; transform-origin: center; transform-box: fill-box; }
-  .peg.hit { fill: var(--marker); r: 5.5; }
-  .ball {
-    position: absolute; top: 0; width: 24px; height: 24px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #fff, var(--marker) 70%);
-    border: 2px solid var(--ink);
-    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-  }
-  /* The highlight above is a reflection of the light source, so it must
-     stay fixed as the ball moves — real rolling motion instead lives in
-     this separate inner layer: a faint seam pattern that we rotate in JS
-     in proportion to horizontal distance travelled, the way an actual
-     sphere's surface markings would spin as it rolls. */
-  .ball-spin {
-    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
-    background: repeating-conic-gradient(rgba(0,0,0,0.16) 0deg 6deg, transparent 6deg 90deg);
-    opacity: 0.55;
-  }
-  .ball-trail { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--marker); opacity: 0.35; pointer-events: none; }
-  .slots { display: flex; overflow-x: auto; gap: 2px; padding-top: 6px; }
-  .slot {
-    flex: 1 1 0; min-width: 46px; border: var(--border); border-top: none; border-radius: 0 0 8px 8px;
-    background: var(--paper-dim); padding: 8px 4px 10px; text-align: center; transition: background 0.2s, transform 0.2s;
-  }
-  .slot.armed { background: rgba(217,80,63,0.18); box-shadow: 0 0 12px 1px rgba(217,80,63,0.5); }
-  .slot.landed { background: var(--pencil); transform: scale(1.06); }
-  .slot-name { font-size: 0.78rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* ---------- Final-approach suspense layer (driven by --susp / --beat from JS) ---------- */
-  .susp-layer { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; overflow: hidden; z-index: 4; }
-  .susp-tint { position: absolute; inset: 0; background: rgba(40,70,160,calc(0.10 * var(--susp, 0))); }
-  .susp-beat { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(255,40,70,0) 45%, rgba(255,40,70,calc(0.24 * var(--susp, 0) * var(--beat, 0.5))) 100%); }
-  .susp-bar { position: absolute; left: 0; right: 0; background: #04020c; height: calc(14px * var(--susp, 0)); }
-  .susp-bar.top { top: 0; }
-  .susp-bar.bot { bottom: 0; }
-  .susp-label {
-    position: absolute; left: 50%; top: 52px; transform: translateX(-50%);
-    padding: 2px 14px; border-radius: 999px; background: rgba(4,2,12,0.78); color: #9fd8ff;
-    font-family: var(--font-display); font-weight: 800; font-size: 0.8rem; letter-spacing: 0.04em; white-space: nowrap;
-    opacity: calc((var(--susp, 0) - 0.6) * 2.5 * (0.6 + 0.4 * var(--beat, 0.5)));
-  }
-
-  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  .winner-banner { margin-top: 18px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
   @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .winner-banner.show { display: block; }
   .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
@@ -94,11 +60,13 @@
   @media (max-width: 860px) {
     .tool-wrap { grid-template-columns: 1fr; }
     .panel { position: static; }
+    .stage { border-radius: 16px; padding: 8px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ball, .stage, .peg, .slot { transition: none !important; }
+    .winner-banner { animation: none; }
   }
 </style>
+
 <link rel="stylesheet" href="../assets/css/responsive.css">
 <script src="../assets/js/ads.js" defer></script>
 </head>
@@ -121,9 +89,10 @@
 
 <main class="wrap">
   <h1 style="margin-top:28px;">Ball Drop Name Picker</h1>
-  <p>One ball, a field of pegs, and a row of name slots. Wherever it lands, that's your pick.</p>
+  <p>An arcade Plinko cabinet: the ball drops from the hopper, pings off the pegs, and funnels into a name bin. Wherever it lands, that's your pick.</p>
 
-  <div class="tool-wrap">
+  <aside class="ad-slot" data-ad="tool-top" aria-label="Advertisement"></aside>
+<div class="tool-wrap">
     <div class="panel">
       <label for="names">Names (one per line)</label>
       <textarea id="names">Ava
@@ -134,9 +103,10 @@ Priya
 Mateo
 Yuki
 Isla</textarea>
+      <div class="name-count" id="nameCount"></div>
 
-      <label for="duration">Drop speed: <span class="duration-val" id="durationVal">4s</span></label>
-      <input type="range" id="duration" min="2" max="10" value="4">
+      <label for="duration">Drop speed: <span class="duration-val" id="durationVal">5s</span></label>
+      <input type="range" id="duration" min="2" max="12" value="5">
 
       <div class="toggle-row">
         <input type="checkbox" id="noRepeat">
@@ -144,7 +114,7 @@ Isla</textarea>
       </div>
       <div class="toggle-row">
         <input type="checkbox" id="projector">
-        <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
+        <label for="projector" style="margin:0;">Projector mode (darker, bigger glow)</label>
       </div>
 
       <button class="btn marker" id="startBtn">Drop the ball</button>
@@ -153,23 +123,22 @@ Isla</textarea>
 
     <div>
       <div class="stage" id="stage">
-        <div class="stage-header">
-          <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
-          <span class="clock" id="clock">–</span>
+        <div class="cab-screen" id="screen">
+          <canvas id="cab" width="900" height="760" aria-label="Plinko board with name bins"></canvas>
+          <div class="cab-hud">
+            <span class="status hud-pill" id="statusText" aria-live="polite">Insert ball to play</span>
+            <span class="clock hud-pill" id="clock">–</span>
+          </div>
         </div>
-        <div class="board" id="board">
-          <svg class="pegs" id="pegSvg"></svg>
-          <div class="ball" id="ball" style="display:none;"><div class="ball-spin" id="ballSpin"></div></div>
-        </div>
-        <div class="slots" id="slots"></div>
-        <div class="susp-layer" aria-hidden="true"><div class="susp-tint"></div><div class="susp-beat"></div><div class="susp-bar top"></div><div class="susp-bar bot"></div><div class="susp-label">◀◀ SLOW-MO ▶▶</div></div>
       </div>
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
       <div class="history" id="historyList"></div>
     </div>
   </div>
 
-  <section class="about-tool" aria-labelledby="about-ball-drop">
+  
+<aside class="ad-slot" data-ad="tool-mid" aria-label="Advertisement"></aside>
+<section class="about-tool" aria-labelledby="about-ball-drop">
     <h2 id="about-ball-drop">About the Ball Drop Name Picker</h2>
     <p>Your names sit in slots at the bottom of a board of pegs. Press Drop the ball and it bounces down through the pegs before landing in one slot, and that name is the pick. It feels a little like a classic game-show board, and the drop speed slider changes how long the ball tumbles.</p>
     <h3>Ways to use it in class</h3>
@@ -187,7 +156,7 @@ Isla</textarea>
 </main>
 
 <footer class="site-footer">
-  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy policy</a></div>
+  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy policy</a> · <a href="../contact.html">Contact</a></div>
 </footer>
 
 
@@ -195,7 +164,19 @@ Isla</textarea>
 <script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
 <script>
+(() => {
+  /* ======================================================================
+     BALL DROP — arcade Plinko cabinet
+     One <canvas>, one requestAnimationFrame loop, a small state machine:
+       idle -> countdown -> drop -> celebrate -> (next drop)
+     The winner is decided up front by RaceEngine; the ball then "earns" it
+     through a real gravity + peg-collision simulation that is run once,
+     recorded as samples, and played back on the slider's clock.
+     ====================================================================== */
+
+  // ---------- DOM ----------
   const namesEl = document.getElementById("names");
+  const nameCountEl = document.getElementById("nameCount");
   const durationEl = document.getElementById("duration");
   const durationVal = document.getElementById("durationVal");
   const noRepeatEl = document.getElementById("noRepeat");
@@ -203,255 +184,492 @@ Isla</textarea>
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
-  const board = document.getElementById("board");
-  const pegSvg = document.getElementById("pegSvg");
-  const ball = document.getElementById("ball");
-  const ballSpin = document.getElementById("ballSpin");
-  const slotsEl = document.getElementById("slots");
+  const canvas = document.getElementById("cab");
   const statusText = document.getElementById("statusText");
-  const clock = document.getElementById("clock");
+  const clockEl = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
+  const ctx = canvas.getContext("2d");
 
+  // ---------- Cabinet coordinate space (logical px, scaled to fit) ----------
+  const W = 900, H = 760;
+  const L = 24, R = 876, FW = R - L;       // playfield left/right/width
+  const HOP_X = W / 2;                      // hopper centre
+  const GATE_Y = 150;                       // trap door under the hopper
+  const FIELD_TOP = 172, FIELD_BOT = 492;   // peg rows live in here
+  const NECK_TOP = 500;                     // pegless funnel starts
+  const DIV_TOP = 592;                      // bin dividers begin
+  const LANE_FLOOR = 664;                   // ball rests here
+  const STRIP_TOP = 666;                    // name plates start
+  const MAX_NAMES = 64;
+
+  const PALETTE = ["#ff4d6d", "#ffb703", "#3ddc97", "#4cc9f0", "#b388ff", "#ff8c42"];
+  const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- tiny helpers ----------
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smooth = (p) => p * p * (3 - 2 * p);
+  const easeOutBack = (t) => { const c = 1.9; t = clamp(t, 0, 1) - 1; return 1 + (c + 1) * t * t * t + c * t * t; };
+  // SoundFX / SuspenseFX are top-level consts (not window properties), so test with typeof.
+  const fx = (name, ...args) => { try { if (typeof SoundFX !== "undefined" && SoundFX[name]) SoundFX[name](...args); } catch (e) { /* audio is optional */ } };
+  const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function rgb(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function rgba(hex, a) { const [r, g, b] = rgb(hex); return `rgba(${r},${g},${b},${a})`; }
+  function seeded(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+
+  // ---------- state ----------
+  let dpr = 1;
+  let projector = false;
   let alreadyWon = [];
-  let dropping = false;
-  let currentNames = [];
-  let pegRows = 0;
-  let currentPegs = [];
-  const PEG_R = 3.5;
-  const BALL_R = 11;
+  let dropCount = 0;
+  let cfg = null;               // current board geometry
+  let staticLayer = null;       // pre-rendered cabinet + pegs + bins
+  let S = 2;                    // static layer resolution multiplier
+  let mode = "idle";            // idle | countdown | drop | celebrate
+  let now = 0, lastNow = 0;
+  let marqueePhase = 0;
 
-  durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
-  projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
-  resetHistoryBtn.addEventListener("click", () => { alreadyWon = []; renderHistory(); });
+  let winnerIdx = -1, celebrateAt = 0, winnerName = "";
+  let play = null;              // active real drop
+  let ghost = null, ghostNextAt = 2.5;
+  let pegsHit = 0, lastPingAt = 0;
+  let gateOpen = 0, gateTarget = 0;
+  let hopperShake = 0;
+  let coneAlpha = 0;
+  let shakeAmt = 0;
+  let suspense = 0, suspTarget = 0;   // 0..1 slow-mo / tension (bars, tint, heartbeat edge)
 
+  const ball = { x: HOP_X, y: GATE_Y - 12, vx: 0, vy: 0, spin: 0, squash: 0, trail: [] };
+  const cam = { x: W / 2, y: H / 2, z: 1, tx: W / 2, ty: H / 2, tz: 1 };
+  const parts = [];
+
+  // ======================================================================
+  // Sprites (pre-rendered once so per-frame drawing is just drawImage)
+  // ======================================================================
+  const glowCache = {};
+  function glowSprite(color) {
+    if (glowCache[color]) return glowCache[color];
+    const s = 96, c = document.createElement("canvas");
+    c.width = c.height = s;
+    const g = c.getContext("2d");
+    const rg = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    rg.addColorStop(0, rgba(color, 1));
+    rg.addColorStop(0.3, rgba(color, 0.5));
+    rg.addColorStop(1, rgba(color, 0));
+    g.fillStyle = rg; g.fillRect(0, 0, s, s);
+    return (glowCache[color] = c);
+  }
+  // Additive glow — the efficient replacement for shadowBlur: one drawImage each.
+  function drawGlow(color, x, y, r, a) {
+    if (a <= 0.01) return;
+    ctx.globalAlpha = Math.min(1, a);
+    ctx.drawImage(glowSprite(color), x - r, y - r, r * 2, r * 2);
+    ctx.globalAlpha = 1;
+  }
+
+  let ballSprite = null, ballSpriteR = 0;
+  function makeBallSprite(r) {
+    const k = 3, size = Math.ceil((r * 2 + 6) * k);
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const g = c.getContext("2d");
+    g.scale(k, k);
+    const cx = size / k / 2;
+    g.translate(cx, cx);
+    const body = g.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r);
+    body.addColorStop(0, "#ffd9d2");
+    body.addColorStop(0.35, "#ff6b5a");
+    body.addColorStop(0.8, "#d9503f");
+    body.addColorStop(1, "#7a1a10");
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fillStyle = body; g.fill();
+    // seam band + dot: these rotate with the ball so rolling is visible
+    g.save(); g.clip();
+    g.fillStyle = "rgba(255,255,255,0.32)"; g.fillRect(-r, -r * 0.18, r * 2, r * 0.36);
+    g.fillStyle = "rgba(30,10,10,0.35)"; g.beginPath(); g.arc(r * 0.55, 0, r * 0.17, 0, 7); g.fill();
+    g.restore();
+    g.lineWidth = Math.max(1, r * 0.1); g.strokeStyle = "#2a0d12";
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
+    ballSprite = c; ballSpriteR = r;
+  }
+
+  // ======================================================================
+  // Board geometry: pegs sized/spaced against the ball, bins fit to count
+  // ======================================================================
+  function eligibleNames() {
+    let pool = getNames();
+    if (noRepeatEl.checked) {
+      const rest = pool.filter((n) => !alreadyWon.includes(n));
+      if (rest.length) pool = rest;
+    }
+    return pool;
+  }
   function getNames() {
-    return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
-  }
-
-  function renderHistory() {
-    if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
-    historyList.innerHTML = "Already won this round: " +
-      alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
-  }
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean).slice(0, MAX_NAMES);
   }
 
   function buildBoard(names) {
-    currentNames = names;
-    slotsEl.innerHTML = names.map((n) =>
-      `<div class="slot"><div class="slot-name">${escapeHtml(n)}</div></div>`
-    ).join("");
+    const n = Math.max(1, names.length);
+    const binW = FW / n;
+    // Ball and bins scale together so 60 names still fit...
+    const bR = clamp(binW * 0.3, 3.6, 13);
+    const pegR = clamp(bR * 0.32, 2.2, 4.2);
+    // ...and peg spacing is derived from ball size: the clear gap between two
+    // pegs is always >= ~3 ball radii beyond a ball diameter, so the board
+    // never jams or looks crowded, whatever the name count.
+    const sMin = 2 * bR + 2 * pegR + bR * 1.15;
+    const cols = Math.max(2, Math.round(FW / sMin));
+    const s = FW / cols;
+    const rowH = s * 0.866;
+    const rows = Math.max(4, Math.floor((FIELD_BOT - FIELD_TOP) / rowH) + 1);
+    const yStart = FIELD_TOP + ((FIELD_BOT - FIELD_TOP) - (rows - 1) * rowH) / 2;
+    const edgeKeep = 2 * bR + pegR + 1;       // no pegs where a ball could wedge against the wall
 
-    // peg field: staggered rows
-    const w = board.clientWidth || 600, h = 300;
-    const rows = 6, cols = Math.max(names.length, 4);
-    pegRows = rows;
-    currentPegs = [];
-    let svg = "";
+    const pegs = [], byRow = [];
     for (let r = 0; r < rows; r++) {
-      const offset = (r % 2 === 0) ? 0 : (w / cols) / 2;
-      for (let c = 0; c < cols; c++) {
-        const x = offset + (c + 0.5) * (w / cols);
-        const y = 20 + r * ((h - 40) / rows);
-        if (x > 8 && x < w - 8) {
-          svg += `<circle class="peg" data-row="${r}" cx="${x}" cy="${y}" r="${PEG_R}"/>`;
-          currentPegs.push({ x, y, row: r });
-        }
+      const row = [];
+      const odd = r % 2 === 1;
+      for (let c = 0; c <= cols; c++) {
+        const x = L + s * (c + (odd ? 0.5 : 0));
+        if (x - L < edgeKeep || R - x < edgeKeep) continue;
+        const p = { x, y: yStart + r * rowH, row: r, litAt: -9 };
+        pegs.push(p); row.push(p);
       }
+      byRow.push(row);
     }
-    pegSvg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    pegSvg.innerHTML = svg;
+
+    cfg = { names, n, binW, bR, pegR, pegs, byRow, rows, rowH, yStart, spacing: s, vertical: n > 12 };
+    makeBallSprite(bR);
+    ball.x = HOP_X; ball.y = GATE_Y - bR; ball.trail.length = 0;
+    renderStatic();
+    nameCountEl.textContent = `${getNames().length} names · each has a 1 in ${n} chance` +
+      (namesEl.value.split(/[\n,]/).map((x) => x.trim()).filter(Boolean).length > MAX_NAMES ? ` (first ${MAX_NAMES} used)` : "");
   }
 
-  function rand(min, max) { return min + Math.random() * (max - min); }
+  // ======================================================================
+  // Static layer: cabinet art, pegs, bins, plates
+  // ======================================================================
+  function fitFont(g, text, maxW, maxPx, minPx, weight = 700) {
+    let px = maxPx;
+    const fam = '"Baloo 2","Segoe UI",sans-serif';
+    for (; px >= minPx; px -= 1) { g.font = `${weight} ${px}px ${fam}`; if (g.measureText(text).width <= maxW) return text; }
+    g.font = `${weight} ${minPx}px ${fam}`;
+    let t = text;
+    while (t.length > 1 && g.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+    return t + "…";
+  }
 
-  /**
-   * A real gravity + peg-collision simulation, run once up front (like
-   * RaceEngine's races: decide the outcome, then simulate an honest path to
-   * it). The ball actually bounces off pegs — gravity pulls it down,
-   * collisions reflect its velocity off the peg's surface with some energy
-   * loss (restitution) plus a small kick *at the moment of impact only* (not
-   * a per-frame jitter, so it reads as a bounce reacting to a peg, not
-   * static). A very gentle, constant sideways pull toward the target column
-   * — like a board with an almost imperceptible tilt — nudges the overall
-   * drift there without overriding what any single bounce does; only in the
-   * short pegless "neck" just above the slots does that pull strengthen into
-   * a real funnel, the way a physical Plinko machine's chute walls funnel
-   * the ball into a slot at the very end. Time is simulated on its own
-   * clock (`t`) and rescaled by the caller afterward to match the slider's
-   * chosen drop speed — the *shape* of the fall doesn't change, only how
-   * fast it plays back.
-   */
-  function simulatePlinko(pegs, boardW, boardH, ballR, startX, targetX) {
-    const DT = 1 / 120;
-    const MAX_STEPS = 4000;
-    const GRAVITY = 2600;
-    const COMBINED_R = ballR + PEG_R;
-    const RESTITUTION = 0.42;
-    const NECK_Y = boardH - 62; // a real funnel: no pegs here, walls guide the ball in
+  function renderStatic() {
+    S = Math.min(3, Math.max(2, dpr * 1.5));
+    const c = document.createElement("canvas");
+    c.width = Math.round(W * S); c.height = Math.round(H * S);
+    const g = c.getContext("2d");
+    g.scale(S, S);
+    const { n, binW, pegs, pegR } = cfg;
+    const rnd = seeded(7);
 
-    let x = startX, y = ballR, vx = rand(-25, 25), vy = 0, t = 0, steps = 0;
-    let neckStartX = null, neckStartY = null;
-    let slowT = null;
-    const samples = [{ t, x, y }];
-    const hits = [];
+    // backdrop
+    const bg = g.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, projector ? "#07040f" : "#1d1346");
+    bg.addColorStop(0.6, projector ? "#030208" : "#0f0a2a");
+    bg.addColorStop(1, projector ? "#000" : "#07041a");
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 110; i++) {
+      g.fillStyle = `rgba(255,255,255,${(0.08 + rnd() * 0.3).toFixed(2)})`;
+      const r = rnd() * 1.4 + 0.3; g.beginPath(); g.arc(rnd() * W, rnd() * H, r, 0, 7); g.fill();
+    }
+    // neon grid inside the field
+    g.save();
+    g.beginPath(); g.roundRect(L, FIELD_TOP - 14, FW, NECK_TOP - FIELD_TOP + 14, 10); g.clip();
+    const fg = g.createLinearGradient(0, FIELD_TOP, 0, NECK_TOP);
+    fg.addColorStop(0, "rgba(76,201,240,0.07)"); fg.addColorStop(1, "rgba(179,136,255,0.12)");
+    g.fillStyle = fg; g.fillRect(L, FIELD_TOP - 14, FW, NECK_TOP - FIELD_TOP + 14);
+    g.strokeStyle = "rgba(140,170,255,0.07)"; g.lineWidth = 1;
+    for (let x = L; x <= R; x += 36) { g.beginPath(); g.moveTo(x, FIELD_TOP - 14); g.lineTo(x, NECK_TOP); g.stroke(); }
+    for (let y = FIELD_TOP - 14; y <= NECK_TOP; y += 36) { g.beginPath(); g.moveTo(L, y); g.lineTo(R, y); g.stroke(); }
+    g.restore();
 
-    while (y < boardH - ballR && steps < MAX_STEPS) {
-      steps++;
-      if (slowT === null && y >= NECK_Y - 130) slowT = t;   // slow-mo kicks in a few rows above the funnel
-      vy += GRAVITY * DT;
+    // side rails
+    for (const [x0, x1] of [[0, L], [R, W]]) {
+      const rg = g.createLinearGradient(x0, 0, x1, 0);
+      rg.addColorStop(0, "#3a2d6b"); rg.addColorStop(0.5, "#5b49a3"); rg.addColorStop(1, "#2a1f4d");
+      g.fillStyle = rg; g.fillRect(x0, 0, x1 - x0, H);
+    }
+    g.fillStyle = "#4cc9f0"; g.globalAlpha = 0.55;
+    g.fillRect(L - 3, FIELD_TOP - 14, 3, STRIP_TOP - FIELD_TOP + 14);
+    g.fillRect(R, FIELD_TOP - 14, 3, STRIP_TOP - FIELD_TOP + 14);
+    g.globalAlpha = 1;
 
-      if (y > NECK_Y) {
-        // Funnel chute: once past the last peg row there's nothing left to
-        // bounce off, so the walls take over and smoothly guide the ball the
-        // rest of the way into its slot — exactly how a physical Plinko
-        // machine's funnel narrows into each bin. Horizontal position is
-        // eased against how far through the neck it is (not against time),
-        // so it always lands exactly on target regardless of how fast or
-        // slow gravity got it there.
-        if (neckStartX === null) { neckStartX = x; neckStartY = y; }
-        y += vy * DT;
-        const span = (boardH - ballR) - neckStartY || 1;
-        const p = Math.min(1, Math.max(0, (y - neckStartY) / span));
-        const eased = p * p * (3 - 2 * p); // smoothstep glide into the slot
-        x = neckStartX + (targetX - neckStartX) * eased;
+    // marquee plate
+    const mg = g.createLinearGradient(0, 0, 0, 52);
+    mg.addColorStop(0, "#5b2bb5"); mg.addColorStop(1, "#2c1466");
+    g.fillStyle = mg; g.fillRect(0, 0, W, 52);
+    g.fillStyle = "#0a0618"; g.fillRect(0, 52, W, 3);
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.font = '800 30px "Baloo 2","Segoe UI",sans-serif';
+    g.lineWidth = 7; g.strokeStyle = "rgba(255,210,74,0.25)"; g.strokeText("★ NAME DROP ★", W / 2, 28);
+    g.fillStyle = "#ffe08a"; g.fillText("★ NAME DROP ★", W / 2, 28);
+
+    // pegs
+    for (const p of pegs) {
+      g.fillStyle = "rgba(0,0,0,0.35)"; g.beginPath(); g.arc(p.x + 0.8, p.y + 1.4, pegR, 0, 7); g.fill();
+      g.fillStyle = projector ? "#e8eeff" : "#aab8ff"; g.beginPath(); g.arc(p.x, p.y, pegR, 0, 7); g.fill();
+      g.fillStyle = "rgba(255,255,255,0.9)"; g.beginPath(); g.arc(p.x - pegR * 0.3, p.y - pegR * 0.3, pegR * 0.38, 0, 7); g.fill();
+    }
+
+    // bins: lane, divider, plate, label
+    const plateTop = STRIP_TOP, plateBot = cfg.vertical ? 752 : 720;
+    for (let i = 0; i < n; i++) {
+      const x = L + i * binW, col = PALETTE[i % PALETTE.length];
+      const lg = g.createLinearGradient(0, DIV_TOP, 0, LANE_FLOOR);
+      lg.addColorStop(0, "rgba(10,6,24,0.9)"); lg.addColorStop(1, rgba(col, 0.28));
+      g.fillStyle = lg; g.fillRect(x, DIV_TOP, binW, LANE_FLOOR - DIV_TOP);
+      // plate
+      const pg = g.createLinearGradient(0, plateTop, 0, plateBot);
+      pg.addColorStop(0, col); pg.addColorStop(1, rgba(col, 0.55));
+      g.fillStyle = pg;
+      g.beginPath(); g.roundRect(x + 1, plateTop, binW - 2, plateBot - plateTop, [0, 0, 6, 6]); g.fill();
+      g.fillStyle = "rgba(255,255,255,0.28)"; g.fillRect(x + 1, plateTop, binW - 2, 3);
+      // label
+      g.save();
+      g.fillStyle = "#14102c"; g.textAlign = "center"; g.textBaseline = "middle";
+      if (cfg.vertical) {
+        g.translate(x + binW / 2, (plateTop + plateBot) / 2 + 2); g.rotate(-Math.PI / 2);
+        const t = fitFont(g, cfg.names[i], plateBot - plateTop - 12, Math.min(15, binW * 0.78), 8);
+        g.fillText(t, 0, 1);
       } else {
-        // Open peg field: a gentle overall pull toward the target column —
-        // like a board with an almost imperceptible tilt — plus real
-        // gravity and real peg collisions. The tilt is far too weak to
-        // override what any single bounce does; it only shapes the
-        // long-run drift.
-        vx += 3.2 * (targetX - x) * DT;
-        x += vx * DT;
-        y += vy * DT;
+        const t = fitFont(g, cfg.names[i], binW - 12, 22, 11);
+        g.fillText(t, x + binW / 2, (plateTop + plateBot) / 2 + 2);
+      }
+      g.restore();
+    }
+    // dividers drawn last so they sit in front of lane tints
+    for (let i = 0; i <= n; i++) {
+      const x = L + i * binW;
+      g.fillStyle = "#8f7ee0"; g.fillRect(x - 1.5, DIV_TOP, 3, plateBot - DIV_TOP);
+      g.fillStyle = "#ffe08a"; g.beginPath(); g.arc(x, DIV_TOP, 2.6, 0, 7); g.fill();
+    }
+    // bottom bezel
+    g.fillStyle = "#0a0618"; g.fillRect(0, plateBot, W, H - plateBot);
+    g.fillStyle = "#3a2d6b"; g.fillRect(0, plateBot, W, 2);
 
-        if (x < ballR) { x = ballR; vx = Math.abs(vx) * 0.5; }
-        if (x > boardW - ballR) { x = boardW - ballR; vx = -Math.abs(vx) * 0.5; }
+    staticLayer = c;
+  }
 
-        for (const peg of pegs) {
-          const dx = x - peg.x, dy = y - peg.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > 0.0001 && dist < COMBINED_R) {
-            const nx = dx / dist, ny = dy / dist;
-            const vn = vx * nx + vy * ny;
-            if (vn < 0) {
-              vx -= (1 + RESTITUTION) * vn * nx;
-              vy -= (1 + RESTITUTION) * vn * ny;
-              vx += rand(-32, 32); // a small kick from THIS impact, not ongoing jitter
-              const overlap = COMBINED_R - dist;
-              x += nx * overlap; y += ny * overlap;
-              hits.push({ t, row: peg.row });
+  // ======================================================================
+  // Physics: one honest simulation, recorded as samples
+  // ======================================================================
+  function simulatePlinko(startX, targetX) {
+    const { pegs, byRow, bR, pegR, rowH, yStart, rows } = cfg;
+    const DT = 1 / 300, G = 2600, REST = 0.45, VMAX = 1700, COMB = bR + pegR;
+    const floorY = LANE_FLOOR - bR;
+    let x = startX, y = GATE_Y - bR, vx = rand(-30, 30), vy = 0, t = 0, steps = 0;
+    let neckX0 = null, neckY0 = 0, resid = 0, bounces = 0, stuck = 0, chkY = y, chkStep = 0, slowT = null;
+    const samples = [{ t, x, y }], hits = [];
+
+    while (steps < 9000) {
+      steps++;
+      vy = Math.min(VMAX, vy + G * DT);
+      if (slowT === null && y >= NECK_TOP - 170) slowT = t;   // slow-mo kicks in a few rows above the funnel
+      if (y < NECK_TOP) {
+        // Open peg field: gravity + collisions + a very gentle "tilt" toward the
+        // target that grows with depth. It never overrides a bounce.
+        const depth = clamp((y - FIELD_TOP) / (NECK_TOP - FIELD_TOP), 0, 1);
+        vx += (1.6 + 3.4 * depth) * (targetX - x) * DT;
+        x += vx * DT; y += vy * DT;
+        if (x < L + bR) { x = L + bR; vx = Math.abs(vx) * 0.5; }
+        if (x > R - bR) { x = R - bR; vx = -Math.abs(vx) * 0.5; }
+        const ro = Math.round((y - yStart) / rowH);
+        for (let r = Math.max(0, ro - 1); r <= Math.min(rows - 1, ro + 1); r++) {
+          for (const p of byRow[r]) {
+            const dx = x - p.x, dy = y - p.y;
+            if (Math.abs(dx) > COMB || Math.abs(dy) > COMB) continue;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 0.0001 && dist < COMB) {
+              const nx = dx / dist, ny = dy / dist, vn = vx * nx + vy * ny;
+              if (vn < 0) {
+                vx -= (1 + REST) * vn * nx; vy -= (1 + REST) * vn * ny;
+                vx += rand(-55, 55) * (bR / 13 + 0.4);       // a kick from THIS impact only
+                hits.push({ t, p, speed: -vn });
+              }
+              const o = COMB - dist; x += nx * o; y += ny * o;
             }
           }
+        }
+        // stuck-breaker: if we barely moved down in ~0.4s, knock it loose
+        if (++chkStep >= 120) { if (y - chkY < 4) { vx += (Math.random() < 0.5 ? -1 : 1) * 240; stuck++; } chkY = y; chkStep = 0; }
+      } else if (y < DIV_TOP) {
+        // Funnel neck: nothing left to hit, so the guide rails steer the ball
+        // onto the target lane, eased by height so it always arrives centred.
+        if (neckX0 === null) { neckX0 = x; neckY0 = y; resid = Math.abs(x - targetX); }
+        y += vy * DT;
+        const p = clamp((y - neckY0) / (DIV_TOP - neckY0), 0, 1);
+        x = neckX0 + (targetX - neckX0) * smooth(p);
+      } else {
+        // Inside the bin: fall, bounce twice, settle
+        x = targetX; y += vy * DT;
+        if (y >= floorY) {
+          y = floorY; vy = -vy * 0.38; bounces++;
+          if (Math.abs(vy) < 150 || bounces > 3) { t += DT; samples.push({ t, x, y }); break; }
         }
       }
       t += DT;
       samples.push({ t, x, y });
     }
-    samples[samples.length - 1].x = targetX; // land dead-center, no residual drift
-    return { rawDuration: Math.max(t, 0.001), samples, hits, slowT: slowT === null ? t * 0.6 : slowT };
+    if (steps >= 9000) return null;
+    return { samples, hits, rawDuration: t, resid: neckX0 === null ? 999 : resid, stuck, slowT: slowT === null ? t * 0.6 : slowT };
   }
 
-  function spawnTrail(x, y) {
-    const t = document.createElement("div");
-    t.className = "ball-trail";
-    t.style.left = x + "px";
-    t.style.top = y + "px";
-    board.appendChild(t);
-    const anim = t.animate([{ opacity: 0.35, transform: "scale(1)" }, { opacity: 0, transform: "scale(0.4)" }], { duration: 380, easing: "ease-out" });
-    anim.onfinish = () => t.remove();
+  function planDrop(startX, targetX) {
+    // Try a few honest simulations and keep one whose funnel hand-off is small,
+    // so the final glide into the lane looks like guidance, not teleporting.
+    let best = null;
+    const accept = Math.max(cfg.binW * 1.1, 36);
+    for (let i = 0; i < 40; i++) {
+      const s = simulatePlinko(startX, targetX);
+      if (!s) continue;
+      if (!best || s.resid < best.resid) best = s;
+      if (s.resid <= accept && s.stuck <= 2 && s.rawDuration > 0.9) break;
+    }
+    if (best) return best;
+    const samples = [], total = 1.4;                 // last-resort straight drop
+    for (let i = 0; i <= 60; i++) { const p = i / 60; samples.push({ t: p * total, x: lerp(startX, targetX, smooth(p)), y: lerp(GATE_Y, LANE_FLOOR - cfg.bR, p * p) }); }
+    return { samples, hits: [], rawDuration: total, resid: 0, stuck: 0, slowT: total * 0.55 };
   }
 
-  function hitRow(row) {
-    pegSvg.querySelectorAll(`[data-row="${row}"]`).forEach((p) => {
-      p.classList.add("hit");
-      setTimeout(() => p.classList.remove("hit"), 160);
-    });
-  }
-
-  // ======================================================================
-  // Suspense: slow-motion final approach, letterbox bars, heartbeat glow,
-  // drumroll, slot-crossing ticks, and a late "off-line" fake-out
-  // ======================================================================
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let susp = 0, suspTarget = 0;
-
-  function applySusp(beat) {
-    stage.style.setProperty("--susp", susp.toFixed(3));
-    stage.style.setProperty("--beat", beat.toFixed(3));
-  }
-  function resetSuspense() { susp = 0; suspTarget = 0; applySusp(0.5); }
-  function fadeOutSuspense() {
-    suspTarget = 0;
-    let last = performance.now();
-    (function step(now) {
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      susp += (0 - susp) * (1 - Math.exp(-dt * 5));
-      if (susp > 0.01 && !dropping) { applySusp(0.5); requestAnimationFrame(step); }
-      else if (!dropping) { susp = 0; applySusp(0.5); }
-    })(last);
-  }
-
-  // A "player" walks the recorded sim on a warped clock: normal speed through the pegs, then an
-  // ever-slowing crawl for the final approach. The total still equals the slider, so the clock
-  // reaches 0 just as the ball comes to rest.
-  function makePlayer(sim, duration) {
+  // A "player" walks a recorded sim forward on a chosen clock (O(1) amortised).
+  function makePlayer(sim, duration, startAt, targetX, isGhost) {
+    // Time warp: normal speed through the peg field, then a slow-motion crawl for the final approach
+    // that keeps getting slower. The total still equals the slider, so the clock hits 0 as the ball rests.
     const tailReal = clamp(duration * 0.5, Math.min(2.2, duration * 0.65), 5.6);
     const preReal = Math.max(0.05, duration - tailReal);
     const rawPre = clamp(sim.slowT, 0.05, sim.rawDuration - 0.05);
     const rawTail = sim.rawDuration - rawPre;
     const CRAWL = 1.8;
-    const pl = { sim, duration, preReal, tailReal, si: 0, x: 0, y: 0 };
+    const pl = { sim, duration, startAt, targetX, isGhost, preReal, tailReal, rawPre, rawTail, tail: false, lastBin: -1, si: 0, hi: 0, x: 0, y: 0, vx: 0, vy: 0, done: false };
     pl.toRaw = (el) => (el <= preReal ? (el / preReal) * rawPre : rawPre + (1 - Math.pow(1 - Math.min(1, (el - preReal) / tailReal), CRAWL)) * rawTail);
     pl.toReal = (rt) => (rt <= rawPre ? (rt / rawPre) * preReal : preReal + (1 - Math.pow(Math.max(0, 1 - (rt - rawPre) / rawTail), 1 / CRAWL)) * tailReal);
     sim.hits.forEach((h) => { h.rt = pl.toReal(h.t); });
     return pl;
   }
-  function samplePlayer(pl, elapsed) {
-    const rawT = Math.min(pl.sim.rawDuration, pl.toRaw(Math.max(0, elapsed)));
+  function samplePlayer(pl, nowS) {
+    const el = Math.max(0, nowS - pl.startAt);
+    const rawT = Math.min(pl.sim.rawDuration, pl.toRaw(el));
     const sm = pl.sim.samples;
     while (pl.si < sm.length - 2 && sm[pl.si + 1].t < rawT) pl.si++;
     const a = sm[pl.si], b = sm[Math.min(pl.si + 1, sm.length - 1)];
     const f = clamp((rawT - a.t) / ((b.t - a.t) || 1), 0, 1);
     pl.x = lerp(a.x, b.x, f); pl.y = lerp(a.y, b.y, f);
+    const dtv = (pl.toReal(b.t) - pl.toReal(a.t)) || 1e-3;
+    pl.vx = (b.x - a.x) / dtv; pl.vy = (b.y - a.y) / dtv;
+    pl.el = el;
     return pl;
   }
 
-  // Near the end the ball sometimes goes off-line before settling on the winner. Every style fades to
-  // zero offset at both ends of the funnel, so the result never changes.
-  function planChaos(targetX, boardW, slotW, duration) {
-    const r = Math.random();
-    let kind = r < 0.08 ? "calm" : r < 0.16 ? "teeter" : r < 0.26 ? "swing" : r < 0.38 ? "zigzag" : r < 0.50 ? "scatter" : "far";
-    if (kind === "far" && duration < 3.5) kind = "scatter";            // not enough time for the big dash
-    const maxAmp = Math.min(boardW * 0.34, slotW * 3.4);
-    const farDir = targetX > boardW - targetX ? -1 : 1;                 // head for the side with more room
-    const room = farDir < 0 ? targetX - BALL_R : boardW - BALL_R - targetX;
+  // ======================================================================
+  // Particles
+  // ======================================================================
+  function addPart(p) { if (parts.length > 700) parts.shift(); parts.push(p); }
+  function sparks(x, y, color, n, speed) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, Math.PI * 2), v = rand(0.3, 1) * speed;
+      addPart({ k: 0, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 0, max: rand(0.25, 0.55), size: rand(1.2, 2.6), color });
+    }
+  }
+  function ring(x, y, color, r0, r1, max) { addPart({ k: 1, x, y, r0, r1, life: 0, max, color }); }
+  function confetti(x, y, n, spread = 1) {
+    for (let i = 0; i < n; i++) {
+      addPart({ k: 2, x: x + rand(-20, 20), y, vx: rand(-380, 380) * spread, vy: rand(-900, -280), w: rand(4, 8), h: rand(6, 12),
+        rot: rand(0, 6.28), vr: rand(-9, 9), life: 0, max: rand(2.6, 4.2), color: PALETTE[(Math.random() * PALETTE.length) | 0] });
+    }
+  }
+  function updateParts(dt) {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.life += dt;
+      if (p.life >= p.max) { parts.splice(i, 1); continue; }
+      if (p.k === 0) { p.vy += 620 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+      else if (p.k === 2) {
+        p.vy = Math.min(380, p.vy + 700 * dt); p.vx *= Math.exp(-1.4 * dt);
+        p.x += p.vx * dt + Math.sin(p.life * 6 + p.rot) * 18 * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+        if (p.y > LANE_FLOOR - 4) { p.y = LANE_FLOOR - 4; p.vy = 0; p.vx *= 0.8; }
+      }
+    }
+  }
+  function drawParts() {
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of parts) {
+      const a = 1 - p.life / p.max;
+      if (p.k === 0) {
+        ctx.strokeStyle = rgba(p.color, a); ctx.lineWidth = p.size;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
+      } else if (p.k === 1) {
+        const r = lerp(p.r0, p.r1, 1 - a * a);
+        ctx.strokeStyle = rgba(p.color, a * 0.8); ctx.lineWidth = 2 + 3 * a;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.stroke();
+      }
+    }
+    ctx.globalCompositeOperation = "source-over";
+    for (const p of parts) {
+      if (p.k !== 2) continue;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(1, Math.cos(p.life * 7 + p.rot));
+      ctx.globalAlpha = Math.min(1, (p.max - p.life) * 2);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ======================================================================
+  // Game flow
+  // ======================================================================
+  function binCenter(i) { return L + (i + 0.5) * cfg.binW; }
+
+  function pegImpact(p, speed, loud) {
+    p.litAt = now;
+    sparks(p.x, p.y, "#ffd24a", clamp(Math.round(speed / 150), 3, 11), 280);
+    if (loud) {
+      pegsHit++;
+      if (now - lastPingAt > 0.045) { fx("ping", p.row + Math.floor(Math.random() * 3)); lastPingAt = now; }
+      ball.squash = clamp(0.28 + speed / 2600, 0.3, 0.55);
+      if (speed > 650) ring(p.x, p.y, "#ffd24a", 4, 10 + Math.min(18, speed / 90), 0.28);   // hard hits flash a shockwave
+      if (!reduceMotion) shakeAmt = Math.max(shakeAmt, p.row >= cfg.rows - 3 ? 3.4 : clamp(speed / 650, 0.5, 2.6));
+    }
+  }
+
+  // Near the end the ball sometimes goes off-line before it settles on the winner. 50% of drops do the
+  // "far" move, the rest pick a milder style (or stay calm). Every style fades to zero offset at both
+  // ends of the funnel, so the result never changes.
+  function planChaos(targetX) {
+    const r = Math.random(), bw = cfg.binW;
+    const kind = r < 0.08 ? "calm" : r < 0.16 ? "teeter" : r < 0.26 ? "swing" : r < 0.38 ? "zigzag" : r < 0.50 ? "scatter" : "far";
+    const maxAmp = Math.min(FW * 0.34, bw * 3.4);
+    const farDir = (targetX - L) > (R - targetX) ? -1 : 1;           // head for the side with more room
+    const room = farDir < 0 ? targetX - L - cfg.bR : R - cfg.bR - targetX;
     return {
       kind,
       dir: kind === "far" ? farDir : (Math.random() < 0.5 ? -1 : 1),
-      amp: kind === "far" ? clamp(room * rand(0.75, 1), slotW * 2, boardW * 0.46) : kind === "teeter" ? Math.min(slotW * 0.95, 70) : clamp(slotW * rand(1.6, 3.2), 40, maxAmp),
-      s0: false, s1: false, s2: false, s3: false, farHold: false, lastK: 0,
-      freq: rand(1.4, 3.2), ph1: rand(0, 6.28), ph2: rand(0, 6.28), f2: rand(2.6, 4.6)
+      amp: kind === "far" ? clamp(room * rand(0.75, 1), bw * 2, FW * 0.46) : kind === "teeter" ? Math.min(bw * 0.95, 70) : clamp(bw * rand(1.6, 3.2), 40, maxAmp),
+      s0: false, s1: false, s2: false, s3: false, farHold: false,
+      freq: rand(1.4, 3.2), ph1: rand(0, 6.28), ph2: rand(0, 6.28), f2: rand(2.6, 4.6),
+      active: false
     };
   }
-  // x / y offset while the ball crosses the funnel; p goes 0..1 from neck top to the floor.
-  function chaosOffset(c, p, tNeck, span) {
+  // x / y offset of the ball while it crosses the funnel; p goes 0..1 from neck top to dividers.
+  function chaosOffset(c, p, tNeck) {
     if (!c || c.kind === "calm") return { dx: 0, dy: 0 };
     if (c.kind === "far") {
-      // 1 hang in the slow-mo, 2 wind-up (lean away + shiver), 3 rocket far out, 4 hold, 5 swing back.
-      // Driven by whichever is furthest along: funnel depth, real seconds, or the time left before the
-      // drop ends, so the whole move always finishes before the ball has to land.
-      const u = Math.max(clamp(p, 0, 1), clamp(tNeck / 2.6, 0, 1), clamp(tNeck / span, 0, 1));
+      // Beat 1: hang in the slow-mo. 2: wind-up (lean AWAY and shiver). 3: rocket far out. 4: hold there.
+      // 5: swing back to the lane. Driven by whichever is further along, funnel depth or real seconds,
+      // so the dash is fast even in slow-mo.
+      const u = Math.max(clamp(p, 0, 1), clamp(tNeck / 2.6, 0, 1));
       const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
       const k = ss(0.30, 0.40, u) - ss(0.74, 0.95, u);
       const wind = ss(0.14, 0.29, u) * (1 - ss(0.29, 0.31, u));
       const shiver = wind * Math.sin(tNeck * 70) * 1.6;
-      const hop = -Math.sin(Math.PI * clamp((u - 0.30) / 0.65, 0, 1)) * 10;
-      return { dx: c.dir * c.amp * k - c.dir * c.amp * 0.07 * wind + shiver, dy: hop + wind * 2, k, u };
+      const hop = -Math.sin(Math.PI * clamp((u - 0.30) / 0.65, 0, 1)) * 16;
+      return { dx: c.dir * c.amp * k - c.dir * c.amp * 0.07 * wind + shiver, dy: hop + wind * 3, k, u, wind };
     }
     const sp = Math.sin(Math.PI * clamp(p, 0, 1));
     const env = Math.pow(sp, 0.7);
@@ -460,174 +678,513 @@ Isla</textarea>
     else if (c.kind === "swing") dx = c.dir * c.amp * Math.sin(Math.PI * 2 * c.freq * p + c.ph1) * env;
     else if (c.kind === "zigzag") dx = c.amp * (2 / Math.PI) * Math.asin(Math.sin(Math.PI * 2 * c.freq * p + c.ph1)) * env;
     else dx = c.amp * 0.6 * (Math.sin(Math.PI * 2 * c.freq * p + c.ph1) + Math.sin(Math.PI * 2 * c.f2 * p + c.ph2)) * env;
-    const dy = c.kind === "teeter" ? 0 : -Math.abs(Math.sin(Math.PI * c.freq * p * 2 + c.ph2)) * c.amp * 0.1 * env;
+    const dy = c.kind === "teeter" ? 0 : -Math.abs(Math.sin(Math.PI * c.freq * p * 2 + c.ph2)) * c.amp * 0.16 * env;   // little hops
     return { dx, dy };
   }
 
-  async function runDrop() {
-    if (dropping) return;
+  function startDrop() {
+    if (mode === "countdown" || mode === "drop") return;
     const roster = getNames();
-    if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
-    dropping = true;
+    if (roster.length < 2) { statusText.textContent = "Add at least two names"; return; }
+    ghost = null;
     winnerBanner.classList.remove("show");
-    stage.classList.remove("zoom", "finished-glow");
-    document.querySelectorAll(".slot").forEach((s) => s.classList.remove("landed", "armed"));
-    resetSuspense();
+    stage.classList.remove("finished-glow");
+    winnerIdx = -1; winnerName = ""; parts.length = 0; coneAlpha = 0; suspense = 0; suspTarget = 0;
 
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
-    buildBoard(result.eligiblePool);
+    // Board must match the pool the engine actually drew from.
+    if (!cfg || cfg.names.join("\u0001") !== result.eligiblePool.join("\u0001")) buildBoard(result.eligiblePool);
 
-    const winnerIdx = result.eligiblePool.indexOf(result.winner);
-    const boardW = board.clientWidth, boardH = 300;
-    const slotW = boardW / result.eligiblePool.length;
-    const targetX = slotW * (winnerIdx + 0.5); // ball-center target; BALL_R handled by simulatePlinko
-    const startX = boardW / 2;
-    const NECK_Y = boardH - 62, END_Y = boardH - BALL_R;
+    const idx = result.eligiblePool.indexOf(result.winner);
+    const targetX = binCenter(idx);
+    const startX = HOP_X + rand(-6, 6);
+    const sim = planDrop(startX, targetX);
 
-    // Simulate the actual bounce path once, up front — the winner is already decided (by RaceEngine
-    // above), but the ball still has to earn its way there through real collisions.
-    const sim = simulatePlinko(currentPegs, boardW, boardH, BALL_R, startX, targetX);
-    const player = makePlayer(sim, duration);
-    const chaos = planChaos(targetX, boardW, slotW, duration);
-
-    ball.style.display = "block";
-    ball.style.top = "0px";
-    ball.style.left = (startX - BALL_R) + "px";
-    ball.style.transform = "scale(1,1)";
-    let spinDeg = 0, lastX = startX;
-    ballSpin.style.transform = "rotate(0deg)";
-
+    dropCount++;
+    pegsHit = 0;
+    mode = "countdown";
+    startBtn.disabled = true;
     statusText.textContent = "Loading the ball…";
-    await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Drop!"], null, board);
+    clockEl.textContent = duration.toFixed(1) + "s";
+    ball.x = HOP_X; ball.y = GATE_Y - cfg.bR; ball.trail.length = 0; ball.spin = 0;
+    gateTarget = 0;
+    fx("rattle");
 
-    statusText.textContent = "Dropping…";
-    SoundFX.drop();
-    const start = performance.now();
-    let lastFrame = start;
-    let lastRow = -1, trailTick = 0, hitIdx = 0, armedIdx = -1;
-    let tail = false, neckAt = null, neckSpan = 1, lastBin = -1;
-    const jolt = () => { if (!reduceMotion) SuspenseFX.microShake(stage); };
-
-    function frame(now) {
-      const elapsed = (now - start) / 1000;
-      const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
-      const progress = Math.min(1, elapsed / duration);
-      clock.textContent = Math.max(0, duration - elapsed).toFixed(1) + "s";
-
-      samplePlayer(player, elapsed);
-      let x = player.x, y = player.y;
-
-      // Final approach: slow motion, drumroll, bars and tension.
-      if (!tail && elapsed >= player.preReal) {
-        tail = true; suspTarget = 1;
-        statusText.textContent = "Here it comes…";
-        SoundFX.drumroll(player.tailReal + 0.8);
-      }
-
-      // Funnel: nothing left to hit, so the late fake-out plays out here.
-      if (y > NECK_Y && y < END_Y - 0.5) {
-        const p = clamp((y - NECK_Y) / (END_Y - NECK_Y), 0, 1);
-        if (neckAt === null) { neckAt = elapsed; neckSpan = Math.max(0.6, duration - 0.35 - elapsed); statusText.textContent = "Wait for it…"; }
-        const o = chaosOffset(chaos, p, elapsed - neckAt, neckSpan);
-        const bxNew = clamp(x + o.dx, BALL_R, boardW - BALL_R);
-        const c = chaos;
-        let wild = true;
-        if (c.kind === "far") {
-          wild = o.u > 0.30 && o.u < 0.95;
-          if (!c.s0 && o.u > 0.15) { c.s0 = true; statusText.textContent = "Something's coming…"; SoundFX.drumroll(1.2); }
-          if (!c.s1 && o.u > 0.31) { c.s1 = true; statusText.textContent = "WHOA — where's it going?!"; SoundFX.slideWhistle(500, 2200, 0.28, 0.12); jolt(); }
-          if (!c.s2 && o.u > 0.41) { c.s2 = true; c.farHold = true; statusText.textContent = "Hold on…"; SoundFX.thud(); jolt(); }
-          if (!c.s3 && o.u > 0.74) { c.s3 = true; c.farHold = false; statusText.textContent = "Swinging back!"; SoundFX.slideWhistle(1900, 600, 0.35, 0.1); }
-          if (Math.abs(o.k - c.lastK) > 0.004) spawnTrail(bxNew - 2, y + o.dy - 2);
-          c.lastK = o.k;
-        }
-        if (wild && c.kind !== "calm" && c.kind !== "teeter" && p > 0.04 && p < 0.96 && trailTick % 2 === 0) spawnTrail(bxNew - 2, y + o.dy - 2);
-        x = bxNew; y += o.dy;
-      }
-
-      ball.style.top = (y - BALL_R) + "px";
-      ball.style.left = (x - BALL_R) + "px";
-      // Roll the surface pattern in proportion to horizontal distance travelled (arc length / radius).
-      spinDeg += ((x - lastX) / BALL_R) * (180 / Math.PI);
-      lastX = x;
-      ballSpin.style.transform = `rotate(${spinDeg.toFixed(1)}deg)`;
-
-      // Fire peg-hit flashes off the real collisions the simulation recorded, on the warped clock.
-      while (hitIdx < sim.hits.length && sim.hits[hitIdx].rt <= elapsed) {
-        const row = sim.hits[hitIdx].row;
-        SoundFX.ping(row + Math.floor(Math.random() * 3));   // xylophone pings off the pegs
-        if (row !== lastRow) { hitRow(row); lastRow = row; }
-        if (row >= pegRows - 2) SuspenseFX.microShake(stage);
-        ball.animate(
-          [{ transform: "scale(1,1)" }, { transform: "scale(1.22,0.8)", offset: 0.35 }, { transform: "scale(1,1)" }],
-          { duration: 160, easing: "ease-out" }
-        );
-        hitIdx++;
-      }
-
-      trailTick++;
-      if (trailTick % 3 === 0) spawnTrail(x - 2, y - 2);
-
-      // Lane under the ball lights up and ticks like a roulette wheel once it's in the slow-mo funnel —
-      // a "closing in" cue, not an answer key shown early.
-      if (tail && y > NECK_Y - 30) {
-        const overIdx = clamp(Math.floor(x / slotW), 0, result.eligiblePool.length - 1);
-        if (overIdx !== armedIdx) {
-          const slotEls = document.querySelectorAll(".slot");
-          if (slotEls[armedIdx]) slotEls[armedIdx].classList.remove("armed");
-          if (slotEls[overIdx]) slotEls[overIdx].classList.add("armed");
-          armedIdx = overIdx;
-        }
-        if (overIdx !== lastBin) {
-          if (lastBin >= 0) SoundFX.tick(1 - Math.min(1, Math.abs(overIdx - winnerIdx) / 3));
-          lastBin = overIdx;
-        }
-      }
-
-      if (progress > 0.8 && !stage.classList.contains("zoom")) stage.classList.add("zoom");
-
-      // Slow-mo look: ease the bars/tint in and pulse the heartbeat glow (faster during the far dash).
-      susp = lerp(susp, suspTarget, 1 - Math.exp(-dt * 3.5));
-      applySusp(reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin((now / 1000) * (chaos.farHold ? 14 : 7.5)));
-
-      if (progress < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        ball.style.left = (targetX - BALL_R) + "px";
-        ball.style.top = (END_Y - BALL_R) + "px";
-        finishDrop(result, winnerIdx);
-      }
-    }
-    requestAnimationFrame(frame);
+    const labels = ["READY!", "3", "2", "1", "Drop!"];
+    let launched = false;
+    const launch = () => {
+      if (launched) return; launched = true;
+      mode = "drop";
+      gateTarget = 1;
+      play = makePlayer(sim, duration, performance.now() / 1000 + 0.12, targetX, false);
+      play.result = result; play.idx = idx;
+      play.chaos = planChaos(targetX);
+      statusText.textContent = "Dropping…";
+      fx("drop");
+    };
+    if (typeof SuspenseFX !== "undefined") SuspenseFX.countdown(stage, labels, (label, i) => { if (i === labels.length - 1) launch(); }, null);
+    else setTimeout(launch, 2500);
   }
 
-  function finishDrop(result, idx) {
-    dropping = false;
-    fadeOutSuspense();
-    SoundFX.matchWin();   // ding! it landed
-    stage.classList.remove("zoom");
-    SuspenseFX.shake(stage, 350);
-    SuspenseFX.winnerSpotlight(stage);
-    stage.classList.add("finished-glow");
-    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+  function finishDrop() {
+    const { result, idx } = play;
+    mode = "celebrate"; celebrateAt = now; winnerIdx = idx; winnerName = result.winner;
+    suspTarget = 0;
+    startBtn.disabled = false;
+    gateTarget = 0;
+    ball.x = binCenter(idx); ball.y = LANE_FLOOR - cfg.bR; ball.squash = 0.4;
     statusText.textContent = "Landed!";
-    clock.textContent = "🔴";
-    const slotEls = document.querySelectorAll(".slot");
-    if (slotEls[idx]) { slotEls[idx].classList.remove("armed"); slotEls[idx].classList.add("landed"); }
-    winnerBanner.classList.remove("show");
-    void winnerBanner.offsetWidth;
+    clockEl.textContent = "🔴";
+    fx("matchWin"); setTimeout(() => fx("fanfare"), 250);
+    if (!reduceMotion) shakeAmt = 7;
+    stage.classList.add("finished-glow"); setTimeout(() => stage.classList.remove("finished-glow"), 1600);
+    const cx = binCenter(idx), col = PALETTE[idx % PALETTE.length];
+    ring(cx, LANE_FLOOR - 6, col, 6, 120, 0.7); ring(cx, LANE_FLOOR - 6, "#ffffff", 4, 80, 0.5);
+    sparks(cx, LANE_FLOOR - 8, "#ffe08a", 40, 520);
+    confetti(cx, LANE_FLOOR - 10, reduceMotion ? 30 : 170);
+    winnerBanner.classList.remove("show"); void winnerBanner.offsetWidth;
     winnerBanner.innerHTML = `<span class="wb-eyebrow">🎯 Winner</span><span class="wb-name">🔴 The ball lands on ${escapeHtml(result.winner)}!</span>`;
     winnerBanner.classList.add("show");
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
-    const rect = (slotEls[idx] || stage).getBoundingClientRect();
-    SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
+    play = null;
   }
 
-  startBtn.addEventListener("click", runDrop);
-  buildBoard(getNames());
-  window.addEventListener("resize", () => buildBoard(currentNames));
+  function renderHistory() {
+    if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
+    historyList.innerHTML = "Already won this round: " + alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
+  }
+
+  // ======================================================================
+  // Per-frame update
+  // ======================================================================
+  function setCam(x, y, z) {
+    if (reduceMotion) { cam.tx = W / 2; cam.ty = H / 2; cam.tz = 1; return; }
+    const hw = W / (2 * z), hh = H / (2 * z);
+    cam.tx = clamp(x, hw, W - hw); cam.ty = clamp(y, hh, H - hh); cam.tz = z;
+  }
+
+  function update(dt) {
+    marqueePhase += dt * 6;
+    gateOpen = lerp(gateOpen, gateTarget, 1 - Math.exp(-dt * 14));
+    hopperShake = mode === "countdown" ? 1.6 : lerp(hopperShake, 0, 1 - Math.exp(-dt * 8));
+    shakeAmt *= Math.exp(-dt * 7);
+    ball.squash *= Math.exp(-dt * 11);
+    suspense = lerp(suspense, suspTarget, 1 - Math.exp(-dt * 3.5));
+    coneAlpha = mode === "celebrate" ? lerp(coneAlpha, 0.25, 1 - Math.exp(-dt * 2)) : coneAlpha;
+
+    if (mode === "drop" && play) {
+      if (now >= play.startAt) {
+        samplePlayer(play, now);
+        const pl = play;
+        // Final approach: slow motion, drumroll, bars and tension.
+        if (!pl.tail && pl.el >= pl.preReal) {
+          pl.tail = true; suspTarget = 1;
+          statusText.textContent = "Here it comes…";
+          fx("drumroll", pl.tailReal + 0.8);
+        }
+        let bx = pl.x, by = pl.y;
+        pl.chaos.active = false;
+        let farPhase = false;
+        if (pl.y > NECK_TOP && pl.y < DIV_TOP) {
+          const p = (pl.y - NECK_TOP) / (DIV_TOP - NECK_TOP);
+          if (pl.neckAt === undefined) pl.neckAt = now;
+          const o = chaosOffset(pl.chaos, p, now - pl.neckAt);
+          bx = clamp(bx + o.dx, L + cfg.bR, R - cfg.bR); by += o.dy;
+          const c = pl.chaos;
+          if (!pl.waitSaid) { pl.waitSaid = true; statusText.textContent = "Wait for it…"; }
+          let wild = true;
+          if (c.kind === "far") {
+            wild = o.u > 0.30 && o.u < 0.95;
+            farPhase = o.u > 0.12 && o.u < 0.96;
+            // wind-up: a rising roll and a rumble as it leans away
+            if (!c.s0 && o.u > 0.15) { c.s0 = true; statusText.textContent = "Something's coming…"; fx("drumroll", 1.2); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 2.5); }
+            // launch: whoosh + shockwave, instant screen punch
+            if (!c.s1 && o.u > 0.31) { c.s1 = true; statusText.textContent = "WHOA — where's it going?!"; fx("slideWhistle", 500, 2200, 0.28, 0.12); ring(bx, by, "#4cc9f0", 6, 70, 0.4); sparks(bx, by, "#ffffff", 18, 380); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 6); }
+            // arrival: thud, then it hangs out there while the heartbeat races
+            if (!c.s2 && o.u > 0.41) { c.s2 = true; c.farHold = true; statusText.textContent = "Hold on…"; fx("thud"); ring(bx, by, "#ffe08a", 6, 56, 0.45); sparks(bx, by, "#ff8c42", 14, 280); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 5); }
+            // return: whoosh back
+            if (!c.s3 && o.u > 0.74) { c.s3 = true; c.farHold = false; statusText.textContent = "Swinging back!"; fx("slideWhistle", 1900, 600, 0.35, 0.1); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 3); }
+            const fast = Math.abs(o.k - (c.lastK || 0)) > 0.004; c.lastK = o.k;
+            if (fast) { sparks(bx, by, "#4cc9f0", 5, 240); ball.squash = Math.max(ball.squash, 0.3); }
+          }
+          if (wild && c.kind !== "calm" && c.kind !== "teeter" && p > 0.04 && p < 0.96) {
+            // wild flight: colourful streak and rumble
+            c.active = true;
+            sparks(bx, by, c.kind === "scatter" ? "#b388ff" : "#4cc9f0", 2, 170);
+            if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 1.8);
+            ball.squash = Math.max(ball.squash, 0.18);
+          }
+        }
+        ball.spin += ((bx - ball.x) / cfg.bR);
+        ball.x = bx; ball.y = by; ball.vx = pl.vx; ball.vy = pl.vy;
+        ball.trail.push({ x: bx, y: by, t: now });
+        const trailLife = pl.chaos.kind === "far" && pl.chaos.active ? 0.6 : 0.32;
+        while (ball.trail.length && now - ball.trail[0].t > trailLife) ball.trail.shift();
+        // roulette ticks as the ball crosses lane dividers in the slow-mo
+        if (pl.tail && pl.y > NECK_TOP - 30) {
+          const bi = clamp(Math.floor((bx - L) / cfg.binW), 0, cfg.n - 1);
+          if (bi !== pl.lastBin) {
+            if (pl.lastBin >= 0) {
+              fx("tick", 1 - Math.min(1, Math.abs(bi - pl.idx) / 3));
+              sparks(L + Math.max(bi, pl.lastBin) * cfg.binW, DIV_TOP, "#ffe08a", 6, 170);
+              if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 1.3);
+            }
+            pl.lastBin = bi;
+          }
+        }
+        // bin floor contacts: a thud on the first landing, softer ones for each bounce
+        const onFloor = pl.y >= LANE_FLOOR - cfg.bR - 1;
+        if (onFloor && !pl.wasFloor) {
+          const k = pl.floorHits || 0; pl.floorHits = k + 1;
+          if (k === 0) fx("thud");
+          sparks(bx, LANE_FLOOR - 2, "#ffe08a", k === 0 ? 16 : 5, 260);
+          if (k === 0) ring(bx, LANE_FLOOR - 4, "#ffe08a", 6, 46, 0.4);
+          if (!reduceMotion) shakeAmt = Math.max(shakeAmt, Math.max(1.2, 5 - k * 1.5));
+        }
+        pl.wasFloor = onFloor;
+        while (pl.hi < pl.sim.hits.length && pl.sim.hits[pl.hi].rt <= pl.el) { const h = pl.sim.hits[pl.hi++]; pegImpact(h.p, h.speed, true); }
+        clockEl.textContent = Math.max(0, pl.duration - pl.el).toFixed(1) + "s";
+        if (pl.y > NECK_TOP - 40) coneAlpha = Math.min(0.5, coneAlpha + dt * 2.4);
+        // Camera keeps its original behaviour (follow, then zoom on the target lane), except during a far
+        // dash, when it pulls wider so you can watch the ball fly out and come back.
+        if (farPhase) setCam(lerp(pl.targetX, bx, 0.5), 610, 1.2);
+        else if (pl.y > NECK_TOP - 50) setCam(pl.targetX, 640, 1.9);
+        else setCam(HOP_X + (pl.x - HOP_X) * 0.5, pl.y + 50, 1.22);
+        if (pl.tail && !reduceMotion) shakeAmt = Math.max(shakeAmt, 0.5 + 0.9 * suspense);
+        if (pl.el >= pl.duration) finishDrop();
+      } else {
+        setCam(HOP_X, 200, 1.35);
+      }
+    } else if (mode === "countdown") {
+      setCam(HOP_X, 205, 1.35);
+      ball.y = GATE_Y - cfg.bR - Math.abs(Math.sin(now * 22)) * 2.5;
+      ball.x = HOP_X + Math.sin(now * 31) * 3;
+    } else if (mode === "celebrate") {
+      const e = now - celebrateAt;
+      if (e < 2.4) setCam(binCenter(winnerIdx), 640, 2.2); else setCam(W / 2, H / 2, 1);
+      if (e < 2.2 && Math.random() < dt * 14 && !reduceMotion) confetti(binCenter(winnerIdx), LANE_FLOOR - 10, 3, 0.9);
+      // winner ball settles with a little hop
+      ball.y = LANE_FLOOR - cfg.bR;
+    } else {
+      setCam(W / 2, H / 2, 1);
+      updateGhost(dt);
+    }
+
+    const k = 1 - Math.exp(-dt * 5);
+    cam.x = lerp(cam.x, cam.tx, k); cam.y = lerp(cam.y, cam.ty, k); cam.z = lerp(cam.z, cam.tz, k);
+    updateParts(dt);
+  }
+
+  // Idle attract mode: a translucent practice ball tumbles down now and then.
+  function updateGhost(dt) {
+    if (reduceMotion || winnerIdx >= 0) { ghost = null; return; }
+    if (!ghost) {
+      if (now < ghostNextAt) return;
+      const tx = binCenter((Math.random() * cfg.n) | 0);
+      const sim = planDrop(HOP_X + rand(-5, 5), tx);
+      ghost = makePlayer(sim, 3.4, now, tx, true);
+      ghost.trail = [];
+      return;
+    }
+    samplePlayer(ghost, now);
+    ghost.trail.push({ x: ghost.x, y: ghost.y, t: now });
+    while (ghost.trail.length && now - ghost.trail[0].t > 0.25) ghost.trail.shift();
+    while (ghost.hi < ghost.sim.hits.length && ghost.sim.hits[ghost.hi].rt <= ghost.el) {
+      const h = ghost.sim.hits[ghost.hi++]; h.p.litAt = now - 0.15;
+    }
+    if (ghost.el >= ghost.duration + 0.8) { ghost = null; ghostNextAt = now + rand(2.5, 4.5); }
+  }
+
+  // ======================================================================
+  // Drawing
+  // ======================================================================
+  let vignette = null, scan = null;
+  function makeOverlays() {
+    vignette = document.createElement("canvas"); vignette.width = 450; vignette.height = 380;
+    const g = vignette.getContext("2d");
+    const rg = g.createRadialGradient(225, 190, 120, 225, 190, 290);
+    rg.addColorStop(0, "rgba(0,0,0,0)"); rg.addColorStop(1, "rgba(0,0,0,0.55)");
+    g.fillStyle = rg; g.fillRect(0, 0, 450, 380);
+    scan = document.createElement("canvas"); scan.width = 4; scan.height = 4;
+    const s = scan.getContext("2d"); s.fillStyle = "rgba(0,0,0,0.18)"; s.fillRect(0, 0, 4, 1);
+  }
+
+  function drawMarquee() {
+    for (let i = 0; i < 31; i++) {
+      const x = 14 + i * ((W - 28) / 30);
+      const on = reduceMotion ? i % 2 === 0 : ((i + Math.floor(marqueePhase)) % 3 === 0);
+      for (const y of [8, 44]) {
+        ctx.fillStyle = on ? "#ffe08a" : "#6b4fb8";
+        ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill();
+        if (on) drawGlow("#ffd24a", x, y, 9, 0.8);
+      }
+    }
+  }
+
+  function drawHopper() {
+    const topW = 190, botW = 48, top = 62;
+    const sx = (Math.random() - 0.5) * hopperShake * 2.4;
+    ctx.save(); ctx.translate(sx, 0);
+    const hg = ctx.createLinearGradient(HOP_X - topW / 2, 0, HOP_X + topW / 2, 0);
+    hg.addColorStop(0, "#5d5a85"); hg.addColorStop(0.5, "#a9a6d6"); hg.addColorStop(1, "#4d4a75");
+    ctx.fillStyle = "#07041a";
+    ctx.beginPath(); ctx.moveTo(HOP_X - topW / 2 + 6, top + 4); ctx.lineTo(HOP_X + topW / 2 - 6, top + 4);
+    ctx.lineTo(HOP_X + botW / 2 - 2, GATE_Y); ctx.lineTo(HOP_X - botW / 2 + 2, GATE_Y); ctx.closePath(); ctx.fill();
+    // ball inside (behind the front lip)
+    const showHopperBall = mode === "idle" || mode === "countdown" || (mode === "celebrate" && now - celebrateAt > 2.6) || (mode === "drop" && play && now < play.startAt);
+    if (showHopperBall) {
+      const bx = mode === "countdown" ? ball.x : HOP_X, by = mode === "countdown" ? ball.y : GATE_Y - cfg.bR - (mode === "idle" ? Math.sin(now * 2.2) * 1.5 : 0);
+      drawBallAt(bx, by, 0, 1, 1, false);
+    }
+    // walls
+    ctx.strokeStyle = hg; ctx.lineWidth = 6; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(HOP_X - topW / 2, top); ctx.lineTo(HOP_X - botW / 2, GATE_Y); ctx.moveTo(HOP_X + topW / 2, top); ctx.lineTo(HOP_X + botW / 2, GATE_Y); ctx.stroke();
+    ctx.fillStyle = "#c9c6ee"; ctx.fillRect(HOP_X - topW / 2 - 6, top - 5, 12, 8); ctx.fillRect(HOP_X + topW / 2 - 6, top - 5, 12, 8);
+    // trap doors swing open
+    const ang = gateOpen * 1.15, half = botW / 2;
+    ctx.fillStyle = "#ffb703";
+    for (const dir of [-1, 1]) {
+      ctx.save(); ctx.translate(HOP_X + dir * half, GATE_Y); ctx.rotate(dir * ang);
+      ctx.fillRect(dir > 0 ? -half : 0, -2, half, 5);
+      ctx.restore();
+    }
+    ctx.fillStyle = "#14102c"; ctx.font = '800 12px "Baloo 2",sans-serif'; ctx.textAlign = "center";
+    ctx.fillText("BALL " + String(Math.max(1, dropCount + (mode === "idle" || mode === "celebrate" ? 1 : 0))).padStart(2, "0"), HOP_X, top + 24);
+    ctx.restore();
+  }
+
+  function drawBallAt(x, y, alpha, sx, sy, withGlow, angle = 0, spin = 0) {
+    const r = cfg.bR, sz = ballSprite.width / 3;
+    if (withGlow) drawGlow("#ff6b5a", x, y, r * 3.2, 0.5);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(angle); ctx.scale(sx, sy); ctx.rotate(spin - angle);
+    ctx.drawImage(ballSprite, -sz / 2, -sz / 2, sz, sz);
+    ctx.restore();
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath(); ctx.ellipse(x - r * 0.33, y - r * 0.4, r * 0.24, r * 0.15, -0.6, 0, 7); ctx.fill();
+  }
+
+  function drawTrail(tr, color, a0) {
+    if (tr.length < 2) return;
+    ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+    for (let i = 1; i < tr.length; i++) {
+      const f = i / tr.length;
+      ctx.strokeStyle = rgba(color, a0 * f * f); ctx.lineWidth = cfg.bR * 1.5 * f;
+      ctx.beginPath(); ctx.moveTo(tr[i - 1].x, tr[i - 1].y); ctx.lineTo(tr[i].x, tr[i].y); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  function drawWorld() {
+    ctx.drawImage(staticLayer, 0, 0, W, H);
+    drawMarquee();
+    const { pegs, pegR, byRow, binW, n } = cfg;
+
+    // idle shimmer wave rolling down the pegs
+    if (mode === "idle" && !reduceMotion) {
+      const r = Math.floor((now * 4) % (cfg.rows + 4)) - 2;
+      for (const rr of [r, r - 1]) if (byRow[rr]) for (const p of byRow[rr]) drawGlow("#4cc9f0", p.x, p.y, pegR * 4.5, rr === r ? 0.45 : 0.22);
+    }
+
+    // winner: sunburst + light beam behind the action
+    if (winnerIdx >= 0) {
+      const cx = binCenter(winnerIdx), col = PALETTE[winnerIdx % PALETTE.length], pulse = 0.5 + 0.5 * Math.sin(now * 5);
+      ctx.save(); ctx.beginPath(); ctx.rect(L, FIELD_TOP - 14, FW, STRIP_TOP - FIELD_TOP + 14); ctx.clip();
+      ctx.globalCompositeOperation = "lighter";
+      const spokes = 14, rot = now * 0.35;
+      for (let i = 0; i < spokes; i++) {
+        const a0 = rot + (i / spokes) * Math.PI * 2, a1 = a0 + Math.PI / spokes;
+        ctx.fillStyle = rgba(col, 0.11);
+        ctx.beginPath(); ctx.moveTo(cx, DIV_TOP); ctx.arc(cx, DIV_TOP, 420, a0, a1); ctx.closePath(); ctx.fill();
+      }
+      const bw = Math.max(binW * 0.5, 18), bg = ctx.createLinearGradient(0, DIV_TOP, 0, FIELD_TOP);
+      bg.addColorStop(0, rgba("#fff3b0", 0.28 + 0.12 * pulse)); bg.addColorStop(1, "rgba(255,243,176,0)");
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.moveTo(cx - bw, DIV_TOP); ctx.lineTo(cx + bw, DIV_TOP); ctx.lineTo(cx + bw * 4.5, FIELD_TOP); ctx.lineTo(cx - bw * 4.5, FIELD_TOP); ctx.closePath(); ctx.fill();
+      ctx.restore(); ctx.globalCompositeOperation = "source-over";
+    }
+
+    // funnel light cone guiding the ball to its lane
+    const coneTarget = play ? play.targetX : (winnerIdx >= 0 ? binCenter(winnerIdx) : null);
+    if (coneTarget !== null && coneAlpha > 0.01) {
+      const wide = Math.max(binW * 1.6, 130);
+      ctx.save(); ctx.beginPath(); ctx.rect(L, NECK_TOP - 20, FW, DIV_TOP - NECK_TOP + 20); ctx.clip();
+      ctx.globalCompositeOperation = "lighter";
+      const cg = ctx.createLinearGradient(0, NECK_TOP - 20, 0, DIV_TOP);
+      cg.addColorStop(0, "rgba(255,240,170,0)"); cg.addColorStop(1, `rgba(255,240,170,${coneAlpha})`);
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.moveTo(coneTarget - wide, NECK_TOP - 20); ctx.lineTo(coneTarget + wide, NECK_TOP - 20); ctx.lineTo(coneTarget + binW / 2, DIV_TOP); ctx.lineTo(coneTarget - binW / 2, DIV_TOP); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(255,224,138,${Math.min(1, coneAlpha * 1.6)})`; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(coneTarget - wide, NECK_TOP - 20); ctx.lineTo(coneTarget - binW / 2, DIV_TOP); ctx.moveTo(coneTarget + wide, NECK_TOP - 20); ctx.lineTo(coneTarget + binW / 2, DIV_TOP); ctx.stroke();
+      ctx.restore(); ctx.globalCompositeOperation = "source-over";
+    }
+
+    // lit pegs (additive glow sprites, only the ones that were recently hit)
+    for (const p of pegs) {
+      const f = 1 - (now - p.litAt) / 0.4;
+      if (f > 0) {
+        drawGlow("#ffd24a", p.x, p.y, pegR * 6.5, f);
+        ctx.fillStyle = `rgba(255,236,160,${f})`; ctx.beginPath(); ctx.arc(p.x, p.y, pegR * (1 + 0.45 * f), 0, 7); ctx.fill();
+      }
+    }
+
+    // bin highlights: lane under the ball ("armed") and the pulsing winner
+    if (mode === "drop" && play && ball.y > NECK_TOP - 30) {
+      const bi = clamp(Math.floor((ball.x - L) / binW), 0, n - 1);
+      const col = PALETTE[bi % PALETTE.length];
+      ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = rgba(col, 0.22); ctx.fillRect(L + bi * binW, DIV_TOP, binW, LANE_FLOOR - DIV_TOP);
+      ctx.globalCompositeOperation = "source-over";
+      drawGlow(col, binCenter(bi), LANE_FLOOR - 6, binW * 1.3 + 20, 0.55);
+    }
+    if (winnerIdx >= 0) {
+      const col = PALETTE[winnerIdx % PALETTE.length], pulse = 0.5 + 0.5 * Math.sin(now * 5), x = L + winnerIdx * binW;
+      const plateBot = cfg.vertical ? 752 : 720;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = rgba("#ffffff", 0.03 + 0.07 * pulse); ctx.fillRect(x, DIV_TOP, binW, plateBot - DIV_TOP);
+      ctx.strokeStyle = rgba("#ffe08a", 0.6 + 0.4 * pulse); ctx.lineWidth = 3;
+      ctx.strokeRect(x + 1.5, DIV_TOP + 1.5, binW - 3, plateBot - DIV_TOP - 3);
+      ctx.globalCompositeOperation = "source-over";
+      drawGlow(col, binCenter(winnerIdx), (STRIP_TOP + plateBot) / 2, binW * 1.8 + 50, 0.55 + 0.35 * pulse);
+    }
+
+    drawHopper();
+
+    // ghost (attract mode) and the real ball
+    if (ghost && !ghost.done) {
+      drawTrail(ghost.trail, "#9fb3ff", 0.25);
+      ctx.globalAlpha = 0.4; drawBallAt(ghost.x, ghost.y, 0, 1, 1, false); ctx.globalAlpha = 1;
+    }
+    if (mode === "drop" && play && now >= play.startAt) {
+      drawTrail(ball.trail, "#ff6b5a", 0.8);
+      const sp = Math.hypot(ball.vx, ball.vy), ang = Math.atan2(ball.vy, ball.vx);
+      const stretch = clamp(sp / 5000, 0, 0.22), sq = ball.squash;
+      drawBallAt(ball.x, ball.y, 1, 1 + stretch - sq * 0.6, 1 - stretch * 0.6 + sq * 0.9, true, ang, ball.spin);
+    } else if (mode === "celebrate") {
+      const e = now - celebrateAt, hop = Math.abs(Math.sin(e * 9)) * Math.max(0, 1 - e * 1.1) * 14;
+      drawBallAt(ball.x, ball.y - hop, 1, 1 + ball.squash * 0.4, 1 - ball.squash * 0.4, true, 0, ball.spin);
+    }
+    drawParts();
+  }
+
+  function drawOverlay() {
+    // CRT feel
+    if (!projector) {
+      ctx.globalAlpha = 0.5; ctx.fillStyle = ctx.createPattern(scan, "repeat"); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+    }
+    ctx.drawImage(vignette, 0, 0, W, H);
+    if (suspense > 0.02) {
+      // slow-mo look: cool tint, letterbox bars sliding in, a label, and a heartbeat glow at the edges
+      ctx.fillStyle = `rgba(40,70,160,${(0.10 * suspense).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+      const bar = 26 * suspense;
+      ctx.fillStyle = "#04020c"; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+      if (suspense > 0.6 && mode === "drop") {
+        ctx.save(); ctx.globalAlpha = (suspense - 0.6) / 0.4 * (0.6 + 0.4 * Math.sin(now * 5));
+        ctx.font = '800 15px "Baloo 2",sans-serif'; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "#9fd8ff"; ctx.fillText("◀◀  SLOW-MO  ▶▶", W / 2, H - bar / 2 - 1);
+        ctx.restore();
+      }
+      const beat = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * ((play && play.chaos && play.chaos.farHold) ? 14 : 7.5));
+      const hg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8);
+      hg.addColorStop(0, "rgba(255,40,70,0)"); hg.addColorStop(1, `rgba(255,40,70,${(0.2 * suspense * beat).toFixed(3)})`);
+      ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+    }
+
+    // HUD labels
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+    ctx.font = '700 13px "Baloo 2",sans-serif';
+    const line = (x, y, label, val, color) => {
+      ctx.fillStyle = "rgba(10,6,24,0.6)"; ctx.fillRect(x - 6, y - 14, 128, 20);
+      ctx.fillStyle = "#8fa0d8"; ctx.fillText(label, x, y);
+      ctx.fillStyle = color; ctx.textAlign = "right"; ctx.fillText(String(val), x + 116, y); ctx.textAlign = "left";
+    };
+    const live = mode !== "idle" || winnerIdx >= 0;
+    line(16, 84, "PEGS HIT", pegsHit, "#ffd24a");
+    line(16, 108, "BALL", String(Math.max(1, dropCount)).padStart(2, "0"), "#ff8a7a");
+    line(W - 142, 84, "BINS", cfg.n, "#4cc9f0");
+    line(W - 142, 108, "MODE", live ? "LIVE" : (ghost ? "DEMO" : "READY"), live ? "#3ddc97" : "#b388ff");
+
+    // winner ribbon
+    if (winnerIdx >= 0) {
+      const e = now - celebrateAt - 0.35;
+      if (e > 0) {
+        const fade = e > 5 ? clamp(1 - (e - 5) / 1.2, 0, 1) : 1;
+        if (fade > 0) {
+          const s = easeOutBack(e / 0.55);
+          ctx.save(); ctx.globalAlpha = fade; ctx.translate(W / 2, H * 0.42); ctx.scale(s, s);
+          const nm = fitFont(ctx, winnerName, 520, 62, 24, 800), bw = Math.max(380, ctx.measureText(nm).width + 110);
+          const g = ctx.createLinearGradient(0, -52, 0, 52);
+          g.addColorStop(0, "#ffe08a"); g.addColorStop(1, "#ff9f1c");
+          ctx.fillStyle = "#14102c"; ctx.beginPath(); ctx.roundRect(-bw / 2 - 5, -57, bw + 10, 114, 16); ctx.fill();
+          ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(-bw / 2, -52, bw, 104, 12); ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.fillRect(-bw / 2 + 12, -48, bw - 24, 4);
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillStyle = "#7a3b00"; ctx.font = '800 16px "Baloo 2",sans-serif'; ctx.fillText("★  WINNER  ★", 0, -30);
+          ctx.fillStyle = "#14102c";
+          const nm2 = fitFont(ctx, winnerName, bw - 70, 58, 22, 800);
+          ctx.fillText(nm2, 0, 8);
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  function draw() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    const sh = shakeAmt > 0.05 && !reduceMotion;
+    ctx.translate(W / 2 + (sh ? rand(-shakeAmt, shakeAmt) : 0), H / 2 + (sh ? rand(-shakeAmt, shakeAmt) : 0));
+    ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
+    drawWorld();
+    ctx.restore();
+    drawOverlay();
+  }
+
+  function loop(ts) {
+    now = ts / 1000;
+    const dt = Math.min(0.05, now - (lastNow || now)); lastNow = now;
+    update(dt); draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ======================================================================
+  // Sizing + wiring
+  // ======================================================================
+  function sizeCanvas() {
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    const cssW = canvas.clientWidth || W;
+    const want = Math.round(W * Math.max(d, cssW / W * d));
+    dpr = clamp(want / W, 1, 2.5);
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  }
+
+  durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
+  projectorEl.addEventListener("change", () => {
+    projector = projectorEl.checked; stage.classList.toggle("projector", projector); renderStatic();
+  });
+  resetHistoryBtn.addEventListener("click", () => { alreadyWon = []; renderHistory(); if (mode === "idle" || mode === "celebrate") rebuildFromInputs(); });
+  startBtn.addEventListener("click", startDrop);
+
+  let rebuildTimer = null;
+  function rebuildFromInputs() {
+    if (mode === "countdown" || mode === "drop") return;
+    winnerIdx = -1; ghost = null; ghostNextAt = now + 1.2; parts.length = 0; coneAlpha = 0;
+    if (mode === "celebrate") { mode = "idle"; winnerBanner.classList.remove("show"); }
+    statusText.textContent = "Insert ball to play"; clockEl.textContent = "–";
+    buildBoard(eligibleNames());
+  }
+  namesEl.addEventListener("input", () => { clearTimeout(rebuildTimer); rebuildTimer = setTimeout(rebuildFromInputs, 180); });
+  noRepeatEl.addEventListener("change", rebuildFromInputs);
+  window.addEventListener("resize", () => { const old = dpr; sizeCanvas(); if (old !== dpr) renderStatic(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => cfg && renderStatic());
+
+  sizeCanvas();
+  makeOverlays();
+  buildBoard(eligibleNames());
+  requestAnimationFrame(loop);
+})();
 </script>
+
 
 </body>
 </html>

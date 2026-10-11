@@ -96,6 +96,8 @@ svg#wheel { height: auto; aspect-ratio: 1 / 1; }
   }
   .site-nav nav::-webkit-scrollbar { display: none; }
   .site-nav nav a { flex: none; }
+  /* fade the right edge so it's clear the menu can be swiped */
+  .site-nav nav { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 40px; }
   .brand { font-size: 1.15rem; }
 
   .stage { padding: 14px; }
@@ -179,7 +181,7 @@ svg#wheel { height: auto; aspect-ratio: 1 / 1; }
   clear: both;
 }
 .ad-slot:not(.is-shown) { height: 0; margin: 0; visibility: hidden; }
-.ad-slot.is-shown { margin: clamp(36px, 6vw, 56px) auto; }
+.ad-slot.is-shown { margin: clamp(28px, 6vw, 56px) auto; }
 .ad-slot .ad-label {
   font: 600 0.68rem/1 var(--font-body);
   color: var(--ink-soft);
@@ -212,3 +214,14 @@ body.ad-in-view .sfx-fab { opacity: 0; pointer-events: none; }
 .doc-page { padding-bottom: 56px; }
 .doc-page p { max-width: 68ch; }
 .doc-page, .about-tool { overflow-wrap: anywhere; }
+
+/* ==========================================================================
+   Mobile/tablet fixes: keep the game on the first screen, readable roster box
+   ========================================================================== */
+@media (max-width: 860px) {
+  /* the ad above the game pushes it off the first screen on phones/tablets */
+  .ad-slot[data-ad="tool-top"] { display: none !important; }
+}
+@media (max-width: 560px) {
+  .control-bar textarea, textarea#names { min-height: 120px !important; }
+}
