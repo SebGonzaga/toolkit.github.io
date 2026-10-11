@@ -3,14 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="canonical" href="https://pickanamegames.com/tools/turtle-race.html">
-<meta property="og:url" content="https://pickanamegames.com/tools/turtle-race.html">
-<meta property="og:site_name" content="Pick &amp; Race">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2748%27 fill=%27%23efb93c%27/%3E%3Ctext x=%2750%27 y=%2766%27 font-size=%2756%27 text-anchor=%27middle%27%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E">
-<meta name="google-adsense-account" content="ca-pub-8362200361779290">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8362200361779290" crossorigin="anonymous"></script>
 <title>Turtle Race Name Picker — Pick &amp; Race</title>
-<meta name="description" content="Turtles climb a hill to a summit flag, with shell slides, naps and a sleepy hare, to pick a name fairly. Free classroom name picker.">
+<meta name="description" content="Deliberately, comedically slow — turtles decide who goes first.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/styles.css">
@@ -26,42 +20,96 @@
     width: 100%; min-height: 140px; border: var(--border); border-radius: 8px;
     padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical;
   }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   input[type="range"] { width: 100%; }
   .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; font-size: 0.88rem; }
   .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
   .duration-val { font-family: var(--font-display); font-weight: 700; }
 
-  /* ---- the hill-climb stage: one canvas scene + an HTML/SVG HUD on top ---- */
   .stage {
-    border: var(--border); border-radius: var(--radius); background: var(--paper);
-    padding: 12px; position: relative; overflow: hidden;
+    border: var(--border); border-radius: var(--radius);
+    background: linear-gradient(180deg, #eee3c8, #ded098);
+    padding: 16px;
+    position: relative; overflow: hidden;
   }
-  .stage.projector { background: #14213a; }
+  .stage.projector { background: #241d0f; }
+  .stage.projector .field { background: transparent; }
+  .stage.projector .field-token .name-tag { background: rgba(255,255,255,0.15); color: #fff; }
   .stage.finished-glow { box-shadow: 0 0 0 4px var(--chalk), 0 0 40px rgba(53,96,74,0.5) inset; }
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2px 10px; position: relative; z-index: 5; min-height: 1.6em; }
-  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
-  .stage.projector .stage-header .status { color: #fff; font-size: 1.35rem; }
 
-  .scene-wrap { position: relative; border-radius: 12px; overflow: hidden; background: #bfe3fb; box-shadow: inset 0 0 0 2px rgba(30,42,69,0.12); }
-  #scene { display: block; width: 100%; aspect-ratio: 16 / 10; touch-action: manipulation; }
-  .stage.projector #scene { filter: saturate(1.2) contrast(1.07); }
+  .heat-shimmer { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0 3px, transparent 3px 7px);
+    opacity: 0.4; }
 
-  /* Elevation-profile HUD: turtle count, the whole climb with a dot per turtle, the clock. */
-  .hud {
-    position: absolute; top: 10px; left: 10px; right: 10px; z-index: 3;
-    display: flex; align-items: center; gap: 12px; padding: 6px 14px;
-    background: rgba(22, 28, 46, 0.93); color: #fff; border-radius: 14px;
-    font-family: var(--font-display); pointer-events: none;
-    box-shadow: 0 2px 10px rgba(10, 20, 40, 0.25);
+  /* -- track environment: grass verges + a dirt lane, with scattered rocks,
+        flowers and bushes instead of one flat tan rectangle -------------- */
+  .dirt-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      linear-gradient(180deg,
+        #7fae57 0%, #6f9c4c 13%,
+        #d8c393 13%, #cdbb85 50%, #c2ae79 87%,
+        #6f9c4c 87%, #628a41 100%);
   }
-  .hud-count { display: flex; flex-direction: column; align-items: center; line-height: 1.05; min-width: 52px; }
-  .hud-count b { font-size: 1.2rem; font-weight: 800; }
-  .hud-count span { font-size: 0.72rem; opacity: 0.8; }
-  .hud-profile { flex: 1; min-width: 0; height: 38px; overflow: visible; }
-  .hud-clock { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 54px; text-align: right; }
-  .stage.projector .hud { font-size: 1.15em; padding: 9px 16px; }
+  .stage.projector .dirt-bg {
+    background: linear-gradient(180deg, #1c2b12 0%, #17240e 13%, #3a2f18 13%, #332a15 87%, #17240e 87%, #101a0a 100%);
+  }
+  .dirt-texture {
+    position: absolute; left: 0; right: 0; top: 13%; bottom: 13%; z-index: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(94deg, rgba(0,0,0,0.05) 0 3px, transparent 3px 24px);
+  }
+  .field-decor { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .field-decor .decor { position: absolute; font-size: 1rem; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); }
+  .field-decor .decor.bush, .field-decor .decor.flower { animation: decor-sway ease-in-out infinite; transform-origin: 50% 100%; }
+  @keyframes decor-sway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 
-  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .turtle-shadow {
+    position: absolute; left: 50%; bottom: 2%; width: 78%; height: 20%; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0,0,0,0.32), transparent 72%);
+    transform: translateX(-50%); z-index: 1;
+  }
+  .dust-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+  .dust-puff { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, rgba(150,120,70,0.6), transparent 70%); }
+  @keyframes dust-fade { 0% { transform: scale(0.4); opacity: 0.7; } 100% { transform: scale(1.8) translateX(-14px) translateY(3px); opacity: 0; } }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .stage.projector .stage-header .status { color: #fff; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .stage.projector .stage-header .clock { color: var(--pencil); }
+
+  .field { position: relative; z-index: 5; }
+  .field.zoom-mild { transform: scale(1.02); }
+  .field.zoom-mild.zoom { transform: scale(1.06); }
+  .field .finish-gate { --fc-a: rgba(60,45,20,0.85); --fc-b: rgba(255,246,214,0.92); --finish-glow: rgba(53,96,74,0.55); }
+  /* Bigger, more prominent racers: larger token box + a real shadow. */
+  .field-token { width: 44px !important; height: 44px !important; }
+  .field.many-names .field-token { width: 30px !important; height: 30px !important; }
+  /* Perspective wrapper around the turtle art (never on .field-token itself
+     — shared-track.js drives that element's own transform for position via
+     WAAPI). A slow dome-like sway, distinct from the legs' own gait. */
+  .turtle3d {
+    position: relative; width: 100%; height: 100%;
+    transform-style: preserve-3d; transform-origin: 50% 85%;
+    animation: turtle-sway 1.4s ease-in-out infinite;
+  }
+  .turtle3d svg { width: 100%; height: 100%; display: block; position: relative; z-index: 2; }
+  @keyframes turtle-sway {
+    0%,100% { transform: rotateX(4deg) rotateZ(-1.5deg) translateY(0); }
+    50%     { transform: rotateX(-3deg) rotateZ(1.5deg) translateY(-1.5px); }
+  }
+  .field-token.surging .turtle3d { animation-duration: 0.55s; }
+  .field-token.stalled .turtle3d { animation-duration: 3.4s; }
+  /* Diagonal gait: front-left+back-right swing forward together while
+     front-right+back-left swing back, then swap — the way four-legged
+     animals actually walk, instead of all four legs moving as one unit. */
+  .t-leg { transform-box: fill-box; transform-origin: 50% 20%; animation: leg-stride 1.1s ease-in-out infinite; }
+  .t-leg-fl, .t-leg-br { animation-name: leg-stride; }
+  .t-leg-fr, .t-leg-bl { animation-name: leg-stride; animation-delay: -0.55s; }
+  @keyframes leg-stride { 0%,100% { transform: rotate(-10deg) translateX(-1px); } 50% { transform: rotate(10deg) translateX(1px); } }
+  .field-token.surging .t-leg { animation-duration: 0.4s; }
+  .field-token.stalled .t-leg { animation-duration: 2.6s; }
+  .field-token .dust { position: absolute; bottom: -2px; left: -2px; width: 5px; height: 5px; border-radius: 50%; background: rgba(90,70,30,0.45); pointer-events: none; }
 
   .winner-banner {
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
@@ -79,9 +127,8 @@
     .tool-wrap { grid-template-columns: 1fr; }
     .panel { position: static; }
   }
-  @media (max-width: 640px) {
-    #scene { aspect-ratio: 3 / 4; }
-    .hud { gap: 8px; padding: 5px 10px; }
+  @media (prefers-reduced-motion: reduce) {
+    .field-token, .turtle3d, .t-leg, .field-decor .decor { animation: none !important; transition: none !important; transform: none !important; }
   }
 </style>
 <link rel="stylesheet" href="../assets/css/responsive.css">
@@ -106,10 +153,9 @@
 
 <main class="wrap">
   <h1 style="margin-top:28px;">Turtle Race Name Picker</h1>
-  <p>Same fair pick, delivered as slowly and dramatically as possible: your turtles climb a hill to the summit flag. Great for building suspense.</p>
+  <p>Same fair pick, delivered as slowly and dramatically as possible. Great for building suspense.</p>
 
-  <aside class="ad-slot" data-ad="tool-top" aria-label="Advertisement"></aside>
-<div class="tool-wrap">
+  <div class="tool-wrap">
     <div class="panel">
       <label for="names">Names (one per line)</label>
       <textarea id="names">Ava
@@ -141,36 +187,43 @@ Isla</textarea>
       <div class="stage" id="stage">
         <div class="stage-header">
           <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
+          <span class="clock" id="clock">–</span>
         </div>
-        <div class="scene-wrap" id="fieldWrap">
-          <canvas id="scene" role="img" aria-label="Animated side view of turtles climbing a hill toward a summit flag. A hare naps beside the trail."></canvas>
-          <div class="hud" aria-hidden="true">
-            <div class="hud-count"><b id="hudCount">8</b><span id="hudLabel">turtles</span></div>
-            <svg class="hud-profile" id="hudProfile" viewBox="0 0 240 40" preserveAspectRatio="xMidYMid meet"></svg>
-            <div class="hud-clock" id="clock">&ndash;</div>
+        <div class="field-stage">
+          <div class="field-wrap" id="fieldWrap">
+            <div class="field" id="field">
+              <div class="dirt-bg"></div>
+              <div class="dirt-texture"></div>
+              <div class="heat-shimmer"></div>
+              <div class="field-decor" id="fieldDecor"></div>
+              <div class="start-gate"></div>
+              <div class="finish-gate"></div>
+              <div class="dust-layer" id="dustLayer"></div>
+              <div class="field-tokens" id="fieldTokens"></div>
+            </div>
+          </div>
+          <div class="leaderboard-panel">
+            <div class="lb-title">Standings</div>
+            <div class="lb-track" id="leaderboard"></div>
           </div>
         </div>
-        <ol class="sr-only" id="srStandings" aria-label="Race result"></ol>
       </div>
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
       <div class="history" id="historyList"></div>
     </div>
   </div>
 
-  <aside class="ad-slot" data-ad="tool-mid" aria-label="Advertisement"></aside>
-<section class="about-tool" aria-labelledby="about-turtle-race">
+  <section class="about-tool" aria-labelledby="about-turtle-race">
     <h2 id="about-turtle-race">About the Turtle Race Name Picker</h2>
-    <p>Each name becomes a turtle on a rolling hill trail. Turtles are famously slow, so this race is a long, funny build-up to a winner. Add your list, press Begin the (slow) race, and watch the camera follow the leader up the mountain while the progress bar at the top tracks every turtle along the climb, until one shuffles over the summit line.</p>
-    <h3>What the turtles get up to</h3>
-    <ul><li><strong>Shell slides:</strong> when a turtle surges, it tucks into its shell and slides forward with speed lines behind it.</li><li><strong>Naps:</strong> when a turtle tires, it starts to doze off, and a hare snoozes beside the trail. Once the leader passes, the hare wakes up and chases, a little too late.</li><li><strong>Hills and puddles:</strong> turtles tilt to the slope and splash through puddles on the way up.</li></ul>
+    <p>Each name becomes a turtle on a shared track. Turtles are famously slow, so this race is a long, funny build-up to a winner. Add your list, press Begin the (slow) race, and watch the leaderboard shift until one turtle shuffles over the finish line.</p>
     <h3>Ways to use it in class</h3>
     <ul><li>Choose a student for a task that benefits from a bit of suspense.</li><li>Give a restless class something calm and silly to watch for a minute.</li><li>Pick the order for a quiet reading rotation.</li><li>Decide which group gets to go first in a team activity.</li></ul>
     <h3>A lesson idea</h3>
-    <p>Slow races are great for transitions. Start the turtles while students pack away or line up, and announce that the winner leads the line when the race ends. The long, silly build-up gives everyone a minute to settle, and the winner has a clear job to do straight away. The hill also makes a nice hook for a quick chat about slopes, speed and the tortoise and the hare fable.</p>
+    <p>Slow races are great for transitions. Start the turtles while students pack away or line up, and announce that the winner leads the line when the race ends. The long, silly build-up gives everyone a minute to settle, and the winner has a clear job to do straight away.</p>
     <h3>Good to know</h3>
-    <p>Use the race length slider to keep the wait short when time is tight. Turn on <strong>No repeats</strong> and everyone gets a turn before any name comes up a second time, which keeps it fair over a whole week. <strong>Projector mode</strong> switches to bigger, higher-contrast graphics and labels so the back row can see the result. With a big class, only the leading turtles are labelled so the screen stays readable.</p>
+    <p>Use the race length slider to keep the wait short when time is tight. Turn on <strong>No repeats</strong> and everyone gets a turn before any name comes up a second time, which keeps it fair over a whole week. <strong>Projector mode</strong> switches to bigger, higher-contrast graphics so the back row can see the result.</p>
     <h3>Questions teachers ask</h3>
-    <dl><dt>Is the slowest-looking turtle ever the winner?</dt><dd>Any turtle can win. The outcome is chosen fairly before the race and the animation simply plays it out.</dd><dt>Does a shell slide or a nap change who wins?</dt><dd>No. Shell slides and naps are just how the race is drawn. They show the pace the turtle was already going to run, so they are fun to watch but never tilt the odds.</dd><dt>Can I stop a race early?</dt><dd>Reload the page to start again; your names stay in the box until you change them.</dd></dl>
+    <dl><dt>Is the slowest-looking turtle ever the winner?</dt><dd>Any turtle can win. The outcome is chosen fairly before the race and the animation simply plays it out.</dd><dt>Can I stop a race early?</dt><dd>Reload the page to start again; your names stay in the box until you change them.</dd></dl>
     <p class="about-more">More tools: <a href="../index.html#tools">see all Pick &amp; Race pickers</a> · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy</a></p>
   </section>
 
@@ -178,14 +231,14 @@ Isla</textarea>
 </main>
 
 <footer class="site-footer">
-  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy policy</a> · <a href="../contact.html">Contact</a></div>
+  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy policy</a></div>
 </footer>
 
 
 <script src="../assets/js/race-engine.js"></script>
 <script src="../assets/js/sound-fx.js"></script>
 <script src="../assets/js/suspense-fx.js"></script>
-<script src="../assets/js/turtle-scene.js"></script>
+<script src="../assets/js/shared-track.js"></script>
 <script>
   const namesEl = document.getElementById("names");
   const durationEl = document.getElementById("duration");
@@ -196,169 +249,279 @@ Isla</textarea>
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
   const fieldWrap = document.getElementById("fieldWrap");
-  const canvas = document.getElementById("scene");
+  const field = document.getElementById("field");
+  const fieldDecor = document.getElementById("fieldDecor");
+  const dustLayer = document.getElementById("dustLayer");
+  const fieldTokens = document.getElementById("fieldTokens");
+  const leaderboard = document.getElementById("leaderboard");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
-  const hudCount = document.getElementById("hudCount");
-  const hudLabel = document.getElementById("hudLabel");
-  const srStandings = document.getElementById("srStandings");
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
 
-  const COMMENTARY = ["Plodding up the hill…", "Still plodding…", "Unbelievably slow progress…", "Someone yawned.", "The suspense is agonizing…", "Any minute now…"];
-  const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const PALETTE = ["#35604a", "#4a7a5e", "#8a6d3b", "#efb93c", "#6b8f71", "#2f4d3a"];
+
+  // shade(color, amt): nudge every RGB channel of a hex color by amt
+  // (negative = darker, positive = lighter) to derive real matching
+  // shadow/highlight tones from each racer's palette color.
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const clamp = (v) => Math.min(255, Math.max(0, v));
+    const r = clamp((n >> 16) + amt), g = clamp(((n >> 8) & 0xff) + amt), b = clamp((n & 0xff) + amt);
+    return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+  }
+  const COMMENTARY = ["Plodding along…", "Still plodding…", "Unbelievably slow progress…", "Someone yawned.", "The suspense is agonizing…", "Any minute now…"];
 
   let alreadyWon = [];
-  let phase = "idle";              // idle | countdown | racing | after
-  let raceCtx = null;
-  let statusHold = 0;              // ms timestamp until which an event message owns the status line
+  let racing = false;
+  let track = null;
+  const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Sound/status reactions to what the scene says is happening on screen.
-  const lastSfx = {};
-  function sfx(key, gap, fn) {
-    const now = performance.now();
-    if (lastSfx[key] && now - lastSfx[key] < gap) return;
-    lastSfx[key] = now;
-    try { fn(); } catch (e) { /* audio is never critical */ }
-  }
-  function say(text, ms = 1600) { statusText.textContent = text; statusHold = performance.now() + ms; }
-  function onSceneEvent(kind) {
-    if (phase !== "racing") {
-      if (kind === "hare-wake" || kind === "hare-late") { /* handled below even in the after-phase */ } else return;
-    }
-    if (kind === "slide") { sfx("slide", 1500, () => SoundFX.slideWhistle(520, 1500, 0.32, 0.07)); say("Shell slide!"); }
-    else if (kind === "nap-start") { sfx("nap", 3500, () => {}); if (Math.random() < 0.5) say("Somebody's getting sleepy…"); }
-    else if (kind === "lead") sfx("lead", 900, () => SoundFX.leadChange());
-    else if (kind === "splash") sfx("splash", 600, () => SoundFX.splash(false));
-    else if (kind === "hare-wake") { sfx("hare", 1000, () => SoundFX.gasp()); say("The hare just woke up!"); }
-    else if (kind === "hare-late") sfx("late", 1000, () => SoundFX.sadTrombone(true));
+  // Scatter rocks, flowers and bushes across the grass verges (top/bottom
+  // ~13% bands) once, purely decorative and CSS-animated from there.
+  const DECOR = [
+    { glyph: "🪨", cls: "rock", bands: [true, true] },
+    { glyph: "🌼", cls: "flower", bands: [true, true] },
+    { glyph: "🌿", cls: "bush", bands: [true, true] },
+    { glyph: "🌸", cls: "flower", bands: [true, true] },
+  ];
+  for (let i = 0; i < 16; i++) {
+    const d = DECOR[i % DECOR.length];
+    const el = document.createElement("span");
+    el.className = "decor " + d.cls;
+    el.textContent = d.glyph;
+    const inTopBand = i % 2 === 0;
+    el.style.left = (2 + Math.random() * 94) + "%";
+    el.style.top = inTopBand ? (1 + Math.random() * 8) + "%" : (91 + Math.random() * 7) + "%";
+    el.style.fontSize = (0.8 + Math.random() * 0.6) + "rem";
+    el.style.opacity = 0.75 + Math.random() * 0.25;
+    el.style.animationDuration = (2.4 + Math.random() * 2) + "s";
+    el.style.animationDelay = (Math.random() * 2) + "s";
+    fieldDecor.appendChild(el);
   }
 
-  const scene = TurtleScene.create(canvas, { reducedMotion: prefersReducedMotion, onEvent: onSceneEvent });
-  scene.attachHud(document.getElementById("hudProfile"));
-  if (window.ResizeObserver) new ResizeObserver(() => scene.resize()).observe(canvas);
-  else window.addEventListener("resize", () => scene.resize());
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => scene.render());
+  function spawnDust(tokEl) {
+    if (prefersReducedMotion || dustLayer.childElementCount > 40) return;
+    const tRect = tokEl.getBoundingClientRect();
+    const fRect = field.getBoundingClientRect();
+    const p = document.createElement("div");
+    p.className = "dust-puff";
+    p.style.left = (tRect.left - fRect.left) + "px";
+    p.style.top = (tRect.top - fRect.top + tRect.height * 0.82) + "px";
+    p.style.animation = `dust-fade ${0.5 + Math.random() * 0.3}s ease-out forwards`;
+    dustLayer.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
-  projectorEl.addEventListener("change", () => { stage.classList.toggle("projector", projectorEl.checked); scene.setProjector(projectorEl.checked); });
-  resetHistoryBtn.addEventListener("click", () => { alreadyWon = []; renderHistory(); });
+  projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
+  resetHistoryBtn.addEventListener("click", () => {
+    alreadyWon = [];
+    renderHistory();
+  });
 
-  function getNames() { return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean); }
+  function getNames() {
+    return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function renderHistory() {
+    if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
+    historyList.innerHTML = "Already won this round: " +
+      alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
+  }
+
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
-  function renderHistory() {
-    if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
-    historyList.innerHTML = "Already won this round: " + alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
+
+  // A layered, radially-shaded turtle instead of one flat ellipse: a domed
+  // shell gradient (light source upper-left) plus a few scute outlines for
+  // texture, and four legs that paddle in a real diagonal-gait pattern
+  // (front-left + back-right together, then front-right + back-left) —
+  // real tortoises and most quadrupeds move that way, not all four at once.
+  // Each token gets a phase offset so a big field doesn't paddle in unison.
+  function tokenHTML(entrant, color, idx) {
+    const gid = `turtleShell${idx}`;
+    const gid2 = `turtleHead${idx}`;
+    const gid3 = `turtleLeg${idx}`;
+    const mid = shade(color, -20);
+    const deep = shade(color, -90);
+    const legLight = shade(color, 15);
+    const phase = ((idx * 0.17) % 1).toFixed(2);
+    return `
+      <div class="turtle-shadow"></div><div class="dust"></div>
+      <div class="turtle3d" style="animation-delay:-${phase}s">
+        <svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="${gid}" cx="36%" cy="22%" r="88%">
+              <stop offset="0%" stop-color="#fff" stop-opacity="0.62"/>
+              <stop offset="28%" stop-color="${color}" stop-opacity="1"/>
+              <stop offset="66%" stop-color="${mid}" stop-opacity="1"/>
+              <stop offset="100%" stop-color="${deep}" stop-opacity="1"/>
+            </radialGradient>
+            <radialGradient id="${gid2}" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#fff" stop-opacity="0.62"/>
+              <stop offset="40%" stop-color="${color}" stop-opacity="1"/>
+              <stop offset="100%" stop-color="${mid}" stop-opacity="1"/>
+            </radialGradient>
+            <linearGradient id="${gid3}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${legLight}"/>
+              <stop offset="100%" stop-color="${mid}"/>
+            </linearGradient>
+          </defs>
+          <ellipse class="t-leg t-leg-br" style="animation-delay:-${phase}s" cx="20" cy="34" rx="5" ry="3" fill="url(#${gid3})"/>
+          <ellipse class="t-leg t-leg-fr" style="animation-delay:-${phase}s" cx="40" cy="34" rx="5" ry="3" fill="url(#${gid3})"/>
+          <ellipse class="t-leg t-leg-bl" style="animation-delay:-${phase}s" cx="16" cy="27" rx="5" ry="3" fill="url(#${gid3})"/>
+          <ellipse class="t-leg t-leg-fl" style="animation-delay:-${phase}s" cx="44" cy="27" rx="5" ry="3" fill="url(#${gid3})"/>
+          <circle cx="50" cy="20" r="7" fill="url(#${gid2})" stroke="${deep}" stroke-width="0.4" stroke-opacity="0.4"/>
+          <path d="M45 24 Q50 27 55 24" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.1" stroke-linecap="round"/>
+          <circle cx="54" cy="18" r="1.6" fill="#1e2a45"/>
+          <circle cx="54.7" cy="17.3" r="0.5" fill="#fff" opacity="0.7"/>
+          <ellipse class="t-shell" cx="28" cy="22" rx="22" ry="14" fill="url(#${gid})" stroke="${deep}" stroke-width="0.6" stroke-opacity="0.4"/>
+          <!-- Individual scute cells, each with a faint highlight or shade
+               of its own, so the shell reads as a dome of separate keratin
+               plates catching light differently, not one gradient blob
+               with outline scratches drawn on top. -->
+          <path d="M28 12 Q35 13 38 19 L28 22 Z" fill="rgba(255,255,255,0.16)"/>
+          <path d="M28 12 Q21 13 18 19 L28 22 Z" fill="rgba(0,0,0,0.08)"/>
+          <path d="M18 19 L28 22 L20 30 Q13 26 14 20 Z" fill="rgba(0,0,0,0.13)"/>
+          <path d="M38 19 L28 22 L36 30 Q43 26 42 20 Z" fill="rgba(255,255,255,0.08)"/>
+          <path class="t-scute" d="M14 20 Q20 12 28 12 Q36 12 42 20" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1.3"/>
+          <path class="t-scute" d="M9 25 L14 20 M47 25 L42 20 M20 33 L20 12 M36 33 L36 12 M28 12 L28 22 L20 30 M28 22 L36 30" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
+          <path class="t-shell-hi" d="M14 15 Q26 7 38 11 Q26 11 14 15 Z" fill="rgba(255,255,255,0.35)"/>
+          <path class="t-shell-shade" d="M10 28 Q28 39 46 28 Q28 35 10 28 Z" fill="rgba(0,0,0,0.16)"/>
+        </svg>
+      </div>`;
   }
 
-  // Idle preview: the roster lined up on the start grid (and it updates as you type).
-  function buildPreview() {
-    const names = getNames();
-    scene.setEntrants(names.map((name) => ({ name, finishTime: 1, progressAt: () => 0, modeAt: () => 0 })));
-    hudCount.textContent = names.length;
-    hudLabel.textContent = names.length === 1 ? "turtle" : "turtles";
-    clock.textContent = "–";
+  function buildStage(order) {
+    if (track) track.destroy(); // cancel any in-flight animations before replacing tokens
+    track = SharedTrack.buildField(fieldTokens, leaderboard, order, {
+      tokenHTML,
+      palette: PALETTE,
+      onCross: (entrant, tok) => {
+        spawnDust(tok.el);
+        const r = tok.el.getBoundingClientRect();
+        SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, { count: 10, spread: 0.35 });
+      },
+    });
   }
-  let previewTimer = null;
-  namesEl.addEventListener("input", () => {
-    if (phase === "racing" || phase === "countdown") return;
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(() => { phase = "idle"; raceCtx = null; buildPreview(); }, 220);
-  });
 
-  // ---------------------------------------------------------------- the one animation loop
-  let last = performance.now(), lastIdleDraw = 0, lastShake = 0, commentaryIdx = 0, lastCommentary = 0;
-  function loop(now) {
-    requestAnimationFrame(loop);
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-
-    if (phase === "idle" || phase === "countdown") {
-      if (prefersReducedMotion) return;                    // static preview; resize/names redraw it
-      if (now - lastIdleDraw < 33) return;                 // ease off to ~30fps while nothing is racing
-      lastIdleDraw = now;
-      scene.frame(0, dt * 2, { racing: false });
-      return;
-    }
-
-    if (phase === "racing") {
-      const c = raceCtx;
-      const real = (now - c.start) / 1000;
-      const tail = c.maxTime * 0.85;
-      const slowNow = c.slowMo && real > tail;
-      const vt = slowNow ? tail + (real - tail) * 0.35 : real;
-      if (slowNow && !c.slowApplied) { c.slowApplied = true; say("Impossibly close… don't blink…", 4000); }
-      clock.textContent = Math.max(0, c.realTotal - real).toFixed(1) + "s";
-      if (now - lastCommentary > c.commentaryEvery && now > statusHold && !slowNow) {
-        lastCommentary = now; commentaryIdx = (commentaryIdx + 1) % COMMENTARY.length; statusText.textContent = COMMENTARY[commentaryIdx];
-      }
-      const progress = vt / c.maxTime;
-      if (progress > 0.82 && !c.crowd) { c.crowd = true; SoundFX.crowdSwell(Math.max(1.2, c.maxTime * 0.2)); }
-      const res = scene.frame(vt, dt, { racing: true, progress, slowMo: slowNow });
-      if (res.groupSurge && now - lastShake > 900) { lastShake = now; SuspenseFX.microShake(stage); }
-      if (vt >= c.winnerTime) finishRace(now);
-      return;
-    }
-
-    // phase === "after": the others keep trundling in, the winner celebrates, the hare arrives late
-    const c = raceCtx;
-    const vt = Math.min(c.vtAtFinish + (now - c.finishedAt) / 1000, c.maxFinish + 0.5);
-    scene.frame(vt, dt, { racing: false, progress: 1, winnerName: c.winner });
-  }
-  requestAnimationFrame(loop);
-
-  // ---------------------------------------------------------------- a race
-  let plodTimer = null;
   async function runRace() {
-    if (phase === "racing" || phase === "countdown") return;
+    if (racing) return;
     const roster = getNames();
-    if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
-    clearTimeout(previewTimer);
-    phase = "countdown";
+    if (roster.length < 2) {
+      statusText.textContent = "Add at least two names first";
+      return;
+    }
+    racing = true;
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
-    srStandings.innerHTML = "";
     const duration = Number(durationEl.value);
-    const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
+    const result = RaceEngine.run(roster, {
+      duration,
+      noRepeat: noRepeatEl.checked,
+      alreadyWon,
+    });
 
     const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
     const displayOrder = result.eligiblePool.map((name) => byName[name]);
-    scene.setEntrants(displayOrder);
-    hudCount.textContent = displayOrder.length;
-    hudLabel.textContent = displayOrder.length === 1 ? "turtle" : "turtles";
-    clock.textContent = duration.toFixed(1) + "s";
+    buildStage(displayOrder);
 
     statusText.textContent = "Ready… whenever they feel like it…";
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "GO! (eventually)"], null, fieldWrap);
 
-    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
-    const maxTime = winnerTime;    // the engine sets this to the slider value (or its slow-mo-adjusted share of it)
-    raceCtx = {
-      result, winner: result.winner, winnerTime, maxTime, slowMo: result.photoFinish,
-      realTotal: maxTime * (result.photoFinish ? RaceEngine.SLOWMO_STRETCH : 1),   // real seconds == the slider value
-      maxFinish: Math.max(...displayOrder.map((o) => o.finishTime)),
-      commentaryEvery: Math.max(1200, duration * 220),
-      start: performance.now(), slowApplied: false, crowd: false,
-    };
-    commentaryIdx = 0; lastCommentary = performance.now(); statusHold = 0;
+    let commentaryIdx = 0;
     statusText.textContent = COMMENTARY[0];
-    phase = "racing";
+    const commentaryTimer = setInterval(() => {
+      commentaryIdx = (commentaryIdx + 1) % COMMENTARY.length;
+      statusText.textContent = COMMENTARY[commentaryIdx];
+    }, Math.max(1200, duration * 220));
 
-    // Comedic little footsteps: a slow "plod… plod…" that alternates pitch.
+    track.play(); // actual motion is now driven by each token's own Web Animation
+
+    // Comedic little footsteps: a slow "plod… plod…" that alternates pitch, one per turtle-ish beat.
     let stepFlip = false;
     plodTimer = setInterval(() => { stepFlip = !stepFlip; SoundFX.plod(stepFlip ? 1 : 0.85); }, 480);
+
+    const start = performance.now();
+    // Timed to the WINNER's own finish, not the slowest turtle's, so the
+    // clock reaches ~0 exactly as the winner crosses the line.
+    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
+    const maxTime = winnerTime; // the engine sets this to the slider value (see race-engine.js)
+    const slowMo = result.photoFinish;
+    const realTotal = maxTime * (slowMo ? RaceEngine.SLOWMO_STRETCH : 1); // real seconds the race takes == the slider value
+    let slowMoApplied = false;
+    let zoomMildOn = false;
+    let lastGroupShake = 0;
+    let lastDustCheck = 0;
+    let crowdSwellStarted = false;
+    let prevLeaderIdx = -1;
+
+    // No longer drives position — only reads each token's own animation
+    // clock (via track.update) to keep the leaderboard/clock in sync. Real
+    // slow motion comes from track.setPlaybackRate(), a genuine browser
+    // primitive, not a manual time remap.
+    function rankFrame(now) {
+      if (!racing) return;
+      const rawElapsed = (now - start) / 1000;
+
+      if (slowMo && !slowMoApplied && rawElapsed > maxTime * 0.85) {
+        slowMoApplied = true;
+        track.setPlaybackRate(0.35);
+        clearInterval(commentaryTimer);
+        statusText.textContent = "Impossibly close… don't blink…";
+      }
+
+      const displayElapsed = slowMoApplied ? SuspenseFX.timeDilation(rawElapsed, maxTime) : rawElapsed;
+      clock.textContent = Math.max(0, realTotal - rawElapsed).toFixed(1) + "s"; // real remaining time: hits 0.0 exactly when the winner is decided
+
+      const { leaderIdx, groupSurge } = track.update(rawElapsed);
+      // A "lead change" between two turtles is almost a contradiction in
+      // terms — which is exactly why the little chime is funny here.
+      if (prevLeaderIdx !== -1 && leaderIdx !== prevLeaderIdx) SoundFX.leadChange();
+      prevLeaderIdx = leaderIdx;
+
+      const overallProgress = displayElapsed / maxTime;
+      if (overallProgress > 0.45 && !zoomMildOn) { zoomMildOn = true; track.setZoomMild(true); }
+      if (overallProgress > 0.82) {
+        track.setZoom(true);
+        if (!crowdSwellStarted) { crowdSwellStarted = true; SoundFX.crowdSwell(Math.max(1.2, maxTime * 0.2)); }
+      }
+      if (groupSurge && now - lastGroupShake > 900) {
+        lastGroupShake = now;
+        SuspenseFX.microShake(stage);
+      }
+      if (now - lastDustCheck > 110) {
+        lastDustCheck = now;
+        track.tokens.forEach((tok) => { if (tok.el.classList.contains("surging")) spawnDust(tok.el); });
+      }
+
+      requestAnimationFrame(rankFrame);
+    }
+    requestAnimationFrame(rankFrame);
+
+    // End the race the instant the winner's own animation completes —
+    // waiting for every turtle (including the slowest) let the winner
+    // cross the line while the clock still had time left on it.
+    await track.finishedByName(result.winner);
+    clearInterval(commentaryTimer);
+    finishRace(result);
   }
 
-  function finishRace(now) {
-    const c = raceCtx, result = c.result;
+  let plodTimer = null;
+
+  function finishRace(result) {
+    racing = false;
     clearInterval(plodTimer);
-    c.finishedAt = now; c.vtAtFinish = c.winnerTime;
-    phase = "after";
     // The punchline: a slow race deserves a ba-dum-tss and a clown horn.
     SoundFX.rimshot();
     setTimeout(() => SoundFX.clownHorn(), 900);
+    if (track) {
+      track.setZoom(false);
+      track.setZoomMild(false);
+      track.celebrateWinner(result.winner);
+    }
     SuspenseFX.shake(stage, 350);
     SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
@@ -369,16 +532,17 @@ Isla</textarea>
     void winnerBanner.offsetWidth;
     winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🐢 ${escapeHtml(result.winner)} finally crosses the line!</span>`;
     winnerBanner.classList.add("show");
-    const top = result.order.slice().sort((a, b) => a.finishTime - b.finishTime).slice(0, 3);
-    srStandings.innerHTML = top.map((o) => `<li>${escapeHtml(o.name)}</li>`).join("");
     if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Impossibly close finish!");
-    if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
+    if (noRepeatEl.checked) {
+      alreadyWon.push(result.winner);
+      renderHistory();
+    }
     const rect = stage.getBoundingClientRect();
     SuspenseFX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   startBtn.addEventListener("click", runRace);
-  buildPreview();
+  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
 </script>
 
 </body>

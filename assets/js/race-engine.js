@@ -63,16 +63,16 @@ const RaceEngine = (() => {
    * gone on, tempered by the racer's own stamina stat.
    */
   function makePacer(stamina) {
-    let timer = 0, targetMul = 1, elapsed = 0, mode = 0;
+    let timer = 0, targetMul = 1, elapsed = 0;
     function next() {
       const r = Math.random();
       const fatigueChance = 0.16 + Math.min(0.22, elapsed * 0.01) * (1 - stamina);
       if (r < 0.24) {
-        targetMul = rand(1.06, 1.2); timer = rand(0.4, 1.1); mode = 1;                  // SURGE
+        targetMul = rand(1.06, 1.2); timer = rand(0.4, 1.1);                         // SURGE
       } else if (r < 0.24 + fatigueChance) {
-        targetMul = rand(0.68, 0.88) * (0.75 + 0.25 * stamina); timer = rand(0.5, 1.4); mode = -1; // FATIGUE
+        targetMul = rand(0.68, 0.88) * (0.75 + 0.25 * stamina); timer = rand(0.5, 1.4); // FATIGUE
       } else {
-        targetMul = rand(0.95, 1.03); timer = rand(0.7, 1.6); mode = 0;                  // CRUISE
+        targetMul = rand(0.95, 1.03); timer = rand(0.7, 1.6);                        // CRUISE
       }
     }
     next();
@@ -83,7 +83,6 @@ const RaceEngine = (() => {
         if (timer <= 0) next();
         return targetMul;
       },
-      mode() { return mode; },
     };
   }
 
@@ -103,7 +102,7 @@ const RaceEngine = (() => {
     const pacer = makePacer(stats.stamina);
     let t = 0, distance = 0, velocity = 0;
     let lateral = 0, lateralTarget = rand(-0.6, 0.6), lateralTimer = rand(0.6, 1.6);
-    const times = [0], distances = [0], laterals = [0], modes = [0];
+    const times = [0], distances = [0], laterals = [0];
     let steps = 0;
     while (distance < 1 && steps < MAX_STEPS) {
       steps++;
@@ -123,14 +122,12 @@ const RaceEngine = (() => {
       times.push(t);
       distances.push(Math.min(distance, 1));
       laterals.push(lateral);
-      modes.push(pacer.mode());
     }
-    if (distances[distances.length - 1] < 1) { times.push(t + DT); distances.push(1); laterals.push(lateral); modes.push(0); }
+    if (distances[distances.length - 1] < 1) { times.push(t + DT); distances.push(1); laterals.push(lateral); }
 
     const finishTime = times[times.length - 1];
     const sampledD = new Array(SAMPLE_COUNT + 1);
     const sampledL = new Array(SAMPLE_COUNT + 1);
-    const sampledM = new Array(SAMPLE_COUNT + 1);
     let j = 0;
     for (let k = 0; k <= SAMPLE_COUNT; k++) {
       const tk = (k / SAMPLE_COUNT) * finishTime;
@@ -140,9 +137,8 @@ const RaceEngine = (() => {
       const localT = Math.min(1, Math.max(0, (tk - times[j]) / span));
       sampledD[k] = distances[j] + (distances[jn] - distances[j]) * localT;
       sampledL[k] = laterals[j] + (laterals[jn] - laterals[j]) * localT;
-      sampledM[k] = localT < 0.5 ? modes[j] : modes[jn]; // pace phase is categorical: nearest step, not interpolated
     }
-    return { finishTime, sampledD, sampledL, sampledM };
+    return { finishTime, sampledD, sampledL };
   }
 
   function lookup(samples, finishTime, t) {
@@ -219,12 +215,7 @@ const RaceEngine = (() => {
       const finishTime = +(t * scale).toFixed(2);
       const progressAt = (tt) => lookup(sim.sampledD, sim.finishTime, tt / scale);
       const lateralAt = (tt) => lookup(sim.sampledL, sim.finishTime, tt / scale);
-      // +1 = surging, 0 = cruising, -1 = fatigued (the same phases that shape progressAt).
-      const modeAt = (tt) => {
-        const m = sim.sampledM, i = Math.round(Math.min(1, Math.max(0, tt / scale / sim.finishTime)) * SAMPLE_COUNT);
-        return m[Math.min(i, m.length - 1)];
-      };
-      return { name, finishTime, progressAt, lateralAt, modeAt };
+      return { name, finishTime, progressAt, lateralAt };
     });
     const sorted = order.slice().sort((a, b) => a.finishTime - b.finishTime);
 
