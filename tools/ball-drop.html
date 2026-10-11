@@ -237,7 +237,6 @@ Isla</textarea>
   let pegsHit = 0, lastPingAt = 0;
   let gateOpen = 0, gateTarget = 0;
   let hopperShake = 0;
-  let coneAlpha = 0;
   let shakeAmt = 0;
   let suspense = 0, suspTarget = 0;   // 0..1 spotlight/heartbeat tension
   let holdAt = 0, pending = null;
@@ -649,7 +648,7 @@ Isla</textarea>
     ghost = null;
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
-    winnerIdx = -1; winnerName = ""; parts.length = 0; coneAlpha = 0; suspense = 0; suspTarget = 0; pending = null;
+    winnerIdx = -1; winnerName = ""; parts.length = 0; suspense = 0; suspTarget = 0; pending = null;
 
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
@@ -742,7 +741,6 @@ Isla</textarea>
     shakeAmt *= Math.exp(-dt * 7);
     suspense = lerp(suspense, suspTarget, 1 - Math.exp(-dt * 3.5));
     ball.squash *= Math.exp(-dt * 11);
-    coneAlpha = mode === "celebrate" ? lerp(coneAlpha, 0.25, 1 - Math.exp(-dt * 2)) : coneAlpha;
 
     if (mode === "drop" && play) {
       if (now >= play.startAt) {
@@ -786,10 +784,10 @@ Isla</textarea>
         pl.wasFloor = onFloor;
         while (pl.hi < pl.sim.hits.length && pl.sim.hits[pl.hi].rt <= pl.el) { const h = pl.sim.hits[pl.hi++]; pegImpact(h.p, h.speed, true); }
         clockEl.textContent = Math.max(0, pl.duration - pl.el).toFixed(1) + "s";
-        if (pl.y > NECK_TOP - 40) coneAlpha = Math.min(0.5, coneAlpha + dt * 2.4);
-        if (pl.y > NECK_TOP - 50) setCam(pl.targetX, 640, pl.tail ? 2.3 : 1.9);
-        else if (pl.tail) setCam(HOP_X + (pl.x - HOP_X) * 0.6, pl.y + 60, 1.6);
-        else setCam(HOP_X + (pl.x - HOP_X) * 0.5, pl.y + 50, 1.22);
+        // Camera stays on the whole board so every name is readable while the
+        // ball falls. Tension comes from slow-mo, sound, light and rumble instead.
+        setCam(W / 2, H / 2, 1);
+        if (pl.tail && !reduceMotion) shakeAmt = Math.max(shakeAmt, 0.5 + 0.9 * suspense);
         if (pl.el >= pl.duration) enterHold();
       } else {
         setCam(HOP_X, 200, 1.35);
@@ -799,11 +797,12 @@ Isla</textarea>
       ball.y = GATE_Y - cfg.bR - Math.abs(Math.sin(now * 22)) * 2.5;
       ball.x = HOP_X + Math.sin(now * 31) * 3;
     } else if (mode === "hold") {
-      setCam(binCenter(pending.idx), 640, 2.4);
+      setCam(W / 2, H / 2, 1);       // hold the wide shot: the zoom is saved for the reveal
+      if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 0.9);
       if (now - holdAt >= 1.15) reveal();
     } else if (mode === "celebrate") {
       const e = now - celebrateAt;
-      if (e < 2.4) setCam(binCenter(winnerIdx), 640, 2.2); else setCam(W / 2, H / 2, 1);
+      if (e < 2.6) setCam(binCenter(winnerIdx), 620, 2.2); else setCam(W / 2, H / 2, 1);   // reveal: punch in on the winner
       if (e < 2.2 && Math.random() < dt * 14 && !reduceMotion) confetti(binCenter(winnerIdx), LANE_FLOOR - 10, 3, 0.9);
       // winner ball settles with a little hop
       ball.y = LANE_FLOOR - cfg.bR;
@@ -812,7 +811,7 @@ Isla</textarea>
       updateGhost(dt);
     }
 
-    const k = 1 - Math.exp(-dt * 5);
+    const k = 1 - Math.exp(-dt * (mode === "celebrate" && now - celebrateAt < 0.7 ? 10 : 5));
     cam.x = lerp(cam.x, cam.tx, k); cam.y = lerp(cam.y, cam.ty, k); cam.z = lerp(cam.z, cam.tz, k);
     updateParts(dt);
   }
@@ -945,21 +944,6 @@ Isla</textarea>
       ctx.restore(); ctx.globalCompositeOperation = "source-over";
     }
 
-    // funnel light cone guiding the ball to its lane
-    const coneTarget = play ? play.targetX : (winnerIdx >= 0 ? binCenter(winnerIdx) : null);
-    if (coneTarget !== null && coneAlpha > 0.01) {
-      const wide = Math.max(binW * 1.6, 130);
-      ctx.save(); ctx.beginPath(); ctx.rect(L, NECK_TOP - 20, FW, DIV_TOP - NECK_TOP + 20); ctx.clip();
-      ctx.globalCompositeOperation = "lighter";
-      const cg = ctx.createLinearGradient(0, NECK_TOP - 20, 0, DIV_TOP);
-      cg.addColorStop(0, "rgba(255,240,170,0)"); cg.addColorStop(1, `rgba(255,240,170,${coneAlpha})`);
-      ctx.fillStyle = cg;
-      ctx.beginPath(); ctx.moveTo(coneTarget - wide, NECK_TOP - 20); ctx.lineTo(coneTarget + wide, NECK_TOP - 20); ctx.lineTo(coneTarget + binW / 2, DIV_TOP); ctx.lineTo(coneTarget - binW / 2, DIV_TOP); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = `rgba(255,224,138,${Math.min(1, coneAlpha * 1.6)})`; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(coneTarget - wide, NECK_TOP - 20); ctx.lineTo(coneTarget - binW / 2, DIV_TOP); ctx.moveTo(coneTarget + wide, NECK_TOP - 20); ctx.lineTo(coneTarget + binW / 2, DIV_TOP); ctx.stroke();
-      ctx.restore(); ctx.globalCompositeOperation = "source-over";
-    }
-
     // lit pegs (additive glow sprites, only the ones that were recently hit)
     for (const p of pegs) {
       const f = 1 - (now - p.litAt) / 0.4;
@@ -1022,10 +1006,12 @@ Isla</textarea>
       const rr = 70 * cam.z;
       const sg = ctx.createRadialGradient(bxs, bys, rr * 0.5, bxs, bys, rr * 2.8);
       sg.addColorStop(0, "rgba(5,3,15,0)"); sg.addColorStop(1, `rgba(5,3,15,${(0.72 * suspense).toFixed(3)})`);
-      ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+      // dim only the area above the bins, so the names stay bright and readable
+      const clipY = Math.max(0, Math.min(H, H / 2 + (DIV_TOP - 4 - cam.y) * cam.z));
+      ctx.fillStyle = sg; ctx.fillRect(0, 0, W, clipY);
       const beat = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * (mode === "hold" ? 12 : 7.5));
       const hg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8);
-      hg.addColorStop(0, "rgba(255,40,70,0)"); hg.addColorStop(1, `rgba(255,40,70,${(0.3 * suspense * beat).toFixed(3)})`);
+      hg.addColorStop(0, "rgba(255,40,70,0)"); hg.addColorStop(1, `rgba(255,40,70,${(0.22 * suspense * beat).toFixed(3)})`);
       ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
     }
 
@@ -1108,7 +1094,7 @@ Isla</textarea>
   let rebuildTimer = null;
   function rebuildFromInputs() {
     if (mode === "countdown" || mode === "drop" || mode === "hold") return;
-    winnerIdx = -1; ghost = null; ghostNextAt = now + 1.2; parts.length = 0; coneAlpha = 0;
+    winnerIdx = -1; ghost = null; ghostNextAt = now + 1.2; parts.length = 0;
     if (mode === "celebrate") { mode = "idle"; winnerBanner.classList.remove("show"); }
     statusText.textContent = "Insert ball to play"; clockEl.textContent = "–";
     buildBoard(eligibleNames());
