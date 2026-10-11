@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Classroom Noise Detector — Pick &amp; Race</title>
+<meta name="description" content="A free classroom noise meter. Uses your microphone to show a live green-yellow-red level, warns when the room gets too loud, and never records or uploads audio.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; }
+  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
+  .panel label:first-of-type { margin-top: 0; }
+  .panel .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .panel .row output { font-family: var(--font-display); font-weight: 800; }
+  input[type="range"] { width: 100%; accent-color: var(--ink); }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .presets button { border: var(--border); background: var(--paper); border-radius: 999px; padding: 5px 12px; font: 600 0.8rem var(--font-body); cursor: pointer; color: var(--ink); }
+  .presets button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 0.88rem; font-weight: 500; margin-top: 14px; cursor: pointer; }
+  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+  .panel .btn.ghost { margin-top: 10px; }
+  .hint { font-size: 0.8rem; color: var(--ink-soft); margin: 8px 0 0; }
+  .privacy { font-size: 0.78rem; color: var(--ink-soft); margin: 14px 0 0; border-top: 1.5px dashed var(--ink-soft); padding-top: 10px; }
+
+  .stage { border: var(--border); border-radius: var(--radius); background: var(--chalk-dim); padding: 24px; min-height: 480px; display: flex; flex-direction: column; align-items: center; gap: 16px; position: relative; overflow: hidden; transition: background 0.3s ease; }
+  .stage[data-state="ok"] { background: #dcefe3; }
+  .stage[data-state="warn"] { background: var(--pencil-dim); }
+  .stage[data-state="loud"] { background: var(--marker-dim); }
+  .stage[data-state="loud"].flash { animation: flash 0.7s ease-in-out infinite alternate; }
+  @keyframes flash { from { box-shadow: inset 0 0 0 0 rgba(217,80,63,0); } to { box-shadow: inset 0 0 0 10px rgba(217,80,63,0.55); } }
+
+  .face { font-size: 5.5rem; line-height: 1; transition: transform 0.15s ease; }
+  .stage[data-state="loud"] .face { animation: shake 0.3s linear infinite; }
+  @keyframes shake { 0%,100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-4px) rotate(-4deg); } 75% { transform: translateX(4px) rotate(4deg); } }
+  .status { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.4rem, 4vw, 2.1rem); margin: 0; text-align: center; max-width: none; color: var(--ink); }
+  .sub { margin: -8px 0 0; font-size: 0.9rem; text-align: center; }
+
+  .meter { position: relative; width: 100%; max-width: 560px; height: 44px; border: var(--border); border-radius: 999px; background: var(--paper); overflow: hidden; }
+  .meter .zones { position: absolute; inset: 0; opacity: 0.22; }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--chalk); transition: background 0.2s ease; }
+  .stage[data-state="warn"] .meter .fill { background: var(--pencil); }
+  .stage[data-state="loud"] .meter .fill { background: var(--marker); }
+  .meter .limit { position: absolute; top: -2px; bottom: -2px; width: 4px; background: var(--ink); left: 60%; transform: translateX(-2px); }
+  .meter-labels { display: flex; justify-content: space-between; width: 100%; max-width: 560px; font-size: 0.75rem; font-weight: 600; color: var(--ink-soft); margin-top: -8px; }
+
+  .big { font-family: var(--font-display); font-weight: 800; font-size: 3rem; line-height: 1; }
+  .big small { font-size: 1rem; color: var(--ink-soft); font-weight: 600; }
+
+  canvas#history { width: 100%; max-width: 560px; height: 90px; border: var(--border); border-radius: var(--radius); background: var(--paper); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; max-width: 560px; }
+  .stat { border: 1.5px solid var(--ink); border-radius: 8px; background: var(--paper); padding: 8px 6px; text-align: center; }
+  .stat b { display: block; font-family: var(--font-display); font-size: 1.25rem; line-height: 1.1; }
+  .stat span { font-size: 0.7rem; font-weight: 600; color: var(--ink-soft); }
+
+  .error { display: none; border: var(--border); border-radius: var(--radius); background: var(--marker-dim); padding: 10px 14px; font-size: 0.88rem; max-width: 560px; color: var(--ink); }
+  .error.show { display: block; }
+
+  /* projector mode: big, bold, hide chrome */
+  body.projector .site-nav, body.projector .about-tool, body.projector footer, body.projector .ad-slot, body.projector .tool-wrap > .panel, body.projector h1, body.projector main > p { display: none; }
+  body.projector .tool-wrap { grid-template-columns: 1fr; padding: 0; }
+  body.projector .stage { min-height: 100vh; border-radius: 0; border: 0; justify-content: center; }
+  body.projector .face { font-size: 11rem; }
+  body.projector .meter, body.projector canvas#history, body.projector .stats, body.projector .meter-labels { max-width: 900px; }
+  body.projector .meter { height: 64px; }
+  .exit-proj { display: none; position: absolute; top: 14px; right: 14px; z-index: 5; }
+  body.projector .exit-proj { display: inline-flex; }
+
+  @media (max-width: 860px) { .tool-wrap { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } .face { font-size: 4.2rem; } }
+  @media (prefers-reduced-motion: reduce) { .stage, .face, .meter .fill { transition: none !important; animation: none !important; } .stage .face { animation: none !important; } }
+</style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
+      <a href="spinning-wheel.html">Wheel</a>
+      <a href="slot-machine.html">Slot Machine</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin-top:28px;">Classroom Noise Detector</h1>
+  <p>A live noise meter for your class. Turn it on, set a limit, and the room gets a friendly green, yellow or red light — with an optional beep when things get too loud.</p>
+
+  <div class="tool-wrap">
+    <div class="panel">
+      <label>Activity preset</label>
+      <div class="presets" id="presets" role="group" aria-label="Activity presets">
+        <button type="button" aria-pressed="false" data-limit="25">Silent test</button>
+        <button type="button" aria-pressed="true" data-limit="50">Group work</button>
+        <button type="button" aria-pressed="false" data-limit="70">Discussion</button>
+      </div>
+
+      <label for="limit"><span class="row"><span>Noise limit</span><output id="limitOut">50</output></span></label>
+      <input type="range" id="limit" min="10" max="95" value="50">
+      <p class="hint">Above the limit the light turns red. Yellow shows when it's getting close.</p>
+
+      <label for="sens"><span class="row"><span>Microphone sensitivity</span><output id="sensOut">0</output></span></label>
+      <input type="range" id="sens" min="-20" max="20" value="0">
+      <p class="hint">Raise it if the meter barely moves in a quiet room; lower it if a normal voice looks too loud.</p>
+
+      <label for="grace"><span class="row"><span>Grace period</span><output id="graceOut">2s</output></span></label>
+      <input type="range" id="grace" min="0" max="10" value="2">
+      <p class="hint">How long it must stay loud before it counts as a strike, so one cough doesn't set it off.</p>
+
+      <label class="check"><input type="checkbox" id="beep" checked> Beep when over the limit</label>
+
+      <button class="btn marker" id="startBtn">Start listening</button>
+      <button class="btn ghost" id="projBtn" type="button">Projector mode</button>
+      <button class="btn ghost small" id="resetBtn" type="button" style="display:none">Reset stats</button>
+
+      <p class="privacy">🔒 Your microphone is only used to measure loudness, right here in your browser. Nothing is recorded, saved or sent anywhere.</p>
+    </div>
+
+    <div>
+      <div class="stage" id="stage" data-state="idle">
+        <button class="btn small ghost exit-proj" id="exitProj" type="button">Exit projector mode</button>
+        <div class="face" id="face" aria-hidden="true">🎤</div>
+        <p class="status" id="status" aria-live="polite">Press “Start listening”</p>
+        <p class="sub" id="sub">Your browser will ask to use the microphone.</p>
+
+        <div class="meter" role="meter" aria-label="Noise level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="meter">
+          <div class="zones" style="background:linear-gradient(90deg,var(--chalk) 0 40%,var(--pencil) 40% 60%,var(--marker) 60% 100%)" id="zones"></div>
+          <div class="fill" id="fill"></div>
+          <div class="limit" id="limitMark" title="Noise limit"></div>
+        </div>
+        <div class="meter-labels"><span>Silent</span><span>Talking</span><span>Loud</span></div>
+
+        <div class="big"><span id="level">0</span> <small>/ 100</small></div>
+
+        <canvas id="history" width="560" height="90" aria-label="Noise history for the last minute" role="img"></canvas>
+
+        <div class="stats">
+          <div class="stat"><b id="sStrikes">0</b><span>strikes</span></div>
+          <div class="stat"><b id="sPeak">0</b><span>peak</span></div>
+          <div class="stat"><b id="sAvg">0</b><span>average</span></div>
+          <div class="stat"><b id="sOver">0%</b><span>time over limit</span></div>
+        </div>
+
+        <div class="error" id="error" role="alert"></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="about-tool" aria-labelledby="about-noise-detector">
+    <h2 id="about-noise-detector">About the Classroom Noise Detector</h2>
+    <p>The Classroom Noise Detector listens through your device's microphone and turns the volume of the room into a simple live meter. Green means calm, yellow means the noise is creeping up, and red means it is over the limit you set. A strike is added when the room stays too loud for longer than your grace period.</p>
+    <h3>Ways to use it in class</h3>
+    <ul><li>Keep a silent test or independent reading time on track without having to shush anyone.</li><li>Give group work a target volume and let the class watch the meter themselves.</li><li>Run a quiet-class challenge: try to finish the lesson with fewer than three strikes.</li><li>Use projector mode so the whole room can see the traffic light.</li></ul>
+    <h3>Setting it up</h3>
+    <p>Pick a preset for the activity, then nudge the noise limit until the meter feels right for your room. If the meter hardly moves, raise the microphone sensitivity. Every room and device is different, so it is a good idea to test it with a normal speaking voice first.</p>
+    <h3>Good to know</h3>
+    <p>This is a relative classroom guide, not a calibrated sound-level meter, so the numbers are not decibels and should not be used for health or safety measurements. Your browser must allow microphone access, and the page needs to be opened over https (or from your own computer) for that to work.</p>
+    <h3>Questions teachers ask</h3>
+    <dl><dt>Does it record my class?</dt><dd>No. It only measures loudness in your browser. No audio is saved or uploaded.</dd><dt>The meter is too jumpy.</dt><dd>Increase the grace period and lower the sensitivity a little.</dd><dt>Can I use it on a projector?</dt><dd>Yes. Use Projector mode for a big, full-screen light and face.</dd></dl>
+    <p class="about-more">More tools: <a href="../index.html#tools">see all Pick &amp; Race pickers</a> · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy</a></p>
+  </section>
+
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy policy</a></div>
+</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage"), face = $("face"), statusEl = $("status"), subEl = $("sub");
+  const HISTORY_SECONDS = 60;
+
+  let ctx = null, analyser = null, stream = null, buf = null, raf = 0, running = false;
+  let smooth = 0, history = [], lastHistPush = 0;
+  let loudSince = null, struck = false, strikes = 0, peak = 0, sum = 0, n = 0, overFrames = 0;
+  let lastBeep = 0;
+
+  const limit = () => +$("limit").value;
+  const sens = () => +$("sens").value;
+  const grace = () => +$("grace").value;
+
+  // Map microphone loudness (dBFS) to a friendly 0-100 scale. -70 dB ≈ silence, -10 dB ≈ very loud.
+  function toLevel(rms) {
+    const db = 20 * Math.log10(Math.max(rms, 1e-8));
+    return Math.max(0, Math.min(100, ((db + 70) / 60) * 100 + sens()));
+  }
+
+  function setState(s) {
+    if (stage.dataset.state === s) return;
+    stage.dataset.state = s;
+    stage.classList.toggle("flash", s === "loud");
+    const map = {
+      idle: ["🎤", "Press “Start listening”", "Your browser will ask to use the microphone."],
+      ok:   ["😊", "Nice and calm", "Right where we want it."],
+      warn: ["😬", "Getting louder…", "Voices down a little, please."],
+      loud: ["🙉", "Too loud!", "Quiet voices, everyone."],
+    };
+    const [f, t, sb] = map[s]; face.textContent = f; statusEl.textContent = t; subEl.textContent = sb;
+  }
+
+  function beep() {
+    if (!ctx || !$("beep").checked) return;
+    const now = ctx.currentTime;
+    if (now - lastBeep < 3) return;      // at most one beep every 3 seconds
+    lastBeep = now;
+    [0, 0.18].forEach((d, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = i ? 523 : 659;
+      g.gain.setValueAtTime(0.0001, now + d);
+      g.gain.exponentialRampToValueAtTime(0.25, now + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + d + 0.16);
+      o.connect(g).connect(ctx.destination);
+      o.start(now + d); o.stop(now + d + 0.18);
+    });
+  }
+
+  function drawHistory() {
+    const c = $("history"), g = c.getContext("2d");
+    const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const css = getComputedStyle(document.documentElement);
+    const ink = css.getPropertyValue("--ink").trim(), marker = css.getPropertyValue("--marker").trim();
+    const ly = h - (limit() / 100) * h;
+    g.strokeStyle = marker; g.setLineDash([6, 4]); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(0, ly); g.lineTo(w, ly); g.stroke(); g.setLineDash([]);
+    if (history.length < 2) return;
+    g.strokeStyle = ink; g.lineWidth = 2; g.lineJoin = "round"; g.beginPath();
+    history.forEach((v, i) => {
+      const x = (i / (HISTORY_SECONDS * 10 - 1)) * w, y = h - (v / 100) * h - 1;
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    });
+    g.stroke();
+  }
+
+  function renderStats() {
+    $("sStrikes").textContent = strikes;
+    $("sPeak").textContent = Math.round(peak);
+    $("sAvg").textContent = n ? Math.round(sum / n) : 0;
+    $("sOver").textContent = (n ? Math.round((overFrames / n) * 100) : 0) + "%";
+  }
+
+  function frame(now) {
+    if (!running) return;
+    analyser.getFloatTimeDomainData(buf);
+    let s = 0;
+    for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+    const raw = toLevel(Math.sqrt(s / buf.length));
+    // Fast attack, slow release so the meter feels alive but not twitchy.
+    smooth = raw > smooth ? smooth + (raw - smooth) * 0.5 : smooth + (raw - smooth) * 0.08;
+
+    const L = limit(), lv = Math.round(smooth);
+    $("fill").style.width = smooth + "%";
+    $("level").textContent = lv;
+    $("meter").setAttribute("aria-valuenow", lv);
+
+    const over = smooth >= L, near = smooth >= L * 0.75;
+    setState(over ? "loud" : near ? "warn" : "ok");
+
+    if (over) {
+      if (loudSince === null) loudSince = now;
+      if (!struck && (now - loudSince) / 1000 >= grace()) { struck = true; strikes++; beep(); }
+      else if (struck && (now - loudSince) / 1000 >= grace() + 6) { loudSince = now; struck = false; } // still loud: strike again after 6s
+    } else { loudSince = null; struck = false; }
+
+    peak = Math.max(peak, smooth); sum += smooth; n++; if (over) overFrames++;
+    if (now - lastHistPush >= 100) {
+      lastHistPush = now; history.push(smooth);
+      if (history.length > HISTORY_SECONDS * 10) history.shift();
+      drawHistory(); renderStats();
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  async function start() {
+    $("error").classList.remove("show");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return showError("This browser can't access a microphone. Try a recent Chrome, Edge, Firefox or Safari, and open the page over https.");
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch (e) {
+      const denied = e && (e.name === "NotAllowedError" || e.name === "SecurityError");
+      return showError(denied
+        ? "Microphone access was blocked. Click the lock icon next to the address bar, allow the microphone, then press Start again."
+        : "No microphone was found. Plug one in and try again.");
+    }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") await ctx.resume();
+    analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
+    ctx.createMediaStreamSource(stream).connect(analyser);
+    buf = new Float32Array(analyser.fftSize);
+    running = true; smooth = 0;
+    $("startBtn").textContent = "Stop listening"; $("startBtn").classList.remove("marker");
+    $("resetBtn").style.display = "";
+    raf = requestAnimationFrame(frame);
+  }
+
+  function stop() {
+    running = false; cancelAnimationFrame(raf);
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    if (ctx) ctx.close();
+    ctx = analyser = stream = null; loudSince = null; struck = false;
+    $("startBtn").textContent = "Start listening"; $("startBtn").classList.add("marker");
+    $("fill").style.width = "0%"; $("level").textContent = "0";
+    stage.dataset.state = ""; setState("idle");
+  }
+
+  function showError(msg) { const e = $("error"); e.textContent = msg; e.classList.add("show"); }
+
+  function reset() {
+    strikes = 0; peak = 0; sum = 0; n = 0; overFrames = 0; history = []; loudSince = null; struck = false;
+    renderStats(); drawHistory();
+  }
+
+  function updateLimitUI() {
+    $("limitOut").textContent = limit();
+    $("limitMark").style.left = limit() + "%";
+    // Zones follow the limit: green to 75% of it, yellow to it, red above.
+    const g = limit() * 0.75, y = limit();
+    $("zones").style.background = `linear-gradient(90deg,var(--chalk) 0 ${g}%,var(--pencil) ${g}% ${y}%,var(--marker) ${y}% 100%)`;
+    drawHistory();
+  }
+
+  $("startBtn").addEventListener("click", () => (running ? stop() : start()));
+  $("resetBtn").addEventListener("click", reset);
+  $("limit").addEventListener("input", () => {
+    updateLimitUI();
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.limit === limit() ? "true" : "false"));
+  });
+  $("sens").addEventListener("input", () => { const v = sens(); $("sensOut").textContent = (v > 0 ? "+" : "") + v; });
+  $("grace").addEventListener("input", () => { $("graceOut").textContent = grace() + "s"; });
+  document.querySelectorAll("#presets button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#presets button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    $("limit").value = b.dataset.limit; updateLimitUI();
+  }));
+
+  const setProjector = (on) => {
+    document.body.classList.toggle("projector", on);
+    if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setTimeout(drawHistory, 50);
+  };
+  $("projBtn").addEventListener("click", () => setProjector(true));
+  $("exitProj").addEventListener("click", () => setProjector(false));
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) document.body.classList.remove("projector"); setTimeout(drawHistory, 50); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.body.classList.remove("projector"); });
+  window.addEventListener("resize", drawHistory);
+  window.addEventListener("pagehide", () => { if (running) stop(); });
+
+  updateLimitUI(); renderStats();
+})();
+</script>
+
+</body>
+</html>

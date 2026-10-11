@@ -131,6 +131,7 @@
       <a class="tool-card" href="tools/tournament-bracket.html"><span class="tab mix">mix</span><span class="icon">🏆</span><h3>Tournament Bracket</h3><p>Seed the class and run a bracket.</p></a>
       <a class="tool-card" href="tools/weighted-picker.html"><span class="tab mix">mix</span><span class="icon">⚖️</span><h3>Weighted Picker</h3><p>Give some names better odds, quietly.</p></a>
       <a class="tool-card" href="tools/elimination-mode.html"><span class="tab mix">mix</span><span class="icon">🕳️</span><h3>Elimination Mode</h3><p>Narrow a shuffled list to one survivor.</p></a>
+      <a class="tool-card" href="tools/noise-detector.html"><span class="tab mix">mix</span><span class="icon">🔊</span><h3>Noise Detector</h3><p>A live green-yellow-red noise meter for the room.</p></a>
       <a class="tool-card" href="tools/yes-no-wheel.html"><span class="tab mix">mix</span><span class="icon">🎯</span><h3>Yes / No Wheel</h3><p>Not a name picker — a decision wheel.</p></a>
     </div>
   </section>
@@ -162,7 +163,7 @@
     "duck-race": "duck", "rocket-race": "rocket", "turtle-race": "turtle", "ball-drop": "ball",
     "balloon-pop": "balloon", "spinning-wheel": "wheel", "slot-machine": "slot", "mystery-card-flip": "card",
     "team-generator": "team", "tournament-bracket": "bracket", "weighted-picker": "weighted",
-    "elimination-mode": "elim", "yes-no-wheel": "yesno", "claw-machine": "weighted", "fishing-game": "fishing",
+    "elimination-mode": "elim", "yes-no-wheel": "yesno", "claw-machine": "weighted", "fishing-game": "fishing", "noise-detector": "weighted",
   };
   document.querySelectorAll(".tool-card").forEach((card) => {
     const slug = (card.getAttribute("href") || "").split("/").pop().replace(".html", "");
