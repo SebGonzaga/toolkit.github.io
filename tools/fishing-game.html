@@ -56,19 +56,26 @@
   .fish.dir-l { flex-direction: row-reverse; }
   .fish.dir-r { transform-origin: 100% 50%; }
   .fish.dir-l { transform-origin: 0% 50%; }
-  .fish-tail { width: 0; height: 0; border-top: 0.78em solid transparent; border-bottom: 0.78em solid transparent; flex: none; }
-  .fish.dir-r .fish-tail { border-left: 1.2em solid var(--fc); margin-right: -2px; }
-  .fish.dir-l .fish-tail { border-right: 1.2em solid var(--fc); margin-left: -2px; }
-  .fish-body { position: relative; background: var(--fc); border-radius: 999px; padding: 0.42em 0.9em; min-width: 3.2em; justify-content: center; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.12), 0 2px 5px rgba(0,0,0,0.28); display: flex; align-items: center; }
-  .fish.dir-r .fish-body { padding-right: 1.6em; }
-  .fish.dir-l .fish-body { padding-left: 1.6em; }
-  .fish-eye { position: absolute; top: 0.5em; width: 0.42em; height: 0.42em; border-radius: 50%; background: #fff; border: 0.12em solid var(--ink); box-sizing: border-box; }
-  .fish.dir-r .fish-eye { right: 0.55em; }
-  .fish.dir-l .fish-eye { left: 0.55em; }
-  .fish-name { font-family: var(--font-display); font-weight: 800; color: var(--ink); line-height: 1.1; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; font-size: 1.1em; }
+  .fish-art { position: absolute; left: 0; right: 0; top: -22%; height: 144%; width: 100%; overflow: visible; pointer-events: none; z-index: 0;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.28)); }
+  .fish.dir-l .fish-art { transform: scaleX(-1); }
+  .fish-tail { width: 2em; height: 1.5em; flex: none; position: relative; z-index: 1; }
+  .fish-body { position: relative; z-index: 1; padding: 0.55em 0.8em; min-width: 3.2em; justify-content: center; display: flex; align-items: center; }
+  .fish.dir-r .fish-body { padding-right: 1.5em; }
+  .fish.dir-l .fish-body { padding-left: 1.5em; }
+  .fish-eye { position: absolute; top: 0.45em; width: 0.62em; height: 0.62em; border-radius: 50%; box-sizing: border-box;
+    background: radial-gradient(circle at 34% 30%, #fff 0 14%, #111 16% 52%, #f6d36b 56% 70%, #fff 72%); border: 0.06em solid rgba(0,0,0,0.55); }
+  .fish.dir-r .fish-eye { right: 0.5em; }
+  .fish.dir-l .fish-eye { left: 0.5em; }
+  .tail-g, .fin-g { transform-box: fill-box; }
+  .tail-g { transform-origin: 100% 50%; animation: tailWag 0.55s ease-in-out infinite alternate; animation-delay: var(--wd, 0s); }
+  .fin-g { transform-origin: 90% 10%; animation: finFlap 0.8s ease-in-out infinite alternate; animation-delay: var(--wd, 0s); }
+  @keyframes tailWag { from { transform: skewY(-14deg) scaleX(0.92); } to { transform: skewY(14deg) scaleX(1.04); } }
+  @keyframes finFlap { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+  .fish-name { font-family: var(--font-display); font-weight: 800; color: var(--ink); line-height: 1.1; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; font-size: 1.1em; text-shadow: 0 0 3px rgba(255,255,255,0.75), 0 0 1px rgba(255,255,255,0.9); }
   .fish.hooked { z-index: 5; }
   .fish.dim { opacity: 0.4; }
-  .fish.caught .fish-body { box-shadow: inset 0 -4px 0 rgba(0,0,0,0.12), 0 0 0 3px var(--pencil), 0 0 24px rgba(239,185,60,0.95); }
+  .fish.caught .fish-art { filter: drop-shadow(0 0 2px var(--pencil)) drop-shadow(0 0 4px var(--pencil)) drop-shadow(0 0 16px rgba(239,185,60,0.95)); }
   .fish.revealed .fish-name { animation: namePop 0.4s cubic-bezier(.2,1.6,.4,1); }
   @keyframes namePop { from { transform: scale(0.4); } to { transform: scale(1); } }
 
@@ -92,7 +99,7 @@
     .scene { height: 400px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .bubble, .alert-pop, .fish.revealed .fish-name { animation: none !important; }
+    .bubble, .alert-pop, .fish.revealed .fish-name, .tail-g, .fin-g { animation: none !important; }
   }
 </style>
 <link rel="stylesheet" href="../assets/css/responsive.css">
@@ -249,6 +256,30 @@ Isla</textarea>
     f.el.classList.toggle("dir-r", d > 0);
     f.el.classList.toggle("dir-l", d < 0);
   }
+  // Realistic fish drawing (faces right; CSS mirrors it for left-swimmers). Stretches to fit the name.
+  function fishArt(i) {
+    const g = "fg" + i;
+    return `<svg class="fish-art" viewBox="0 0 120 70" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color:color-mix(in srgb, var(--fc) 62%, #000)"/>
+        <stop offset="0.38" style="stop-color:var(--fc)"/>
+        <stop offset="0.72" style="stop-color:color-mix(in srgb, var(--fc) 55%, #fff)"/>
+        <stop offset="1" style="stop-color:color-mix(in srgb, var(--fc) 22%, #fff)"/>
+      </linearGradient></defs>
+      <g class="tail-g"><path d="M27,35 L1,8 Q10,35 1,62 Z" fill="var(--fc)" stroke="rgba(0,0,0,0.3)" stroke-width="0.8" stroke-linejoin="round"/>
+        <path d="M24,35 L7,17 M24,35 L6,35 M24,35 L7,53" stroke="rgba(0,0,0,0.22)" stroke-width="0.7" fill="none"/></g>
+      <path d="M44,17 Q50,0 66,2 Q78,5 86,15 Z" fill="var(--fc)" stroke="rgba(0,0,0,0.3)" stroke-width="0.8" stroke-linejoin="round"/>
+      <path d="M52,17 L54,6 M60,15 L62,4 M68,14 L72,6" stroke="rgba(0,0,0,0.22)" stroke-width="0.6" fill="none"/>
+      <g class="fin-g"><path d="M58,54 Q60,69 76,63 Q70,58 70,54 Z" fill="var(--fc)" stroke="rgba(0,0,0,0.3)" stroke-width="0.8" stroke-linejoin="round"/></g>
+      <path d="M22,31 C36,13 64,11 90,14 C108,17 119,28 120,35 C119,42 108,53 90,56 C64,59 36,57 22,39 Z" fill="url(#${g})" stroke="rgba(0,0,0,0.38)" stroke-width="1" stroke-linejoin="round"/>
+      <path d="M30,34 Q70,30 98,34" stroke="rgba(0,0,0,0.16)" stroke-width="0.9" fill="none"/>
+      <path d="M44,22 q6,13 0,26 M54,20 q6,15 0,30 M64,19 q6,16 0,32 M74,19 q6,16 0,32 M84,21 q5,14 0,28" stroke="rgba(255,255,255,0.2)" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <path d="M96,20 Q104,35 96,50" stroke="rgba(0,0,0,0.3)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      <path d="M32,25 C52,15 78,15 96,19" stroke="rgba(255,255,255,0.35)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <path d="M118,35 Q113,38 109,36" stroke="rgba(0,0,0,0.45)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <g class="fin-g"><path d="M88,40 Q72,50 64,45 Q72,37 88,40 Z" fill="var(--fc)" stroke="rgba(0,0,0,0.35)" stroke-width="0.8" stroke-linejoin="round"/></g>
+    </svg>`;
+  }
   // `names` are shuffled by the caller so a fish's colour and place never hint at who it is.
   function buildFish(names) {
     fishLayer.innerHTML = "";
@@ -259,7 +290,8 @@ Isla</textarea>
       const el = document.createElement("div");
       el.className = "fish dir-r";
       el.style.setProperty("--fc", COLORS[i % COLORS.length]);
-      el.innerHTML = `<span class="fish-tail"></span><span class="fish-body"><span class="fish-eye"></span><span class="fish-name">?</span></span>`;
+      el.style.setProperty("--wd", (-Math.random() * 0.8).toFixed(2) + "s");
+      el.innerHTML = fishArt(i) + `<span class="fish-tail"></span><span class="fish-body"><span class="fish-eye"></span><span class="fish-name">?</span></span>`;
       fishLayer.appendChild(el);
       fish.push({
         el, label: el.querySelector(".fish-name"), name,
