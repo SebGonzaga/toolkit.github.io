@@ -237,9 +237,9 @@ Isla</textarea>
   let pegsHit = 0, lastPingAt = 0;
   let gateOpen = 0, gateTarget = 0;
   let hopperShake = 0;
+  let coneAlpha = 0;
   let shakeAmt = 0;
-  let suspense = 0, suspTarget = 0;   // 0..1 spotlight/heartbeat tension
-  let holdAt = 0, pending = null;
+  let suspense = 0, suspTarget = 0;   // 0..1 slow-mo / tension (bars, tint, heartbeat edge)
 
   const ball = { x: HOP_X, y: GATE_Y - 12, vx: 0, vy: 0, spin: 0, squash: 0, trail: [] };
   const cam = { x: W / 2, y: H / 2, z: 1, tx: W / 2, ty: H / 2, tz: 1 };
@@ -471,6 +471,7 @@ Isla</textarea>
     while (steps < 9000) {
       steps++;
       vy = Math.min(VMAX, vy + G * DT);
+      if (slowT === null && y >= NECK_TOP - 170) slowT = t;   // slow-mo kicks in a few rows above the funnel
       if (y < NECK_TOP) {
         // Open peg field: gravity + collisions + a very gentle "tilt" toward the
         // target that grows with depth. It never overrides a bounce.
@@ -496,7 +497,6 @@ Isla</textarea>
             }
           }
         }
-        if (slowT === null && y >= NECK_TOP - 80) slowT = t;   // slow-mo kicks in here
         // stuck-breaker: if we barely moved down in ~0.4s, knock it loose
         if (++chkStep >= 120) { if (y - chkY < 4) { vx += (Math.random() < 0.5 ? -1 : 1) * 240; stuck++; } chkY = y; chkStep = 0; }
       } else if (y < DIV_TOP) {
@@ -540,16 +540,14 @@ Isla</textarea>
 
   // A "player" walks a recorded sim forward on a chosen clock (O(1) amortised).
   function makePlayer(sim, duration, startAt, targetX, isGhost) {
-    // Time warp: normal speed through the peg field, then slow motion for the
-    // final approach. The total still equals the slider, so the clock hits 0
-    // exactly when the ball comes to rest.
-    const tailReal = clamp(duration * 0.42, Math.min(1.6, duration * 0.6), 4.6);
+    // Time warp: normal speed through the peg field, then a slow-motion crawl for the final approach
+    // that keeps getting slower. The total still equals the slider, so the clock hits 0 as the ball rests.
+    const tailReal = clamp(duration * 0.5, Math.min(2.2, duration * 0.65), 5.6);
     const preReal = Math.max(0.05, duration - tailReal);
     const rawPre = clamp(sim.slowT, 0.05, sim.rawDuration - 0.05);
     const rawTail = sim.rawDuration - rawPre;
-    const pl = { sim, duration, startAt, targetX, isGhost, preReal, tailReal, rawPre, rawTail, tail: false, lastBin: -1, si: 0, hi: 0, x: 0, y: 0, vx: 0, vy: 0, done: false };
-    // The tail decelerates (ease-out power curve): slow-mo that keeps getting slower, a near-freeze at the end.
     const CRAWL = 1.8;
+    const pl = { sim, duration, startAt, targetX, isGhost, preReal, tailReal, rawPre, rawTail, tail: false, lastBin: -1, si: 0, hi: 0, x: 0, y: 0, vx: 0, vy: 0, done: false };
     pl.toRaw = (el) => (el <= preReal ? (el / preReal) * rawPre : rawPre + (1 - Math.pow(1 - Math.min(1, (el - preReal) / tailReal), CRAWL)) * rawTail);
     pl.toReal = (rt) => (rt <= rawPre ? (rt / rawPre) * preReal : preReal + (1 - Math.pow(Math.max(0, 1 - (rt - rawPre) / rawTail), 1 / CRAWL)) * tailReal);
     sim.hits.forEach((h) => { h.rt = pl.toReal(h.t); });
@@ -633,34 +631,28 @@ Isla</textarea>
     sparks(p.x, p.y, "#ffd24a", clamp(Math.round(speed / 150), 3, 11), 280);
     if (loud) {
       pegsHit++;
-      if (now - lastPingAt > 0.035) {
-        // pegs play a melody: pitch follows the ball left-to-right, loudness follows impact strength
-        fx("plinkoPeg", Math.floor(clamp((p.x - L) / FW, 0, 0.999) * 9) + (Math.random() < 0.5 ? 0 : 1), clamp(speed / 1400, 0.2, 1));
-        lastPingAt = now;
-      }
+      if (now - lastPingAt > 0.045) { fx("ping", p.row + Math.floor(Math.random() * 3)); lastPingAt = now; }
       ball.squash = clamp(0.28 + speed / 2600, 0.3, 0.55);
       if (speed > 650) ring(p.x, p.y, "#ffd24a", 4, 10 + Math.min(18, speed / 90), 0.28);   // hard hits flash a shockwave
       if (!reduceMotion) shakeAmt = Math.max(shakeAmt, p.row >= cfg.rows - 3 ? 3.4 : clamp(speed / 650, 0.5, 2.6));
     }
   }
 
-  // Near the end the ball sometimes goes off-line before it settles on the winner.
-  // It is NOT random every time: ~30% of drops stay calm, the rest pick one style.
-  // Every style fades to zero offset at both ends of the funnel, so the result never changes.
+  // Near the end the ball sometimes goes off-line before it settles on the winner. 50% of drops do the
+  // "far" move, the rest pick a milder style (or stay calm). Every style fades to zero offset at both
+  // ends of the funnel, so the result never changes.
   function planChaos(targetX) {
     const r = Math.random(), bw = cfg.binW;
     const kind = r < 0.08 ? "calm" : r < 0.16 ? "teeter" : r < 0.26 ? "swing" : r < 0.38 ? "zigzag" : r < 0.50 ? "scatter" : "far";
     const maxAmp = Math.min(FW * 0.34, bw * 3.4);
-    // "far": after the slow-mo crawl the ball suddenly rockets toward the far side of the board, then swings back.
-    const farDir = (targetX - L) > (R - targetX) ? -1 : 1;
+    const farDir = (targetX - L) > (R - targetX) ? -1 : 1;           // head for the side with more room
     const room = farDir < 0 ? targetX - L - cfg.bR : R - cfg.bR - targetX;
     return {
       kind,
       dir: kind === "far" ? farDir : (Math.random() < 0.5 ? -1 : 1),
       amp: kind === "far" ? clamp(room * rand(0.75, 1), bw * 2, FW * 0.46) : kind === "teeter" ? Math.min(bw * 0.95, 70) : clamp(bw * rand(1.6, 3.2), 40, maxAmp),
-      s1: false, s2: false, s3: false,
-      freq: rand(1.4, 3.2),
-      ph1: rand(0, 6.28), ph2: rand(0, 6.28), f2: rand(2.6, 4.6),
+      s0: false, s1: false, s2: false, s3: false, farHold: false,
+      freq: rand(1.4, 3.2), ph1: rand(0, 6.28), ph2: rand(0, 6.28), f2: rand(2.6, 4.6),
       active: false
     };
   }
@@ -668,13 +660,16 @@ Isla</textarea>
   function chaosOffset(c, p, tNeck) {
     if (!c || c.kind === "calm") return { dx: 0, dy: 0 };
     if (c.kind === "far") {
-      // Hang in the crawl, dash far out, hold, then swing back. Driven by whichever is
-      // further along, funnel depth or real seconds, so the dash is fast even in slow-mo.
-      const u = Math.max(clamp(p, 0, 1), clamp(tNeck / 1.6, 0, 1));
+      // Beat 1: hang in the slow-mo. 2: wind-up (lean AWAY and shiver). 3: rocket far out. 4: hold there.
+      // 5: swing back to the lane. Driven by whichever is further along, funnel depth or real seconds,
+      // so the dash is fast even in slow-mo.
+      const u = Math.max(clamp(p, 0, 1), clamp(tNeck / 2.6, 0, 1));
       const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-      const k = ss(0.18, 0.30, u) - ss(0.70, 0.94, u);
-      const hop = -Math.sin(Math.PI * clamp((u - 0.18) / 0.76, 0, 1)) * 16;
-      return { dx: c.dir * c.amp * k, dy: hop, k, u };
+      const k = ss(0.30, 0.40, u) - ss(0.74, 0.95, u);
+      const wind = ss(0.14, 0.29, u) * (1 - ss(0.29, 0.31, u));
+      const shiver = wind * Math.sin(tNeck * 70) * 1.6;
+      const hop = -Math.sin(Math.PI * clamp((u - 0.30) / 0.65, 0, 1)) * 16;
+      return { dx: c.dir * c.amp * k - c.dir * c.amp * 0.07 * wind + shiver, dy: hop + wind * 3, k, u, wind };
     }
     const sp = Math.sin(Math.PI * clamp(p, 0, 1));
     const env = Math.pow(sp, 0.7);
@@ -688,13 +683,13 @@ Isla</textarea>
   }
 
   function startDrop() {
-    if (mode === "countdown" || mode === "drop" || mode === "hold") return;
+    if (mode === "countdown" || mode === "drop") return;
     const roster = getNames();
     if (roster.length < 2) { statusText.textContent = "Add at least two names"; return; }
     ghost = null;
     winnerBanner.classList.remove("show");
     stage.classList.remove("finished-glow");
-    winnerIdx = -1; winnerName = ""; parts.length = 0; suspense = 0; suspTarget = 0; pending = null;
+    winnerIdx = -1; winnerName = ""; parts.length = 0; coneAlpha = 0; suspense = 0; suspTarget = 0;
 
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
@@ -714,7 +709,7 @@ Isla</textarea>
     clockEl.textContent = duration.toFixed(1) + "s";
     ball.x = HOP_X; ball.y = GATE_Y - cfg.bR; ball.trail.length = 0; ball.spin = 0;
     gateTarget = 0;
-    fx("plinkoLoad");
+    fx("rattle");
 
     const labels = ["READY!", "3", "2", "1", "Drop!"];
     let launched = false;
@@ -726,30 +721,22 @@ Isla</textarea>
       play.result = result; play.idx = idx;
       play.chaos = planChaos(targetX);
       statusText.textContent = "Dropping…";
-      fx("plinkoGate");
+      fx("drop");
     };
     if (typeof SuspenseFX !== "undefined") SuspenseFX.countdown(stage, labels, (label, i) => { if (i === labels.length - 1) launch(); }, null);
     else setTimeout(launch, 2500);
   }
 
-  function enterHold() {
-    mode = "hold"; holdAt = now; pending = play;
-    ball.x = binCenter(pending.idx); ball.y = LANE_FLOOR - cfg.bR; ball.squash = 0.35;
-    statusText.textContent = "And the winner is…";
-    clockEl.textContent = "0.0s";
-    if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 3);
-  }
-
-  function reveal() {
-    const { result, idx } = pending;
-    suspTarget = 0;
+  function finishDrop() {
+    const { result, idx } = play;
     mode = "celebrate"; celebrateAt = now; winnerIdx = idx; winnerName = result.winner;
+    suspTarget = 0;
     startBtn.disabled = false;
     gateTarget = 0;
     ball.x = binCenter(idx); ball.y = LANE_FLOOR - cfg.bR; ball.squash = 0.4;
     statusText.textContent = "Landed!";
     clockEl.textContent = "🔴";
-    fx("plinkoReveal");
+    fx("matchWin"); setTimeout(() => fx("fanfare"), 250);
     if (!reduceMotion) shakeAmt = 7;
     stage.classList.add("finished-glow"); setTimeout(() => stage.classList.remove("finished-glow"), 1600);
     const cx = binCenter(idx), col = PALETTE[idx % PALETTE.length];
@@ -760,7 +747,7 @@ Isla</textarea>
     winnerBanner.innerHTML = `<span class="wb-eyebrow">🎯 Winner</span><span class="wb-name">🔴 The ball lands on ${escapeHtml(result.winner)}!</span>`;
     winnerBanner.classList.add("show");
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
-    play = null; pending = null;
+    play = null;
   }
 
   function renderHistory() {
@@ -782,39 +769,49 @@ Isla</textarea>
     gateOpen = lerp(gateOpen, gateTarget, 1 - Math.exp(-dt * 14));
     hopperShake = mode === "countdown" ? 1.6 : lerp(hopperShake, 0, 1 - Math.exp(-dt * 8));
     shakeAmt *= Math.exp(-dt * 7);
-    suspense = lerp(suspense, suspTarget, 1 - Math.exp(-dt * 3.5));
     ball.squash *= Math.exp(-dt * 11);
+    suspense = lerp(suspense, suspTarget, 1 - Math.exp(-dt * 3.5));
+    coneAlpha = mode === "celebrate" ? lerp(coneAlpha, 0.25, 1 - Math.exp(-dt * 2)) : coneAlpha;
 
     if (mode === "drop" && play) {
       if (now >= play.startAt) {
         samplePlayer(play, now);
         const pl = play;
-        // Final approach: slow motion, drumroll, spotlight and a camera push-in.
+        // Final approach: slow motion, drumroll, bars and tension.
         if (!pl.tail && pl.el >= pl.preReal) {
           pl.tail = true; suspTarget = 1;
           statusText.textContent = "Here it comes…";
-          fx("plinkoSuspense", pl.tailReal + 1.0);
+          fx("drumroll", pl.tailReal + 0.8);
         }
         let bx = pl.x, by = pl.y;
         pl.chaos.active = false;
+        let farPhase = false;
         if (pl.y > NECK_TOP && pl.y < DIV_TOP) {
           const p = (pl.y - NECK_TOP) / (DIV_TOP - NECK_TOP);
           if (pl.neckAt === undefined) pl.neckAt = now;
           const o = chaosOffset(pl.chaos, p, now - pl.neckAt);
           bx = clamp(bx + o.dx, L + cfg.bR, R - cfg.bR); by += o.dy;
           const c = pl.chaos;
+          if (!pl.waitSaid) { pl.waitSaid = true; statusText.textContent = "Wait for it…"; }
+          let wild = true;
           if (c.kind === "far") {
-            // punctuate the dash: whoosh + shockwave as it launches, a thud at the far end, whoosh on the way back
-            if (!c.s1 && o.u > 0.19) { c.s1 = true; fx("slideWhistle", 500, 2200, 0.28, 0.12); ring(bx, by, "#7ae8ff", 6, 60, 0.35); sparks(bx, by, "#ffffff", 14, 340); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 5); }
-            if (!c.s2 && o.u > 0.31) { c.s2 = true; fx("plinkoLand", 0); ring(bx, by, "#ffe08a", 6, 50, 0.4); sparks(bx, by, "#ff7ad9", 12, 260); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 4); }
-            if (!c.s3 && o.u > 0.72) { c.s3 = true; fx("slideWhistle", 1900, 600, 0.35, 0.1); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 3); }
+            wild = o.u > 0.30 && o.u < 0.95;
+            farPhase = o.u > 0.12 && o.u < 0.96;
+            // wind-up: a rising roll and a rumble as it leans away
+            if (!c.s0 && o.u > 0.15) { c.s0 = true; statusText.textContent = "Something's coming…"; fx("drumroll", 1.2); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 2.5); }
+            // launch: whoosh + shockwave, instant screen punch
+            if (!c.s1 && o.u > 0.31) { c.s1 = true; statusText.textContent = "WHOA — where's it going?!"; fx("slideWhistle", 500, 2200, 0.28, 0.12); ring(bx, by, "#4cc9f0", 6, 70, 0.4); sparks(bx, by, "#ffffff", 18, 380); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 6); }
+            // arrival: thud, then it hangs out there while the heartbeat races
+            if (!c.s2 && o.u > 0.41) { c.s2 = true; c.farHold = true; statusText.textContent = "Hold on…"; fx("thud"); ring(bx, by, "#ffe08a", 6, 56, 0.45); sparks(bx, by, "#ff8c42", 14, 280); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 5); }
+            // return: whoosh back
+            if (!c.s3 && o.u > 0.74) { c.s3 = true; c.farHold = false; statusText.textContent = "Swinging back!"; fx("slideWhistle", 1900, 600, 0.35, 0.1); if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 3); }
             const fast = Math.abs(o.k - (c.lastK || 0)) > 0.004; c.lastK = o.k;
-            if (fast) { sparks(bx, by, "#7ae8ff", 4, 220); ball.squash = Math.max(ball.squash, 0.3); }
+            if (fast) { sparks(bx, by, "#4cc9f0", 5, 240); ball.squash = Math.max(ball.squash, 0.3); }
           }
-          if (pl.chaos.kind !== "calm" && pl.chaos.kind !== "teeter" && p > 0.04 && p < 0.96) {
-            // wild flight: colourful streak, rumble and a ticking sound as it whips around
-            pl.chaos.active = true;
-            sparks(bx, by, pl.chaos.kind === "scatter" ? "#ff7ad9" : "#7ae8ff", 2, 170);
+          if (wild && c.kind !== "calm" && c.kind !== "teeter" && p > 0.04 && p < 0.96) {
+            // wild flight: colourful streak and rumble
+            c.active = true;
+            sparks(bx, by, c.kind === "scatter" ? "#b388ff" : "#4cc9f0", 2, 170);
             if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 1.8);
             ball.squash = Math.max(ball.squash, 0.18);
           }
@@ -822,13 +819,14 @@ Isla</textarea>
         ball.spin += ((bx - ball.x) / cfg.bR);
         ball.x = bx; ball.y = by; ball.vx = pl.vx; ball.vy = pl.vy;
         ball.trail.push({ x: bx, y: by, t: now });
-        while (ball.trail.length && now - ball.trail[0].t > 0.32) ball.trail.shift();
-        // roulette ticks as the ball crosses lane dividers
+        const trailLife = pl.chaos.kind === "far" && pl.chaos.active ? 0.6 : 0.32;
+        while (ball.trail.length && now - ball.trail[0].t > trailLife) ball.trail.shift();
+        // roulette ticks as the ball crosses lane dividers in the slow-mo
         if (pl.tail && pl.y > NECK_TOP - 30) {
           const bi = clamp(Math.floor((bx - L) / cfg.binW), 0, cfg.n - 1);
           if (bi !== pl.lastBin) {
             if (pl.lastBin >= 0) {
-              fx("plinkoTick", 1 - Math.min(1, Math.abs(bi - pl.idx) / 3));
+              fx("tick", 1 - Math.min(1, Math.abs(bi - pl.idx) / 3));
               sparks(L + Math.max(bi, pl.lastBin) * cfg.binW, DIV_TOP, "#ffe08a", 6, 170);
               if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 1.3);
             }
@@ -839,7 +837,7 @@ Isla</textarea>
         const onFloor = pl.y >= LANE_FLOOR - cfg.bR - 1;
         if (onFloor && !pl.wasFloor) {
           const k = pl.floorHits || 0; pl.floorHits = k + 1;
-          fx("plinkoLand", k);
+          if (k === 0) fx("thud");
           sparks(bx, LANE_FLOOR - 2, "#ffe08a", k === 0 ? 16 : 5, 260);
           if (k === 0) ring(bx, LANE_FLOOR - 4, "#ffe08a", 6, 46, 0.4);
           if (!reduceMotion) shakeAmt = Math.max(shakeAmt, Math.max(1.2, 5 - k * 1.5));
@@ -847,11 +845,14 @@ Isla</textarea>
         pl.wasFloor = onFloor;
         while (pl.hi < pl.sim.hits.length && pl.sim.hits[pl.hi].rt <= pl.el) { const h = pl.sim.hits[pl.hi++]; pegImpact(h.p, h.speed, true); }
         clockEl.textContent = Math.max(0, pl.duration - pl.el).toFixed(1) + "s";
-        // Camera stays on the whole board so every name is readable while the
-        // ball falls. Tension comes from slow-mo, sound, light and rumble instead.
-        setCam(W / 2, H / 2, 1);
+        if (pl.y > NECK_TOP - 40) coneAlpha = Math.min(0.5, coneAlpha + dt * 2.4);
+        // Camera keeps its original behaviour (follow, then zoom on the target lane), except during a far
+        // dash, when it pulls wider so you can watch the ball fly out and come back.
+        if (farPhase) setCam(lerp(pl.targetX, bx, 0.5), 610, 1.2);
+        else if (pl.y > NECK_TOP - 50) setCam(pl.targetX, 640, 1.9);
+        else setCam(HOP_X + (pl.x - HOP_X) * 0.5, pl.y + 50, 1.22);
         if (pl.tail && !reduceMotion) shakeAmt = Math.max(shakeAmt, 0.5 + 0.9 * suspense);
-        if (pl.el >= pl.duration) enterHold();
+        if (pl.el >= pl.duration) finishDrop();
       } else {
         setCam(HOP_X, 200, 1.35);
       }
@@ -859,13 +860,9 @@ Isla</textarea>
       setCam(HOP_X, 205, 1.35);
       ball.y = GATE_Y - cfg.bR - Math.abs(Math.sin(now * 22)) * 2.5;
       ball.x = HOP_X + Math.sin(now * 31) * 3;
-    } else if (mode === "hold") {
-      setCam(W / 2, H / 2, 1);       // hold the wide shot: the zoom is saved for the reveal
-      if (!reduceMotion) shakeAmt = Math.max(shakeAmt, 0.9);
-      if (now - holdAt >= 1.15) reveal();
     } else if (mode === "celebrate") {
       const e = now - celebrateAt;
-      if (e < 2.6) setCam(binCenter(winnerIdx), 620, 2.2); else setCam(W / 2, H / 2, 1);   // reveal: punch in on the winner
+      if (e < 2.4) setCam(binCenter(winnerIdx), 640, 2.2); else setCam(W / 2, H / 2, 1);
       if (e < 2.2 && Math.random() < dt * 14 && !reduceMotion) confetti(binCenter(winnerIdx), LANE_FLOOR - 10, 3, 0.9);
       // winner ball settles with a little hop
       ball.y = LANE_FLOOR - cfg.bR;
@@ -874,7 +871,7 @@ Isla</textarea>
       updateGhost(dt);
     }
 
-    const k = 1 - Math.exp(-dt * (mode === "celebrate" && now - celebrateAt < 0.7 ? 10 : 5));
+    const k = 1 - Math.exp(-dt * 5);
     cam.x = lerp(cam.x, cam.tx, k); cam.y = lerp(cam.y, cam.ty, k); cam.z = lerp(cam.z, cam.tz, k);
     updateParts(dt);
   }
@@ -1007,6 +1004,21 @@ Isla</textarea>
       ctx.restore(); ctx.globalCompositeOperation = "source-over";
     }
 
+    // funnel light cone guiding the ball to its lane
+    const coneTarget = play ? play.targetX : (winnerIdx >= 0 ? binCenter(winnerIdx) : null);
+    if (coneTarget !== null && coneAlpha > 0.01) {
+      const wide = Math.max(binW * 1.6, 130);
+      ctx.save(); ctx.beginPath(); ctx.rect(L, NECK_TOP - 20, FW, DIV_TOP - NECK_TOP + 20); ctx.clip();
+      ctx.globalCompositeOperation = "lighter";
+      const cg = ctx.createLinearGradient(0, NECK_TOP - 20, 0, DIV_TOP);
+      cg.addColorStop(0, "rgba(255,240,170,0)"); cg.addColorStop(1, `rgba(255,240,170,${coneAlpha})`);
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.moveTo(coneTarget - wide, NECK_TOP - 20); ctx.lineTo(coneTarget + wide, NECK_TOP - 20); ctx.lineTo(coneTarget + binW / 2, DIV_TOP); ctx.lineTo(coneTarget - binW / 2, DIV_TOP); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(255,224,138,${Math.min(1, coneAlpha * 1.6)})`; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(coneTarget - wide, NECK_TOP - 20); ctx.lineTo(coneTarget - binW / 2, DIV_TOP); ctx.moveTo(coneTarget + wide, NECK_TOP - 20); ctx.lineTo(coneTarget + binW / 2, DIV_TOP); ctx.stroke();
+      ctx.restore(); ctx.globalCompositeOperation = "source-over";
+    }
+
     // lit pegs (additive glow sprites, only the ones that were recently hit)
     for (const p of pegs) {
       const f = 1 - (now - p.litAt) / 0.4;
@@ -1017,7 +1029,7 @@ Isla</textarea>
     }
 
     // bin highlights: lane under the ball ("armed") and the pulsing winner
-    if ((mode === "drop" || mode === "hold") && play && ball.y > NECK_TOP - 30) {
+    if (mode === "drop" && play && ball.y > NECK_TOP - 30) {
       const bi = clamp(Math.floor((ball.x - L) / binW), 0, n - 1);
       const col = PALETTE[bi % PALETTE.length];
       ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = rgba(col, 0.22); ctx.fillRect(L + bi * binW, DIV_TOP, binW, LANE_FLOOR - DIV_TOP);
@@ -1047,9 +1059,6 @@ Isla</textarea>
       const sp = Math.hypot(ball.vx, ball.vy), ang = Math.atan2(ball.vy, ball.vx);
       const stretch = clamp(sp / 5000, 0, 0.22), sq = ball.squash;
       drawBallAt(ball.x, ball.y, 1, 1 + stretch - sq * 0.6, 1 - stretch * 0.6 + sq * 0.9, true, ang, ball.spin);
-    } else if (mode === "hold") {
-      const e = now - holdAt, wob = Math.abs(Math.sin(e * 14)) * Math.max(0, 1 - e * 1.6) * 5;
-      drawBallAt(ball.x, ball.y - wob, 1, 1 + ball.squash * 0.4, 1 - ball.squash * 0.4, true, 0, ball.spin);
     } else if (mode === "celebrate") {
       const e = now - celebrateAt, hop = Math.abs(Math.sin(e * 9)) * Math.max(0, 1 - e * 1.1) * 14;
       drawBallAt(ball.x, ball.y - hop, 1, 1 + ball.squash * 0.4, 1 - ball.squash * 0.4, true, 0, ball.spin);
@@ -1064,15 +1073,7 @@ Isla</textarea>
     }
     ctx.drawImage(vignette, 0, 0, W, H);
     if (suspense > 0.02) {
-      // Lights drop around the ball and the screen edges pulse like a heartbeat.
-      const bxs = W / 2 + (ball.x - cam.x) * cam.z, bys = H / 2 + (ball.y - cam.y) * cam.z;
-      const rr = 70 * cam.z;
-      const sg = ctx.createRadialGradient(bxs, bys, rr * 0.5, bxs, bys, rr * 2.8);
-      sg.addColorStop(0, "rgba(5,3,15,0)"); sg.addColorStop(1, `rgba(5,3,15,${(0.72 * suspense).toFixed(3)})`);
-      // dim only the area above the bins, so the names stay bright and readable
-      const clipY = Math.max(0, Math.min(H, H / 2 + (DIV_TOP - 4 - cam.y) * cam.z));
-      ctx.fillStyle = sg; ctx.fillRect(0, 0, W, clipY);
-      // slow-mo look: cool tint, letterbox bars sliding in, and a label
+      // slow-mo look: cool tint, letterbox bars sliding in, a label, and a heartbeat glow at the edges
       ctx.fillStyle = `rgba(40,70,160,${(0.10 * suspense).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
       const bar = 26 * suspense;
       ctx.fillStyle = "#04020c"; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
@@ -1082,9 +1083,9 @@ Isla</textarea>
         ctx.fillStyle = "#9fd8ff"; ctx.fillText("◀◀  SLOW-MO  ▶▶", W / 2, H - bar / 2 - 1);
         ctx.restore();
       }
-      const beat = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * (mode === "hold" ? 12 : 7.5));
+      const beat = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * ((play && play.chaos && play.chaos.farHold) ? 14 : 7.5));
       const hg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8);
-      hg.addColorStop(0, "rgba(255,40,70,0)"); hg.addColorStop(1, `rgba(255,40,70,${(0.22 * suspense * beat).toFixed(3)})`);
+      hg.addColorStop(0, "rgba(255,40,70,0)"); hg.addColorStop(1, `rgba(255,40,70,${(0.2 * suspense * beat).toFixed(3)})`);
       ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
     }
 
@@ -1166,8 +1167,8 @@ Isla</textarea>
 
   let rebuildTimer = null;
   function rebuildFromInputs() {
-    if (mode === "countdown" || mode === "drop" || mode === "hold") return;
-    winnerIdx = -1; ghost = null; ghostNextAt = now + 1.2; parts.length = 0;
+    if (mode === "countdown" || mode === "drop") return;
+    winnerIdx = -1; ghost = null; ghostNextAt = now + 1.2; parts.length = 0; coneAlpha = 0;
     if (mode === "celebrate") { mode = "idle"; winnerBanner.classList.remove("show"); }
     statusText.textContent = "Insert ball to play"; clockEl.textContent = "–";
     buildBoard(eligibleNames());
