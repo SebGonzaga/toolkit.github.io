@@ -502,11 +502,91 @@ const SoundFX = (() => {
   /** Rate-limited so a few dozen surging racers still read as one squeak here and there. */
   function drop() { slideWhistle(1300, 300, 0.55, 0.13); }
 
+  /* ---------------------------------------------------------------- Plinko / ball-drop kit
+     A little arcade soundtrack for the ball drop: hopper clink, trap-door clunk,
+     marimba pegs that play a pentatonic melody left-to-right, a slow-motion
+     riser with an accelerating heartbeat, roulette ticks over the bin dividers,
+     bin thuds, and a big reveal stinger. */
+  const PLINKO_SCALE = [392, 440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];
+
+  /** Ball loaded into the hopper: coin clink, ball thunk, rattle. */
+  function plinkoLoad() {
+    if (!allowed("plLoad", 300)) return;
+    tone(1568, 0.09, { type: "triangle", gain: 0.12 });
+    tone(2093, 0.2, { type: "triangle", gain: 0.1, delay: 0.07 });
+    noiseBurst(0.05, { filterType: "highpass", filterFreq: 3500, gain: 0.08 });
+    tone(110, 0.2, { gain: 0.22, glideTo: 70, delay: 0.14 });
+    rattle(0.8);
+  }
+  /** Trap door releases: latch clack, low clunk, falling whistle. */
+  function plinkoGate() {
+    if (!allowed("plGate", 400)) return;
+    noiseBurst(0.03, { filterType: "highpass", filterFreq: 2500, gain: 0.16 });
+    tone(180, 0.14, { type: "square", gain: 0.1, glideTo: 60, filter: { type: "lowpass", freq: 700 } });
+    tone(95, 0.26, { gain: 0.3, glideTo: 45, delay: 0.02 });
+    slideWhistle(1200, 350, 0.5, 0.07);
+  }
+  /** Peg hit: woody marimba pluck. i = scale degree (0-9), power = 0..1 impact strength. */
+  function plinkoPeg(i = 4, power = 0.6) {
+    if (!allowed("plPeg", 22)) return;
+    const f = PLINKO_SCALE[Math.max(0, Math.min(PLINKO_SCALE.length - 1, Math.round(i)))];
+    const g = 0.05 + 0.13 * Math.max(0, Math.min(1, power));
+    tone(f, 0.42, { gain: g });
+    tone(f * 4, 0.07, { gain: g * 0.35 });
+    tone(f * 0.5, 0.18, { type: "triangle", gain: g * 0.4 });
+    noiseBurst(0.012, { filterType: "bandpass", filterFreq: f * 3, q: 2, gain: 0.04 + 0.05 * power });
+  }
+  /** Slow-motion final approach: swelling riser + heartbeat that speeds up. Ends in a beat of near-silence. */
+  function plinkoSuspense(dur = 2.5) {
+    if (muted) return;
+    noiseBurst(dur, { filterType: "lowpass", filterFreq: 200, sweepTo: 2600, q: 2, gain: 0.09, fadeIn: dur * 0.8 });
+    tone(98, dur, { type: "sawtooth", gain: 0.07, glideTo: 196, attack: dur * 0.7, sustain: true, filter: { type: "lowpass", freq: 300, to: 1400 } });
+    tone(147, dur, { type: "triangle", gain: 0.05, glideTo: 294, attack: dur * 0.7, sustain: true, vibrato: 3, vibratoRate: 6 });
+    let t = 0.1, gap = 0.9, level = 0.16;
+    while (t < dur - 0.25) {
+      tone(70, 0.16, { gain: level, glideTo: 42, delay: t });
+      tone(62, 0.14, { gain: level * 0.75, glideTo: 40, delay: t + 0.16 });
+      t += gap; gap = Math.max(0.36, gap * 0.86); level = Math.min(0.3, level + 0.02);
+    }
+  }
+  /** Roulette tick as the ball crosses a lane divider; near = 0..1, pitch rises as it closes in on its lane. */
+  function plinkoTick(near = 0.5) {
+    if (!allowed("plTick", 40)) return;
+    const f = 700 + 900 * Math.max(0, Math.min(1, near));
+    noiseBurst(0.015, { filterType: "highpass", filterFreq: 3000, gain: 0.1 });
+    tone(f, 0.05, { type: "square", gain: 0.07, glideTo: f * 0.6, filter: { type: "lowpass", freq: 2500 } });
+    tone(f / 2, 0.09, { type: "triangle", gain: 0.1 });
+  }
+  /** Ball hits the bin floor. kind 0 = first impact (with coin clink), 1+ = smaller bounces. */
+  function plinkoLand(kind = 0) {
+    const k = Math.max(0.25, 1 - kind * 0.35);
+    tone(130, 0.22, { gain: 0.34 * k, glideTo: 55 });
+    noiseBurst(0.06, { filterType: "lowpass", filterFreq: 900, gain: 0.18 * k });
+    if (kind === 0) {
+      tone(2349, 0.25, { type: "triangle", gain: 0.07 });
+      tone(3136, 0.3, { type: "triangle", gain: 0.05, delay: 0.04 });
+    } else tone(600 + 1200 * k, 0.06, { type: "triangle", gain: 0.04 * k });
+  }
+  /** The big reveal: boom, rising bell arpeggio, held chord, cymbal, party popper, crowd. */
+  function plinkoReveal() {
+    if (!allowed("plReveal", 1200)) return;
+    cymbal();
+    tone(65, 0.5, { gain: 0.35, glideTo: 40 });
+    [523.25, 659.25, 783.99, 1046.5, 1318.51, 1568].forEach((f, i) => {
+      tone(f, 0.45, { type: "triangle", gain: 0.16, delay: i * 0.07 });
+      tone(f * 2, 0.3, { gain: 0.05, delay: i * 0.07 });
+    });
+    [523.25, 659.25, 783.99, 1046.5].forEach((f) => tone(f, 0.9, { type: "triangle", gain: 0.09, delay: 0.45, sustain: true }));
+    later(partyPopper, 120);
+    later(cheer, 300);
+    later(sparkle, 650);
+  }
+
   /** Index-page hover previews: each tool card "says" something. */
   function preview(kind) {
     const map = {
       duck: () => quack(1), rocket: () => laserZap(1), turtle: () => plod(0.8),
-      ball: () => ping(3), balloon: () => squeak(1.1), wheel: () => { tick(1); later(() => tick(0.9), 90); later(() => tick(0.8), 200); },
+      ball: () => { plinkoPeg(7, 0.7); later(() => plinkoPeg(5, 0.6), 110); later(() => plinkoPeg(3, 0.6), 230); later(() => plinkoLand(0), 380); }, balloon: () => squeak(1.1), wheel: () => { tick(1); later(() => tick(0.9), 90); later(() => tick(0.8), 200); },
       slot: () => kaChing(), card: () => flutter(), team: () => deal(2), bracket: () => matchWin(),
       weighted: () => thud(), elim: () => uhoh(), yesno: () => answer("yes"), fishing: () => splash(false),
     };
@@ -609,6 +689,7 @@ const SoundFX = (() => {
     beep, countdownStep, splash, crowdSwell, cheer, fanfare, winner, leadChange,
     tick, reelTick, reelStop, lever, kaChing, drumroll, ping, matchWin, flutter, flipReveal,
     deal, rattle, stamp, answer, eliminated, plod, sputter, rocketLaunch, laserZap, explosionBoom, balloonPop, drop,
+    plinkoLoad, plinkoGate, plinkoPeg, plinkoSuspense, plinkoTick, plinkoLand, plinkoReveal,
     preview,
   };
 })();
