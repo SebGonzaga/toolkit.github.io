@@ -125,6 +125,7 @@
       <a class="tool-card" href="tools/spinning-wheel.html"><span class="tab spin">spin</span><span class="icon">🎡</span><h3>Spinning Wheel</h3><p>The classic. Spin it, watch it settle.</p></a>
       <a class="tool-card" href="tools/slot-machine.html"><span class="tab spin">spin</span><span class="icon">🎰</span><h3>Slot Machine</h3><p>Reels tumble and lock in a name.</p></a>
       <a class="tool-card" href="tools/claw-machine.html"><span class="tab spin">spin</span><span class="icon">🕹️</span><h3>Claw Machine</h3><p>The claw creeps, drops, and grabs a name — will it hold on?</p></a>
+      <a class="tool-card" href="tools/fishing-game.html"><span class="tab spin">spin</span><span class="icon">🎣</span><h3>Fishing Game</h3><p>Aim the hook cannon, shoot a mystery fish, reveal the winner.</p></a>
       <a class="tool-card" href="tools/mystery-card-flip.html"><span class="tab spin">spin</span><span class="icon">🃏</span><h3>Mystery Card Flip</h3><p>Watch the cards shuffle, then pick one.</p></a>
       <a class="tool-card" href="tools/team-generator.html"><span class="tab mix">mix</span><span class="icon">👥</span><h3>Team Generator</h3><p>Random pairs or groups of any size.</p></a>
       <a class="tool-card" href="tools/tournament-bracket.html"><span class="tab mix">mix</span><span class="icon">🏆</span><h3>Tournament Bracket</h3><p>Seed the class and run a bracket.</p></a>
@@ -161,7 +162,7 @@
     "duck-race": "duck", "rocket-race": "rocket", "turtle-race": "turtle", "ball-drop": "ball",
     "balloon-pop": "balloon", "spinning-wheel": "wheel", "slot-machine": "slot", "mystery-card-flip": "card",
     "team-generator": "team", "tournament-bracket": "bracket", "weighted-picker": "weighted",
-    "elimination-mode": "elim", "yes-no-wheel": "yesno", "claw-machine": "weighted",
+    "elimination-mode": "elim", "yes-no-wheel": "yesno", "claw-machine": "weighted", "fishing-game": "fishing",
   };
   document.querySelectorAll(".tool-card").forEach((card) => {
     const slug = (card.getAttribute("href") || "").split("/").pop().replace(".html", "");

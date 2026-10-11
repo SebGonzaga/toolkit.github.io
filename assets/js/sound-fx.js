@@ -508,7 +508,7 @@ const SoundFX = (() => {
       duck: () => quack(1), rocket: () => laserZap(1), turtle: () => plod(0.8),
       ball: () => ping(3), balloon: () => squeak(1.1), wheel: () => { tick(1); later(() => tick(0.9), 90); later(() => tick(0.8), 200); },
       slot: () => kaChing(), card: () => flutter(), team: () => deal(2), bracket: () => matchWin(),
-      weighted: () => thud(), elim: () => uhoh(), yesno: () => answer("yes"),
+      weighted: () => thud(), elim: () => uhoh(), yesno: () => answer("yes"), fishing: () => splash(false),
     };
     (map[kind] || hover)();
   }

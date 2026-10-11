@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fishing Game Name Picker — Pick &amp; Race</title>
+<meta name="description" content="An arcade fish-shooting game: aim the hook cannon, fire at the swimming fish, and the mystery fish you hook reveals the winner.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/styles.css">
+<style>
+  .tool-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 28px; padding: 32px 0 64px; align-items: start; }
+  .panel { border: var(--border); border-radius: var(--radius); background: var(--paper); padding: 20px; position: sticky; top: 20px; }
+  .panel label { display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }
+  .panel label:first-of-type { margin-top: 0; }
+  textarea { width: 100%; min-height: 140px; border: var(--border); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 0.9rem; resize: vertical; }
+  input[type="range"] { width: 100%; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; font-size: 0.88rem; }
+  .panel .btn { width: 100%; justify-content: center; margin-top: 18px; }
+  .duration-val { font-family: var(--font-display); font-weight: 700; }
+
+  .stage {
+    border: var(--border); border-radius: var(--radius);
+    background: #dff0fb; padding: 16px;
+    min-height: 460px; position: relative; overflow: hidden;
+  }
+  .stage.projector { background: #08111f; }
+  .stage.projector .status { color: #fff; }
+  .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 44px rgba(239,185,60,0.55) inset; }
+
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 6; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.3rem; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .stage.projector .clock { color: var(--pencil); }
+
+  /* ---- The pond: all underwater, hook cannon on the sand at the bottom. ---- */
+  .scene {
+    position: relative; height: 440px; border-radius: 12px; overflow: hidden;
+    border: var(--border); cursor: crosshair; user-select: none; -webkit-user-select: none;
+    background: linear-gradient(180deg, #5cc0ea 0%, #2a8cc6 45%, #124f80 100%);
+    touch-action: manipulation;
+  }
+  .scene::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(100deg, rgba(255,255,255,0.07) 0 40px, transparent 40px 110px); }
+  .stage.projector .scene { background: linear-gradient(180deg, #14609a 0%, #0c3f6d 50%, #07243f 100%); }
+  .sand { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #e7cf8e; border-top: 3px solid #d2b872; z-index: 1; }
+  .stage.projector .sand { background: #8a7a4c; border-top-color: #6d6038; }
+  .plant { position: absolute; bottom: 22px; font-size: 26px; opacity: 0.85; z-index: 1; }
+  .bubble { position: absolute; bottom: 36px; width: 8px; height: 8px; border: 1.5px solid rgba(255,255,255,0.6); border-radius: 50%; animation: rise 8s linear infinite; z-index: 1; }
+  .bubble.b1 { left: 14%; } .bubble.b2 { left: 38%; animation-delay: 2.4s; animation-duration: 10s; } .bubble.b3 { left: 70%; animation-delay: 4.6s; } .bubble.b4 { left: 90%; animation-delay: 1s; animation-duration: 9s; }
+  @keyframes rise { from { transform: translateY(0); opacity: 0.9; } to { transform: translateY(-400px); opacity: 0; } }
+
+  #fishLayer { position: absolute; inset: 0; z-index: 2; pointer-events: none; --fs: 15px; }
+  .fish { position: absolute; left: 0; top: 0; display: flex; align-items: center; font-size: var(--fs); will-change: transform; --fc: #f28b82; transition: opacity 0.4s ease; }
+  .stage.projector .fish { font-size: calc(var(--fs) * 1.2); }
+  .fish.dir-l { flex-direction: row-reverse; }
+  .fish.dir-r { transform-origin: 100% 50%; }
+  .fish.dir-l { transform-origin: 0% 50%; }
+  .fish-tail { width: 0; height: 0; border-top: 0.78em solid transparent; border-bottom: 0.78em solid transparent; flex: none; }
+  .fish.dir-r .fish-tail { border-left: 1.2em solid var(--fc); margin-right: -2px; }
+  .fish.dir-l .fish-tail { border-right: 1.2em solid var(--fc); margin-left: -2px; }
+  .fish-body { position: relative; background: var(--fc); border-radius: 999px; padding: 0.42em 0.9em; min-width: 3.2em; justify-content: center; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.12), 0 2px 5px rgba(0,0,0,0.28); display: flex; align-items: center; }
+  .fish.dir-r .fish-body { padding-right: 1.6em; }
+  .fish.dir-l .fish-body { padding-left: 1.6em; }
+  .fish-eye { position: absolute; top: 0.5em; width: 0.42em; height: 0.42em; border-radius: 50%; background: #fff; border: 0.12em solid var(--ink); box-sizing: border-box; }
+  .fish.dir-r .fish-eye { right: 0.55em; }
+  .fish.dir-l .fish-eye { left: 0.55em; }
+  .fish-name { font-family: var(--font-display); font-weight: 800; color: var(--ink); line-height: 1.1; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; font-size: 1.1em; }
+  .fish.hooked { z-index: 5; }
+  .fish.dim { opacity: 0.4; }
+  .fish.caught .fish-body { box-shadow: inset 0 -4px 0 rgba(0,0,0,0.12), 0 0 0 3px var(--pencil), 0 0 24px rgba(239,185,60,0.95); }
+  .fish.revealed .fish-name { animation: namePop 0.4s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes namePop { from { transform: scale(0.4); } to { transform: scale(1); } }
+
+  .gun-svg { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; overflow: visible; }
+  .alert-pop { position: absolute; z-index: 8; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; background: #fff; border: 2px solid var(--ink);
+    font-family: var(--font-display); font-weight: 800; font-size: 1rem; line-height: 22px; text-align: center; display: none; pointer-events: none; }
+  .alert-pop.show { display: block; animation: alertPop 0.35s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes alertPop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .fx-ring { position: absolute; width: 36px; height: 36px; margin: -18px 0 0 -18px; border: 3px solid rgba(255,255,255,0.9); border-radius: 50%; z-index: 7; pointer-events: none; }
+  .fx-flash { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: radial-gradient(circle, #fff6b8, #ffd54a 60%, transparent 70%); z-index: 7; pointer-events: none; }
+
+  .winner-banner { margin-top: 14px; border: var(--border); border-radius: var(--radius); background: var(--pencil-dim); padding: 14px 18px; font-family: var(--font-display); font-size: 1.15rem; display: none; animation: winnerPop 0.5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes winnerPop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .winner-banner.show { display: block; }
+  .history { margin-top: 16px; font-size: 0.82rem; color: var(--ink-soft); }
+  .history .chip { display: inline-block; border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; margin: 3px 4px 0 0; }
+
+  @media (max-width: 860px) {
+    .tool-wrap { grid-template-columns: 1fr; }
+    .panel { position: static; }
+    .scene { height: 400px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble, .alert-pop, .fish.revealed .fish-name { animation: none !important; }
+  }
+</style>
+<link rel="stylesheet" href="../assets/css/responsive.css">
+<script src="../assets/js/ads.js" defer></script>
+</head>
+<body>
+
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html"><span class="mark"></span>Pick &amp; Race</a>
+    <nav>
+      <a href="../index.html#tools">All tools</a>
+      <a href="duck-race.html">Duck Race</a>
+      <a href="slot-machine.html">Slot Machine</a>
+      <a href="spinning-wheel.html">Wheel</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin-top:28px;">Fishing Game Name Picker</h1>
+  <p>An arcade-style fish shooter. Every name is a mystery fish swimming in the pond. Aim the hook cannon, shoot, and the first fish you hook reveals the winner.</p>
+
+  <div class="tool-wrap">
+    <div class="panel">
+      <label for="names">Names (one per line)</label>
+      <textarea id="names">Ava
+Liam
+Noor
+Diego
+Priya
+Mateo
+Yuki
+Isla</textarea>
+
+      <label for="speed">Fish speed: <span class="duration-val" id="speedVal">Medium</span></label>
+      <input type="range" id="speed" min="1" max="3" step="1" value="2">
+
+      <div class="toggle-row">
+        <input type="checkbox" id="noRepeat">
+        <label for="noRepeat" style="margin:0;">No repeats until everyone's had a turn</label>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="projector">
+        <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
+      </div>
+
+      <button class="btn marker" id="startBtn">Start fishing</button>
+      <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
+    </div>
+
+    <div>
+      <div class="stage" id="stage">
+        <div class="stage-header">
+          <span class="status" id="statusText" aria-live="polite">Press Start fishing</span>
+          <span class="clock" id="clock" title="Hooks shot">🪝 0</span>
+        </div>
+        <div class="scene" id="scene" role="img" aria-label="A pond full of mystery fish with a hook cannon at the bottom. Click or tap to shoot a hook.">
+          <div class="sand"></div>
+          <span class="plant" style="left:8%">🌿</span><span class="plant" style="left:30%">🐚</span><span class="plant" style="left:66%">🌿</span><span class="plant" style="left:93%">🌿</span>
+          <span class="bubble b1"></span><span class="bubble b2"></span><span class="bubble b3"></span><span class="bubble b4"></span>
+          <div id="fishLayer"></div>
+          <svg class="gun-svg" id="gunSvg" xmlns="http://www.w3.org/2000/svg">
+            <line id="aimLine" stroke="#fff" stroke-width="2" stroke-dasharray="3 8" stroke-linecap="round" stroke-opacity="0.55" style="display:none"/>
+            <g id="hooksLayer"></g>
+            <g id="cannon">
+              <rect id="barrel" x="-10" y="-50" width="20" height="52" rx="7" fill="#1e2a45" stroke="#0e1628" stroke-width="2"/>
+              <rect x="-12" y="-52" width="24" height="9" rx="4" fill="#d9503f" stroke="#0e1628" stroke-width="2" id="muzzleCap"/>
+              <circle r="26" fill="#d9503f" stroke="#0e1628" stroke-width="3"/>
+              <circle r="11" fill="#efb93c" stroke="#0e1628" stroke-width="2"/>
+            </g>
+          </svg>
+          <div class="alert-pop" id="alertPop"></div>
+        </div>
+      </div>
+      <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
+      <div class="history" id="historyList"></div>
+    </div>
+  </div>
+
+  <section class="about-tool" aria-labelledby="about-fishing-game">
+    <h2 id="about-fishing-game">About the Fishing Game Name Picker</h2>
+    <p>This works like the fish-shooting games you see in arcades. Every name on your list becomes a mystery fish with a question mark on it, and they all swim back and forth across the pond. A hook cannon sits at the bottom. Move the pointer to aim, then click or tap to shoot a hook at a fish. The first fish you hook is reeled up and flips over to show the name on it, and that person is the winner. Missed hooks just snap back so you can shoot again.</p>
+    <h3>Ways to use it in class</h3>
+    <ul><li>Let a student come up and take the shot to pick who answers next.</li><li>Take turns shooting for the line leader or helper of the day.</li><li>Turn the speed up for older students who want a challenge, or down for younger ones.</li><li>Use it as a reward: whoever's turn it is gets to aim and fire.</li></ul>
+    <h3>A lesson idea</h3>
+    <p>Type vocabulary words, animals or question topics instead of names. A student shoots a hook, reels in a mystery fish, and the class answers whatever it turns out to be. The aiming adds a little skill and excitement, and nobody can tell which fish is which before the hook lands.</p>
+    <h3>Good to know</h3>
+    <p>The names are hidden and the fish are mixed up fresh every round, so there's no way to aim for a particular person. Turn on <strong>No repeats</strong> and everyone gets a turn before any name comes up a second time, with past winners left out of the pond. <strong>Fish speed</strong> sets how fast the fish swim, and <strong>Projector mode</strong> switches to a dark pond with bigger fish so the back row can see.</p>
+    <h3>Questions teachers ask</h3>
+    <dl><dt>Is it fair if a student does the aiming?</dt><dd>Yes. Every fish has a name hidden behind a question mark, and the names are shuffled onto the fish at the start of each round. Aiming at a fish tells you nothing about who it is, so every name has the same chance.</dd><dt>What if the hook misses?</dt><dd>It snaps back and you can shoot again. You can have a few hooks in the water at once.</dd></dl>
+    <p class="about-more">More tools: <a href="../index.html#tools">see all Pick &amp; Race pickers</a> · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy</a></p>
+  </section>
+
+  <aside class="ad-slot" data-ad="tool-bottom" aria-label="Advertisement"></aside>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="../about.html">About</a> · <a href="../privacy.html">Privacy policy</a></div>
+</footer>
+
+<script src="../assets/js/race-engine.js"></script>
+<script src="../assets/js/sound-fx.js"></script>
+<script src="../assets/js/suspense-fx.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const namesEl = $("names"), speedEl = $("speed"), speedVal = $("speedVal");
+  const noRepeatEl = $("noRepeat"), projectorEl = $("projector"), startBtn = $("startBtn"), resetHistoryBtn = $("resetHistory");
+  const stage = $("stage"), scene = $("scene"), fishLayer = $("fishLayer"), gunSvg = $("gunSvg");
+  const cannonEl = $("cannon"), barrelEl = $("barrel"), muzzleCapEl = $("muzzleCap"), hooksLayer = $("hooksLayer"), aimLineEl = $("aimLine");
+  const alertEl = $("alertPop"), statusText = $("statusText"), clock = $("clock");
+  const winnerBanner = $("winnerBanner"), historyList = $("historyList");
+
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const smooth = (k, dt) => 1 - Math.exp(-k * dt);
+  const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  const COLORS = ["#f28b82", "#fbbc04", "#81c995", "#78d9ec", "#c58af9", "#ff8bcb", "#ffb74d", "#7cb3ff"];
+  const SPEED_MULT = [0.55, 1, 1.7], SPEED_WORDS = ["Slow", "Medium", "Fast"];
+  const HOOK_SPEED = 950, RETRACT_SPEED = 1300, MAX_HOOKS = 3, COOLDOWN = 0.3, REEL = 1.0;
+  const HIT_PAD = 12;      // forgiving hit box around each fish, in px
+
+  let alreadyWon = [];
+  let fish = [];
+  let state = "idle";      // idle | playing | reeling | done
+  let hooks = [], shots = 0, cooldown = 0;
+  let aim = 0, aimTarget = 0;                 // barrel angle from straight-up, radians
+  let pointer = null;                          // last pointer position inside the scene
+  let alertTimer = null, caught = null;
+
+  // ---------- geometry ----------
+  const G = { W: 0, H: 0, cx: 0, cy: 0 };
+  function measure() {
+    G.W = scene.clientWidth; G.H = scene.clientHeight;
+    G.cx = G.W / 2; G.cy = G.H - 40;
+    gunSvg.setAttribute("width", G.W); gunSvg.setAttribute("height", G.H);
+    gunSvg.setAttribute("viewBox", `0 0 ${G.W} ${G.H}`);
+  }
+  const zoneTop = () => 30;
+  const zoneBottom = () => G.H - 130;
+  function muzzle() { return { x: G.cx + Math.sin(aim) * 54, y: G.cy - Math.cos(aim) * 54 }; }
+  const speedMult = () => SPEED_MULT[Number(speedEl.value) - 1] || 1;
+
+  // ---------- fish ----------
+  function fishFontSize(n) { return n <= 6 ? 18 : n <= 10 ? 16 : n <= 16 ? 14 : n <= 24 ? 12.5 : 11; }
+  function setDir(f, d) {
+    f.dir = d;
+    f.el.classList.toggle("dir-r", d > 0);
+    f.el.classList.toggle("dir-l", d < 0);
+  }
+  // `names` are shuffled by the caller so a fish's colour and place never hint at who it is.
+  function buildFish(names) {
+    fishLayer.innerHTML = "";
+    fish = [];
+    const n = names.length;
+    fishLayer.style.setProperty("--fs", fishFontSize(n) + "px");
+    names.forEach((name, i) => {
+      const el = document.createElement("div");
+      el.className = "fish dir-r";
+      el.style.setProperty("--fc", COLORS[i % COLORS.length]);
+      el.innerHTML = `<span class="fish-tail"></span><span class="fish-body"><span class="fish-eye"></span><span class="fish-name">?</span></span>`;
+      fishLayer.appendChild(el);
+      fish.push({
+        el, label: el.querySelector(".fish-name"), name,
+        x: 0, by: 0, baseY: 0, w: el.offsetWidth, h: el.offsetHeight, dir: 1,
+        speed: rand(40, 85), mode: "swim", phase: Math.random() * 6.28, bobF: 1 + Math.random(), tilt: 0, scale: 1,
+      });
+    });
+    layoutFish();
+  }
+  function remeasureFish() { fish.forEach((f) => { f.w = f.el.offsetWidth; f.h = f.el.offsetHeight; }); }
+  function layoutFish() {
+    const n = fish.length;
+    if (!n) return;
+    const avgH = fish.reduce((s, f) => s + f.h, 0) / n || 30;
+    const zoneH = zoneBottom() - zoneTop();
+    const lanes = clamp(Math.floor(zoneH / (avgH + 8)), 1, n);
+    const laneH = zoneH / lanes;
+    const order = RaceEngine.shuffle(fish.map((_, i) => i));
+    fish.forEach((f, i) => {
+      const lane = order[i] % lanes;
+      f.baseY = zoneTop() + lane * laneH + (laneH - f.h) / 2 + rand(-3, 3);
+      f.by = f.baseY;
+      f.x = rand(4, Math.max(5, G.W - f.w - 4));
+      setDir(f, Math.random() < 0.5 ? 1 : -1);
+    });
+  }
+  function mouthOf(f) { return { x: f.dir > 0 ? f.x + f.w : f.x, y: f.by + f.h / 2 }; }
+  function attachFish(f, tip, tilt, scale) {
+    f.x = f.dir > 0 ? tip.x - f.w : tip.x;
+    f.by = tip.y - f.h / 2;
+    f.tilt = tilt; f.scale = scale;
+  }
+  function updateFish(dt, t) {
+    const sm = speedMult();
+    for (const f of fish) {
+      if (f.mode === "hooked") continue;
+      f.x += f.dir * f.speed * sm * dt;
+      if (f.x < 4) { f.x = 4; setDir(f, 1); }
+      else if (f.x > G.W - f.w - 4) { f.x = G.W - f.w - 4; setDir(f, -1); }
+      if (Math.random() < 0.04 * dt) setDir(f, -f.dir);
+      f.by = f.baseY + Math.sin(t * f.bobF + f.phase) * 5;
+    }
+  }
+
+  // ---------- effects ----------
+  function ring(x, y, big) {
+    if (reduceMotion) return;
+    const r = document.createElement("span");
+    r.className = "fx-ring";
+    r.style.left = x + "px"; r.style.top = y + "px";
+    scene.appendChild(r);
+    r.animate([{ transform: "scale(0.3)", opacity: 0.95 }, { transform: `scale(${big ? 3.2 : 1.8})`, opacity: 0 }],
+      { duration: big ? 700 : 450, easing: "ease-out" }).onfinish = () => r.remove();
+  }
+  function flash(x, y) {
+    if (reduceMotion) return;
+    const r = document.createElement("span");
+    r.className = "fx-flash";
+    r.style.left = x + "px"; r.style.top = y + "px";
+    scene.appendChild(r);
+    r.animate([{ transform: "scale(0.5)", opacity: 1 }, { transform: "scale(1.8)", opacity: 0 }],
+      { duration: 220, easing: "ease-out" }).onfinish = () => r.remove();
+  }
+  function showAlert(f, ch, ms) {
+    clearTimeout(alertTimer);
+    alertEl.textContent = ch;
+    alertEl.style.left = (f.x + f.w / 2 - 13) + "px";
+    alertEl.style.top = (f.by - 34) + "px";
+    alertEl.classList.remove("show");
+    void alertEl.offsetWidth;
+    alertEl.classList.add("show");
+    alertTimer = setTimeout(() => alertEl.classList.remove("show"), ms);
+  }
+  function setStatus(t) { if (statusText.textContent !== t) statusText.textContent = t; }
+  function updateShots() { clock.textContent = "🪝 " + shots; }
+
+  // ---------- hooks ----------
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function makeHookEl() {
+    const g = document.createElementNS(SVGNS, "g");
+    const line = document.createElementNS(SVGNS, "line");
+    line.setAttribute("stroke", "#f4f1e8"); line.setAttribute("stroke-width", "2"); line.setAttribute("stroke-opacity", "0.9");
+    const shape = document.createElementNS(SVGNS, "path");
+    shape.setAttribute("d", "M0 0 L0 10 Q0 22 9 19 Q15 16 12 9");
+    shape.setAttribute("fill", "none"); shape.setAttribute("stroke", "#f4f1e8"); shape.setAttribute("stroke-width", "3"); shape.setAttribute("stroke-linecap", "round");
+    const barb = document.createElementNS(SVGNS, "circle");
+    barb.setAttribute("r", "3"); barb.setAttribute("fill", "#d9503f"); barb.setAttribute("cx", "0"); barb.setAttribute("cy", "0");
+    g.appendChild(line); g.appendChild(shape); g.appendChild(barb);
+    hooksLayer.appendChild(g);
+    return { g, line, shape };
+  }
+
+  function fire(tx, ty) {
+    if (state === "idle") { setStatus("Press Start fishing first"); return; }
+    if (state !== "playing") return;
+    if (cooldown > 0 || hooks.length >= MAX_HOOKS) return;
+    const m = muzzle();
+    const dist = Math.hypot(tx - m.x, ty - m.y);
+    const u = { x: Math.sin(aim), y: -Math.cos(aim) };
+    const parts = makeHookEl();
+    hooks.push({ ...parts, s: m, u, d: 0, L: clamp(dist, 90, G.H * 1.1), state: "fly", tip: { x: m.x, y: m.y }, fish: null, t: 0 });
+    cooldown = COOLDOWN; shots++; updateShots();
+    flash(m.x, m.y);
+    SoundFX.whoosh(0.25, true, 0.08);
+  }
+
+  function hitTest(p) {
+    for (const f of fish) {
+      if (f.mode === "hooked") continue;
+      if (p.x >= f.x - HIT_PAD && p.x <= f.x + f.w + HIT_PAD && p.y >= f.by - HIT_PAD && p.y <= f.by + f.h + HIT_PAD) return f;
+    }
+    return null;
+  }
+
+  function onHooked(h, f) {
+    state = "reeling";
+    // Reveal the mystery name now; keep the mouth where it is while the pill resizes.
+    const mouth = mouthOf(f);
+    f.label.textContent = f.name;
+    f.el.classList.add("revealed");
+    f.w = f.el.offsetWidth; f.h = f.el.offsetHeight;
+    f.mode = "hooked"; f.el.classList.add("hooked");
+    attachFish(f, mouth, 0, 1);
+    h.state = "reel"; h.fish = f; h.t = 0; h.P0 = mouth;
+    const sc = 1.4;
+    h.P1 = { x: G.W / 2 + f.dir * f.w * sc / 2, y: G.H * 0.34 };
+    h.P1.x = clamp(h.P1.x, f.dir > 0 ? f.w * sc + 8 : 8, f.dir > 0 ? G.W - 8 : G.W - f.w * sc - 8);
+    h.nextTick = 0;
+    caught = f;
+    // every other hook in the water snaps back
+    hooks.forEach((o) => { if (o !== h && o.state === "fly") o.state = "retract"; });
+    ring(mouth.x, mouth.y, true);
+    showAlert(f, "!", 1200);
+    SoundFX.bonk();
+    setStatus("Hooked one!");
+  }
+
+  function removeHook(h) { h.g.remove(); hooks = hooks.filter((o) => o !== h); }
+
+  function updateHooks(dt) {
+    for (const h of hooks.slice()) {
+      if (h.state === "fly") {
+        let move = HOOK_SPEED * dt;
+        while (move > 0 && h.state === "fly") {
+          const step = Math.min(8, move); move -= step;
+          h.d = Math.min(h.L, h.d + step);
+          h.tip = { x: h.s.x + h.u.x * h.d, y: h.s.y + h.u.y * h.d };
+          if (state === "playing") {
+            const f = hitTest(h.tip);
+            if (f) { onHooked(h, f); break; }
+          }
+          if (h.d >= h.L) { h.state = "retract"; ring(h.tip.x, h.tip.y, false); }
+        }
+      } else if (h.state === "retract") {
+        h.d -= RETRACT_SPEED * dt;
+        if (h.d <= 0) { removeHook(h); continue; }
+        h.tip = { x: h.s.x + h.u.x * h.d, y: h.s.y + h.u.y * h.d };
+      } else if (h.state === "reel") {
+        h.t += dt;
+        const u = clamp(h.t / REEL, 0, 1), e = easeIO(u);
+        h.tip = { x: lerp(h.P0.x, h.P1.x, e), y: lerp(h.P0.y, h.P1.y, e) };
+        attachFish(h.fish, h.tip, Math.sin(h.t * 22) * (1 - u) * 6, lerp(1, 1.4, e));
+        h.nextTick -= dt;
+        if (h.nextTick <= 0) { SoundFX.tick(1); h.nextTick = 0.09; }
+        if (u >= 1) { h.state = "hold"; finish(h.fish); }
+      } else if (h.state === "hold") {
+        h.tip = { x: h.P1.x + Math.sin(performance.now() / 500) * 2, y: h.P1.y + Math.sin(performance.now() / 380) * 1.5 };
+        attachFish(h.fish, h.tip, Math.sin(performance.now() / 500) * 2, 1.4);
+      }
+    }
+  }
+
+  function finish(f) {
+    state = "done";
+    f.el.classList.add("caught");
+    fish.forEach((o) => { if (o !== f) o.el.classList.add("dim"); });
+    startBtn.disabled = false; startBtn.textContent = "Fish again";
+    statusText.textContent = "Caught one!";
+    SuspenseFX.microShake(stage);
+    SuspenseFX.winnerSpotlight(stage);
+    stage.classList.add("finished-glow");
+    setTimeout(() => stage.classList.remove("finished-glow"), 1400);
+    winnerBanner.classList.remove("show");
+    void winnerBanner.offsetWidth;
+    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🎣 ${escapeHtml(f.name)} was caught!</span>`;
+    winnerBanner.classList.add("show");
+    if (noRepeatEl.checked) { alreadyWon.push(f.name); renderHistory(); }
+    const r = f.el.getBoundingClientRect();
+    SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2);
+  }
+
+  // ---------- drawing ----------
+  function render() {
+    for (const f of fish) {
+      f.el.style.transform = `translate3d(${f.x.toFixed(1)}px, ${f.by.toFixed(1)}px, 0) rotate(${f.tilt.toFixed(1)}deg) scale(${f.scale.toFixed(3)})`;
+    }
+    cannonEl.setAttribute("transform", `translate(${G.cx} ${G.cy})`);
+    const deg = (aim * 180 / Math.PI).toFixed(2);
+    barrelEl.setAttribute("transform", `rotate(${deg})`);
+    muzzleCapEl.setAttribute("transform", `rotate(${deg})`);
+    const m = muzzle();
+    for (const h of hooks) {
+      h.line.setAttribute("x1", m.x); h.line.setAttribute("y1", m.y);
+      h.line.setAttribute("x2", h.tip.x); h.line.setAttribute("y2", h.tip.y);
+      const phi = Math.atan2(-h.u.x, h.u.y) * 180 / Math.PI;
+      h.shape.setAttribute("transform", `translate(${h.tip.x.toFixed(1)} ${h.tip.y.toFixed(1)}) rotate(${phi.toFixed(1)})`);
+    }
+    if (pointer && state === "playing") {
+      aimLineEl.style.display = "";
+      aimLineEl.setAttribute("x1", m.x); aimLineEl.setAttribute("y1", m.y);
+      aimLineEl.setAttribute("x2", m.x + Math.sin(aim) * Math.min(G.H, 420)); aimLineEl.setAttribute("y2", m.y - Math.cos(aim) * Math.min(G.H, 420));
+    } else aimLineEl.style.display = "none";
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+    cooldown = Math.max(0, cooldown - dt);
+    aim += (aimTarget - aim) * smooth(16, dt);
+    updateFish(dt, now / 1000);
+    updateHooks(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- controls ----------
+  function getNames() {
+    return namesEl.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean).slice(0, 60);
+  }
+  function renderHistory() {
+    if (!alreadyWon.length) { historyList.innerHTML = ""; return; }
+    historyList.innerHTML = "Already won this round: " +
+      alreadyWon.map((n) => `<span class="chip">${escapeHtml(n)}</span>`).join("");
+  }
+  function sceneXY(e) {
+    const r = scene.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function aimAt(p) {
+    pointer = p;
+    aimTarget = clamp(Math.atan2(p.x - G.cx, G.cy - p.y), -1.4, 1.4);
+  }
+  scene.addEventListener("pointermove", (e) => aimAt(sceneXY(e)));
+  scene.addEventListener("pointerleave", () => { pointer = null; });
+  scene.addEventListener("click", (e) => {
+    const p = sceneXY(e);
+    aimAt(p);
+    aim = aimTarget;       // snap the barrel on a tap so touch screens shoot where you tapped
+    fire(p.x, p.y);
+  });
+
+  let rebuildTimer = null;
+  namesEl.addEventListener("input", () => {
+    clearTimeout(rebuildTimer);
+    rebuildTimer = setTimeout(() => { if (state === "idle") buildFish(RaceEngine.shuffle(getNames())); }, 250);
+  });
+  speedEl.addEventListener("input", () => { speedVal.textContent = SPEED_WORDS[Number(speedEl.value) - 1]; });
+  projectorEl.addEventListener("change", () => {
+    stage.classList.toggle("projector", projectorEl.checked);
+    requestAnimationFrame(remeasureFish);
+  });
+  resetHistoryBtn.addEventListener("click", () => { alreadyWon = []; renderHistory(); });
+  window.addEventListener("resize", () => {
+    measure();
+    fish.forEach((f) => { f.x = clamp(f.x, 4, Math.max(5, G.W - f.w - 4)); });
+    if (state === "idle" || state === "playing") layoutFish();
+  });
+
+  function startRound() {
+    const roster = getNames();
+    if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
+    let pool = roster;
+    if (noRepeatEl.checked) {
+      const remaining = roster.filter((n) => !alreadyWon.includes(n));
+      if (remaining.length) pool = remaining;
+      else { alreadyWon = []; renderHistory(); }    // everyone's had a turn — start over
+    }
+    hooks.forEach((h) => h.g.remove()); hooks = [];
+    caught = null; shots = 0; cooldown = 0; updateShots();
+    winnerBanner.classList.remove("show");
+    stage.classList.remove("finished-glow");
+    alertEl.classList.remove("show");
+    buildFish(RaceEngine.shuffle(pool));              // fresh shuffle: names are hidden, nothing to learn from last round
+    state = "playing";
+    startBtn.textContent = "New round";
+    setStatus("Aim and click to shoot a hook!");
+  }
+  startBtn.addEventListener("click", startRound);
+
+  // ---------- go ----------
+  measure();
+  buildFish(RaceEngine.shuffle(getNames()));
+  requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>
