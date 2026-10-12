@@ -122,7 +122,7 @@
   @keyframes boom-ring-big { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(7); opacity: 0; } }
   @keyframes boom-spark { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; } }
 
-  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
+  .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 7; }
   .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: #eef1fb; }
   .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; color: #ffd25c; }
   .stage.projector .stage-header .status { color: #fff; }
@@ -168,6 +168,62 @@
   @keyframes core-pulse { 0%,100% { opacity: 0.65; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.2); } }
   .field-token.surging .r-core { animation-duration: 0.16s; }
 
+  /* -- lock-on reticle: hops between ships while "scanning", then snaps red -- */
+  .reticle { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity 0.12s ease; will-change: transform; }
+  .reticle.on { opacity: 1; }
+  .reticle i, .reticle b { position: absolute; display: block; }
+  .rt-ring { left: -32px; top: -32px; width: 64px; height: 64px; border-radius: 50%; box-sizing: border-box;
+    border: 2px dashed rgba(120,230,255,0.95); box-shadow: 0 0 10px rgba(80,200,255,0.6); animation: rt-spin 1.4s linear infinite; }
+  .rt-h { left: -40px; top: -1px; width: 80px; height: 2px; background: rgba(120,230,255,0.8); -webkit-mask: linear-gradient(90deg,#000 0 30%,transparent 30% 70%,#000 70%); mask: linear-gradient(90deg,#000 0 30%,transparent 30% 70%,#000 70%); }
+  .rt-v { left: -1px; top: -40px; width: 2px; height: 80px; background: rgba(120,230,255,0.8); -webkit-mask: linear-gradient(#000 0 30%,transparent 30% 70%,#000 70%); mask: linear-gradient(#000 0 30%,transparent 30% 70%,#000 70%); }
+  .rt-label { left: -40px; width: 80px; top: 36px; text-align: center; font: 800 0.62rem/1 var(--font-display); letter-spacing: 0.14em; color: #8fe8ff; text-shadow: 0 0 6px rgba(0,0,0,0.8); }
+  .reticle.locked .rt-ring { border: 2px solid #ff4d4d; box-shadow: 0 0 16px 2px rgba(255,60,60,0.9); animation: none; }
+  .reticle.locked .rt-h, .reticle.locked .rt-v { background: #ff4d4d; }
+  .reticle.locked .rt-label { color: #ff7a7a; animation: rt-blink 0.3s steps(1) infinite; }
+  .reticle.locked.snap .rt-ring { animation: rt-lock 0.28s ease-out; }
+  @keyframes rt-spin { to { transform: rotate(360deg); } }
+  @keyframes rt-lock { from { transform: scale(2); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+  @keyframes rt-blink { 50% { opacity: 0.25; } }
+  .field-token.targeted .name-tag { opacity: 1; }
+  .field-token.locked-on .name-tag { background: rgba(140,20,20,0.9); border-color: #ff6a6a; color: #fff; }
+
+  /* -- shield bubble + damage smoke -- */
+  .shield { position: absolute; width: 66px; height: 66px; margin: -33px 0 0 -33px; border-radius: 50%; box-sizing: border-box;
+    border: 2px solid rgba(175,238,255,0.95);
+    background: radial-gradient(circle, rgba(120,200,255,0.05) 40%, rgba(120,200,255,0.5) 100%);
+    box-shadow: 0 0 18px rgba(120,210,255,0.9); animation: shield-pop 0.55s ease-out forwards; }
+  @keyframes shield-pop { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+  .smoke { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(130,130,140,0.8), rgba(60,60,70,0) 70%); animation: smoke-fall 0.9s ease-out forwards; }
+  @keyframes smoke-fall { 0% { transform: translateY(0) scale(0.6); opacity: 0.85; } 100% { transform: translateY(46px) scale(2.6); opacity: 0; } }
+  .field-token.damaged .rocket3d svg { animation: dmg-flicker 1.3s steps(1) infinite; }
+  @keyframes dmg-flicker {
+    0%, 100% { filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+    8% { filter: brightness(0.55) drop-shadow(0 0 6px #ff5a2a); }
+    12% { filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+    52% { filter: brightness(0.7) drop-shadow(0 0 4px #ff7a3a); }
+    56% { filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+  }
+  .field-token.dodge .token-art svg { animation: barrel 0.55s ease-in-out; }
+  @keyframes barrel { 0% { transform: scaleX(1); } 50% { transform: scaleX(-0.2); } 100% { transform: scaleX(1); } }
+
+  /* -- last-two duel: vignette, red edge pulse, glowing finalists -- */
+  .stage.duel::after { content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.6) 100%);
+    box-shadow: inset 0 0 70px rgba(255,50,50,0.35); animation: duel-pulse 1s ease-in-out infinite; }
+  @keyframes duel-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+  .field-token.dueling::before { content: ""; position: absolute; left: 50%; top: 50%; width: 70px; height: 70px; margin: -35px 0 0 -35px;
+    border-radius: 50%; box-shadow: 0 0 30px 10px var(--c); opacity: 0.28; animation: aura 1s ease-in-out infinite; pointer-events: none; }
+  @keyframes aura { 0%, 100% { opacity: 0.18; } 50% { opacity: 0.4; } }
+
+  /* -- radio chatter line at the bottom of the arena -- */
+  .callout { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 8; max-width: 92%;
+    padding: 4px 14px; border-radius: 999px; background: rgba(6,10,26,0.82); border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; opacity: 0; pointer-events: none; }
+  .callout.show { animation: callout-pop 1.7s ease-out forwards; }
+  @keyframes callout-pop { 0% { opacity: 0; transform: translate(-50%, 8px); } 12% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; } }
+
   /* Fleet Status panel, restyled dark to sit inside the space scene */
   .stage .leaderboard-panel { background: rgba(6,10,26,0.72); border-color: rgba(255,255,255,0.18); color: #e8ecfa; }
   .stage .leaderboard-panel .lb-title { color: #9fb0d8; }
@@ -200,7 +256,8 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .star, .rocket3d, .r-flame, .r-core, .debris, .debris .rock, .nebula, .ember, .tracer { animation: none !important; transition: none !important; }
+    .star, .rocket3d, .r-flame, .r-core, .debris, .debris .rock, .nebula, .ember, .tracer, .smoke, .shield, .rt-ring, .rt-label, .field-token.damaged .rocket3d svg, .field-token.dodge .token-art svg, .field-token.dueling::before, .stage.duel::after { animation: none !important; transition: none !important; }
+    .callout.show { animation: none; opacity: 1; }
     /* .field-token itself keeps its JS-driven transform (the ship's real
        position), so ships stay visible and correctly placed. */
   }
@@ -285,6 +342,7 @@ Isla</textarea>
               <div class="exhaust-layer" id="exhaustLayer"></div>
               <div class="field-tokens" id="fieldTokens"></div>
               <div class="fx-layer" id="fxLayer"></div>
+              <div class="callout" id="callout"></div>
             </div>
           </div>
           <div class="leaderboard-panel">
@@ -344,6 +402,15 @@ Isla</textarea>
   const winnerBanner = document.getElementById("winnerBanner");
   const historyList = document.getElementById("historyList");
   const starfield = document.getElementById("starfield");
+  const calloutEl = document.getElementById("callout");
+  // Short radio-chatter line at the bottom of the arena.
+  function callout(text) {
+    if (!calloutEl) return;
+    calloutEl.textContent = text;
+    calloutEl.classList.remove("show");
+    void calloutEl.offsetWidth;
+    calloutEl.classList.add("show");
+  }
 
   // A top-down silver fighter, nose pointing UP (-y), in the style of a
   // classic vertical space shooter: swept wings, twin engine nacelles with
@@ -442,14 +509,25 @@ Isla</textarea>
 
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
+  // Blue-white shield bubble flashed around a ship that survives a hit.
+  function spawnShield(ship, W, H) {
+    const s = document.createElement("div");
+    s.className = "shield";
+    s.style.left = (ship.x * W).toFixed(1) + "px";
+    s.style.top = (ship.y * H).toFixed(1) + "px";
+    fxLayer.appendChild(s);
+    setTimeout(() => s.remove(), 600);
+  }
+
   /**
    * Builds one battle's worth of ships + fleet-status rows, and owns their
    * movement/combat state. Ships hover and strafe around the arena nose-up
    * (banking into their turns, tilting toward whoever they're shooting) like
-   * a vertical space shooter. Fireballs fly in real time from shooter to
-   * target and home on the target's current position, driven by step() so
-   * they stay in sync with the battle clock (including the final slow-mo).
-   * RaceEngine still decides who wins — this only decides how it *looks*.
+   * a vertical space shooter. Fireballs fly in battle-clock time from shooter
+   * to target, so they stay in sync during slow-mo. A single lock-on reticle
+   * hops between ships and snaps red before every shot, including the shots
+   * that get blocked or dodged. RaceEngine still decides who wins; this only
+   * decides how the fight *looks*.
    */
   function createFleet(tokensEl, fleetListEl, entrants) {
     const n = entrants.length;
@@ -491,11 +569,19 @@ Isla</textarea>
         tx: 0.5, ty: 0.5, wanderTimer: 0,
         speed: rnd(0.06, 0.11), turnRate: rnd(1.3, 2.6),
         aimUntil: -1, aimTarget: null,
+        damage: 0, duel: null, duelFoe: null,
         alive: true, rowEl: null,
       };
     });
     const byName = Object.fromEntries(ships.map((s) => [s.name, s]));
     const bolts = [];
+
+    // One shared reticle that follows whichever ship it is aimed at.
+    const ret = { target: null, locked: false, el: document.createElement("div") };
+    ret.el.className = "reticle";
+    ret.el.innerHTML = '<i class="rt-ring"></i><i class="rt-h"></i><i class="rt-v"></i><b class="rt-label">SCAN</b>';
+    fxLayer.appendChild(ret.el);
+    const retLabel = ret.el.querySelector(".rt-label");
 
     if (fleetListEl) {
       ships.forEach((ship) => {
@@ -511,9 +597,39 @@ Isla</textarea>
       ship.el.style.transform = `translate(${(ship.x * W).toFixed(1)}px, ${(ship.y * H).toFixed(1)}px) translate(-50%, -50%)`;
       ship.artEl.style.transform = `rotate(${ship.angle.toFixed(1)}deg)`;
     }
+    function placeReticle() {
+      if (ret.target && ret.target.alive) {
+        const W = fieldEl.clientWidth, H = fieldEl.clientHeight;
+        ret.el.style.transform = `translate(${(ret.target.x * W).toFixed(1)}px, ${(ret.target.y * H).toFixed(1)}px)`;
+        ret.el.classList.add("on");
+      } else {
+        ret.el.classList.remove("on");
+      }
+    }
 
     // Place every ship once so the arena isn't empty before a battle starts.
     ships.forEach((s) => place(s, fieldEl.clientWidth, fieldEl.clientHeight));
+
+    function setReticle(name, locked) {
+      const ship = byName[name];
+      if (ret.target && ret.target !== ship) ret.target.el.classList.remove("targeted", "locked-on");
+      ret.target = ship && ship.alive ? ship : null;
+      ret.locked = !!locked;
+      ret.el.classList.toggle("locked", ret.locked);
+      retLabel.textContent = ret.locked ? "LOCKED" : "SCAN";
+      if (ret.target) {
+        ret.target.el.classList.add("targeted");
+        ret.target.el.classList.toggle("locked-on", ret.locked);
+      }
+      if (ret.locked) { ret.el.classList.remove("snap"); void ret.el.offsetWidth; ret.el.classList.add("snap"); }
+      placeReticle();
+    }
+    function clearReticle(name) {
+      if (name && (!ret.target || ret.target.name !== name)) return;
+      if (ret.target) ret.target.el.classList.remove("targeted", "locked-on");
+      ret.target = null; ret.locked = false;
+      ret.el.classList.remove("on", "locked", "snap");
+    }
 
     function step(dt) {
       if (dt <= 0) return;
@@ -523,10 +639,16 @@ Isla</textarea>
       const now = performance.now() / 1000;
       ships.forEach((ship) => {
         if (!ship.alive) return;
-        const aiming = ship.aimUntil > now && ship.aimTarget && ship.aimTarget.alive;
+        const foe = ship.duelFoe && ship.duelFoe.alive ? ship.duelFoe : null;
+        const aimT = foe || (ship.aimUntil > now && ship.aimTarget && ship.aimTarget.alive ? ship.aimTarget : null);
         let tx, ty, spd = ship.speed;
-        if (aiming) {
-          tx = ship.aimTarget.x; ty = ship.aimTarget.y; spd = ship.speed * 1.5;
+        if (ship.duel) {
+          // Finalists hold opposite corners of the arena, circling slowly.
+          tx = ship.duel.bx + 0.05 * Math.sin(now * 1.2 + ship.duel.ph);
+          ty = ship.duel.by + 0.06 * Math.cos(now * 0.9 + ship.duel.ph);
+          spd = ship.speed * 1.3;
+        } else if (aimT) {
+          tx = aimT.x; ty = aimT.y; spd = ship.speed * 1.5;
         } else {
           ship.wanderTimer -= dt;
           if (ship.wanderTimer <= 0) {
@@ -545,8 +667,8 @@ Isla</textarea>
         // Nose stays up: bank into sideways motion, and swing toward the
         // target (within limits) while lining up a shot.
         let want;
-        if (aiming) {
-          const adx = (ship.aimTarget.x - ship.x) * W, ady = (ship.aimTarget.y - ship.y) * H;
+        if (aimT) {
+          const adx = (aimT.x - ship.x) * W, ady = (aimT.y - ship.y) * H;
           want = clamp(Math.atan2(adx, -ady) * 180 / Math.PI, -38, 38);
         } else {
           want = clamp((ship.vx / ship.speed) * 9, -16, 16);
@@ -556,27 +678,45 @@ Isla</textarea>
         ship.el.classList.toggle("surging", surging);
         place(ship, W, H);
       });
+      placeReticle();
 
       for (let i = bolts.length - 1; i >= 0; i--) {
         const b = bolts[i];
         b.t += dt;
-        const p = Math.min(1, b.t / b.dur);
-        const e = 0.15 * p + 0.85 * p * p;
-        const ex = b.victim.x * W, ey = b.victim.y * H;
+        const p = b.t / b.dur;
+        const ex = b.miss ? b.ex : b.victim.x * W, ey = b.miss ? b.ey : b.victim.y * H;
+        const pc = Math.min(1, p);
+        let e = 0.15 * pc + 0.85 * pc * pc;
+        if (p > 1) e = 1 + (p - 1) * 1.85;           // a miss keeps flying past
         const bx = b.sx + (ex - b.sx) * e, by = b.sy + (ey - b.sy) * e;
-        const ang = Math.atan2(ey - by, ex - bx) * 180 / Math.PI;
+        const ang = (b.miss ? Math.atan2(ey - b.sy, ex - b.sx) : Math.atan2(ey - by, ex - bx)) * 180 / Math.PI;
         b.el.style.transform = `translate(${bx.toFixed(1)}px, ${by.toFixed(1)}px) rotate(${ang.toFixed(1)}deg)`;
-        if (p >= 1) { b.el.remove(); bolts.splice(i, 1); }
+        if (b.dodgeAt != null && p >= b.dodgeAt) { b.dodgeAt = null; dodge(b.victim); }
+        const gone = b.miss ? (e > 2.4 || bx < -60 || bx > W + 60 || by < -60 || by > H + 60) : p >= 1;
+        if (gone) {
+          if (!b.miss && b.onHit) b.onHit();
+          b.el.remove(); bolts.splice(i, 1);
+        }
       }
     }
 
-    // Engine embers streaming down from every live ship (more while surging).
+    // Engine embers streaming down from every live ship (more while
+    // surging), plus smoke from any ship that has taken a hit.
     function trails() {
       if (prefersReducedMotion) return;
       const W = fieldEl.clientWidth, H = fieldEl.clientHeight;
       let anySurge = false;
       ships.forEach((ship) => {
-        if (!ship.alive || exhaustLayer.childElementCount > 70) return;
+        if (!ship.alive) return;
+        if (ship.damage > 0 && exhaustLayer.childElementCount < 90 && Math.random() < 0.65) {
+          const sm = document.createElement("i");
+          sm.className = "smoke";
+          sm.style.left = (ship.x * W + rnd(-6, 6)).toFixed(1) + "px";
+          sm.style.top = (ship.y * H + tokH * 0.2).toFixed(1) + "px";
+          exhaustLayer.appendChild(sm);
+          setTimeout(() => sm.remove(), 950);
+        }
+        if (exhaustLayer.childElementCount > 70) return;
         const surging = ship.el.classList.contains("surging");
         if (surging) anySurge = true;
         if (Math.random() > (surging ? 0.95 : 0.5)) return;
@@ -607,9 +747,27 @@ Isla</textarea>
       setTimeout(() => t.remove(), 850);
     }
 
-    // Called right as a shot is fired: the shooter swings toward its target
-    // for a beat while a fireball launches and flies in `flightSec` seconds.
-    function fire(shooterName, victimName, flightSec) {
+    // A hit the ship survives: shield flash, a lurch, and smoke from then on.
+    function impact(ship) {
+      if (!ship || !ship.alive) return;
+      spawnShield(ship, fieldEl.clientWidth, fieldEl.clientHeight);
+      ship.damage++;
+      ship.el.classList.add("damaged");
+      ship.vx += rnd(-0.14, 0.14); ship.vy += rnd(-0.1, 0.1);
+      SoundFX.bump();
+    }
+    // Evasive barrel roll + sideways dash when a shot whistles past.
+    function dodge(ship) {
+      if (!ship || !ship.alive) return;
+      ship.el.classList.add("dodge");
+      setTimeout(() => ship.el.classList.remove("dodge"), 600);
+      ship.vx += (Math.random() < 0.5 ? -1 : 1) * 0.25;
+      SoundFX.whoosh(0.25, true, 0.1);
+    }
+
+    // Called right as a shot is fired. kind: "kill" (lands for real),
+    // "shield" (lands but the ship survives) or "miss" (flies past).
+    function fire(shooterName, victimName, flightSec, kind) {
       const shooter = byName[shooterName], victim = byName[victimName];
       if (!shooter || !victim) return;
       const W = fieldEl.clientWidth, H = fieldEl.clientHeight;
@@ -626,15 +784,38 @@ Isla</textarea>
       const sx = shooter.x * W, sy = shooter.y * H - tokH * 0.4;
       el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;
       fxLayer.appendChild(el);
-      bolts.push({ el, victim, sx, sy, t: 0, dur: clamp(flightSec || 0.4, 0.2, 0.7) });
+      const bolt = { el, victim, sx, sy, t: 0, dur: clamp(flightSec || 0.4, 0.2, 0.7), miss: kind === "miss", dodgeAt: null, onHit: null };
+      if (kind === "shield") bolt.onHit = () => impact(victim);
+      if (kind === "miss") {
+        const dx = victim.x * W - sx, dy = victim.y * H - sy, len = Math.hypot(dx, dy) || 1;
+        const side = Math.random() < 0.5 ? -1 : 1;
+        bolt.ex = victim.x * W + (-dy / len) * side * 30;
+        bolt.ey = victim.y * H + (dx / len) * side * 30;
+        bolt.dodgeAt = 0.45;
+      }
+      bolts.push(bolt);
+    }
+
+    // Two finalists square off in opposite corners, each glowing in its
+    // pilot color and tracking the other.
+    function duel(nameA, nameB) {
+      const A = byName[nameA], B = byName[nameB];
+      if (!A || !B || !A.alive || !B.alive) return;
+      const flip = Math.random() < 0.5;
+      A.duel = { bx: flip ? 0.28 : 0.72, by: flip ? 0.66 : 0.34, ph: 0 };
+      B.duel = { bx: flip ? 0.72 : 0.28, by: flip ? 0.34 : 0.66, ph: 2.4 };
+      A.duelFoe = B; B.duelFoe = A;
+      A.el.classList.add("dueling"); B.el.classList.add("dueling");
     }
 
     // Takes one ship out of the fight: explosion, spin-out, fleet-row update.
     function kill(name, big) {
       const ship = byName[name];
       if (!ship || !ship.alive) return;
+      clearReticle(name);
       ship.alive = false;
       spawnExplosion(ship.el, big);
+      ship.el.classList.remove("targeted", "locked-on", "dueling", "damaged");
       ship.el.classList.add("destroyed");
       if (ship.rowEl) {
         ship.rowEl.classList.add("destroyed");
@@ -646,6 +827,7 @@ Isla</textarea>
     function celebrate(name) {
       const ship = byName[name];
       if (!ship) return;
+      clearReticle();
       ship.el.classList.add("victor");
       if (ship.rowEl) {
         ship.rowEl.classList.add("winner");
@@ -657,9 +839,10 @@ Isla</textarea>
     function teardown() {
       bolts.forEach((b) => b.el.remove());
       bolts.length = 0;
+      ret.el.remove();
     }
 
-    return { ships, step, trails, ambient, fire, kill, celebrate, teardown };
+    return { ships, step, trails, ambient, fire, kill, celebrate, teardown, setReticle, clearReticle, duel };
   }
 
   function buildFleet(entrants) {
@@ -709,7 +892,7 @@ Isla</textarea>
     }
     racing = true;
     winnerBanner.classList.remove("show");
-    stage.classList.remove("finished-glow");
+    stage.classList.remove("finished-glow", "duel");
     const duration = Number(durationEl.value);
     // RaceEngine still runs its full fair, weighted simulation — we just
     // reinterpret its output for a shootdown instead of a footrace: the
@@ -733,23 +916,98 @@ Isla</textarea>
     const startBuf = Math.min(1.1, duration * 0.14);
     const preVictoryGap = Math.min(1.0, duration * 0.08);
     const lastEventTime = Math.max(startBuf + 0.4, duration - preVictoryGap);
-    const gap = (lastEventTime - startBuf) / nEv;
-
-    const alivePool = new Set(displayOrder.map((o) => o.name));
-    const events = eliminationOrder
-      .map((victim, i) => ({ victim, t: startBuf + gap * (i + 1) + (Math.random() - 0.5) * gap * 0.35 }))
-      .sort((a, b) => a.t - b.t);
+    // ---- The schedule -------------------------------------------------
+    // The engine already decided who survives. Everything below is pacing
+    // and theatre: kills come quickly while the sky is crowded, then the
+    // gaps stretch so the last two ships get the longest, tensest stretch.
+    // Fake-outs (shots that are blocked or dodged) are sprinkled into the
+    // gaps, and every shot, lethal or not, gets the same lock-on reticle,
+    // so a "LOCKED" ship is never a sure thing.
+    const names = displayOrder.map((o) => o.name);
+    const span = lastEventTime - startBuf;
+    const wts = eliminationOrder.map((_, i) => 1 + 5 * Math.pow(nEv > 1 ? i / (nEv - 1) : 1, 2));
+    const wSum = wts.reduce((a, b) => a + b, 0);
+    const flightBase = Math.min(0.55, Math.max(0.25, duration * 0.05));
+    let acc = 0;
+    const events = eliminationOrder.map((victim, i) => {
+      acc += wts[i];
+      const jitter = i < nEv - 2 ? (Math.random() - 0.5) * 0.25 * (wts[i] / wSum) * span : 0;
+      return { kind: "kill", idx: i, target: victim, t: startBuf + span * (acc / wSum) + jitter, flight: flightBase, final: false };
+    });
     let prevT = 0;
     events.forEach((ev, i) => {
-      ev.t = Math.min(lastEventTime, Math.max(ev.t, prevT + Math.max(0.35, gap * 0.4)));
+      ev.t = Math.min(lastEventTime, Math.max(ev.t, prevT + 0.35));
       prevT = ev.t;
-      const candidates = [...alivePool].filter((nm) => nm !== ev.victim);
-      ev.shooter = candidates[Math.floor(Math.random() * candidates.length)];
-      ev.fireAt = Math.max(startBuf * 0.5, ev.t - Math.min(0.55, Math.max(0.25, duration * 0.05)));
-      ev.fired = false; ev.resolved = false;
-      ev.final = i === events.length - 1;
-      alivePool.delete(ev.victim);
+      ev.final = i === nEv - 1;
+      if (ev.final) ev.flight = Math.max(flightBase, 0.6);   // the last shot takes its time
+      ev.fireAt = Math.max(0.1, ev.t - ev.flight);
     });
+
+    const killT = (i) => (i < 0 ? startBuf : events[i].t);
+    const aliveAt = (t) => names.filter((nm) => !events.some((e) => e.target === nm && e.t <= t));
+    const pickShooter = (t, target) => {
+      const c = aliveAt(t).filter((nm) => nm !== target);
+      return c.length ? c[Math.floor(Math.random() * c.length)] : null;
+    };
+    const decoyFlight = Math.min(0.5, Math.max(0.28, flightBase));
+    const extra = [];
+    function addDecoy(fireAt, kind, target) {
+      const shooter = pickShooter(fireAt, target);
+      if (!shooter || !target) return false;
+      extra.push({ kind, target, shooter, fireAt, flight: decoyFlight, t: fireAt + decoyFlight, final: false, scanMax: 0.4 });
+      return true;
+    }
+    // Fake-outs in the roomier gaps. The last two kills keep a long clear
+    // stretch before their own lock-on so the real moment gets room to breathe.
+    let decoyCount = 0;
+    for (let i = 0; i <= nEv - 2 && decoyCount < 5; i++) {
+      const t0 = killT(i - 1);
+      const kLock = events[i].fireAt - 0.22;
+      const clear = i >= nEv - 2 ? 0.9 : 0.2;
+      for (let k = 0; k < 2 && decoyCount < 5; k++) {
+        const fireAt = t0 + 0.3 + k * 1.5 + Math.random() * 0.15;
+        if (fireAt + decoyFlight + clear > kLock) break;
+        const pool = aliveAt(fireAt + decoyFlight + 0.3);
+        if (pool.length < 2 || Math.random() > 0.75) continue;
+        if (addDecoy(fireAt, Math.random() < 0.5 ? "shield" : "miss", pool[Math.floor(Math.random() * pool.length)])) decoyCount++;
+      }
+    }
+    // The final stretch: the eventual winner gets hit but holds on, and
+    // if there's room the doomed ship dodges one shot first.
+    const finalVictim = events[nEv - 1].target;
+    const T0 = nEv >= 2 ? events[nEv - 2].t : startBuf;
+    const gFinal = events[nEv - 1].t - T0;
+    if (gFinal >= 1.65) addDecoy(T0 + 0.35, "shield", survivorName);
+    if (gFinal >= 2.9) addDecoy(T0 + 1.45, "miss", finalVictim);
+
+    // Lock-on timing: the reticle scans across ships, then snaps onto the
+    // target 0.22s before the shot. Longer scans for the last few kills.
+    const all = events.concat(extra).sort((a, b) => a.fireAt - b.fireAt);
+    let busy = startBuf * 0.3;
+    all.forEach((ev) => {
+      if (ev.kind === "kill") ev.shooter = ev.final ? survivorName : pickShooter(ev.fireAt, ev.target);
+      ev.lockAt = ev.fireAt - 0.22;
+      const maxScan = ev.kind === "kill" ? (ev.final ? 1.7 : (ev.idx === nEv - 2 ? 1.3 : 0.8)) : ev.scanMax;
+      const scanStart = Math.max(busy + 0.08, ev.lockAt - maxScan);
+      const scanLen = ev.lockAt - scanStart;
+      ev.hops = [];
+      if (scanLen >= 0.3) {
+        const nh = Math.min(7, Math.floor(scanLen / 0.2));
+        const pool = aliveAt(ev.fireAt).filter((nm) => nm !== ev.shooter);
+        let last = null;
+        for (let h = 0; h < nh; h++) {
+          const cand = pool.filter((nm) => nm !== last);
+          if (!cand.length) break;
+          last = cand[Math.floor(Math.random() * cand.length)];
+          ev.hops.push({ t: scanStart + (h + 0.5) * (scanLen / nh), name: last });
+        }
+      }
+      ev.hopIdx = 0; ev.locked = false; ev.fired = false; ev.resolved = false;
+      busy = Math.max(busy, ev.t);
+    });
+    const duelT = T0 + 0.15;
+    let duelOn = false, nextBeat = 0, remaining = displayOrder.length;
+    let lastAmbient = 0;
 
     statusText.textContent = "Fleets scrambling…";
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "ENGAGE!"], null, fieldWrap);
@@ -764,7 +1022,6 @@ Isla</textarea>
     let slowMoApplied = false;
     let lastVirt = 0;
     let lastPuffCheck = 0;
-    let lastAmbient = 0;
     let allDone = false;
     let resolvedAt = 0;
     const start = performance.now();
@@ -785,15 +1042,58 @@ Isla</textarea>
       lastVirt = virt;
       battle.step(dt);
 
-      events.forEach((ev) => {
+      if (!duelOn && virt >= duelT) {
+        duelOn = true;
+        battle.duel(survivorName, finalVictim);
+        stage.classList.add("duel");
+        statusText.textContent = "Last two standing — who blinks first?";
+        callout("Two ships left…");
+        SuspenseFX.photoFinishBanner(stage, "Last two!");
+        SoundFX.dramatic();
+        nextBeat = now + 500;
+      }
+      if (duelOn && !allDone && now >= nextBeat) {
+        // Heartbeat that speeds up as the final shot approaches.
+        const prog = clamp((virt - duelT) / Math.max(0.5, maxTime - duelT), 0, 1);
+        SoundFX.tick(0.6 + prog * 0.6);
+        nextBeat = now + (900 - 600 * prog);
+      }
+
+      all.forEach((ev) => {
+        if (ev.resolved) return;
+        while (ev.hopIdx < ev.hops.length && virt >= ev.hops[ev.hopIdx].t) {
+          battle.setReticle(ev.hops[ev.hopIdx].name, false);
+          SoundFX.tick(1 + ev.hopIdx * 0.08);
+          ev.hopIdx++;
+        }
+        if (!ev.locked && virt >= ev.lockAt) {
+          ev.locked = true;
+          battle.setReticle(ev.target, true);
+          SoundFX.beep("go");
+          callout(`${ev.shooter} locks onto ${ev.target}…`);
+          if (ev.final) SoundFX.drumroll(1.2);
+        }
         if (!ev.fired && virt >= ev.fireAt) {
           ev.fired = true;
-          battle.fire(ev.shooter, ev.victim, Math.max(0.2, ev.t - ev.fireAt));
+          battle.fire(ev.shooter, ev.target, ev.t - ev.fireAt, ev.kind);
         }
-        if (!ev.resolved && virt >= ev.t) {
+        if (virt >= ev.t) {
           ev.resolved = true;
-          battle.kill(ev.victim, ev.final);
-          if (ev.final) { allDone = true; resolvedAt = now; }
+          battle.clearReticle(ev.target);
+          if (ev.kind === "kill") {
+            battle.kill(ev.target, ev.final);
+            remaining--;
+            callout(`${ev.target} is down!`);
+            if (!ev.final) {
+              if (remaining > 2) statusText.textContent = `${remaining} ships left`;
+              if (remaining <= 4) SuspenseFX.microShake(stage, 200);
+            }
+            if (ev.final) { allDone = true; resolvedAt = now; }
+          } else if (ev.kind === "shield") {
+            callout(`Direct hit — ${ev.target} is still flying!`);
+          } else {
+            callout(`${ev.target} dodged it!`);
+          }
         }
       });
 
@@ -817,6 +1117,7 @@ Isla</textarea>
 
   function finishBattle(result) {
     racing = false;
+    stage.classList.remove("duel");
     if (fleet) fleet.celebrate(result.winner);
     SuspenseFX.flash(stage, 500);
     SuspenseFX.winnerSpotlight(stage);
