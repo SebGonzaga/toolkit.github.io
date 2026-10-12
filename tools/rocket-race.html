@@ -6,7 +6,7 @@
 <link rel="canonical" href="https://pickanamegames.com/tools/rocket-race.html">
 <meta property="og:url" content="https://pickanamegames.com/tools/rocket-race.html">
 <meta property="og:site_name" content="Pick &amp; Race">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2748%27 fill=%27%23efb93c%27/%3E%3Ctext x=%2750%27 y=%2766%27 font-size=%2756%27 text-anchor=%27middle%27%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2748%27 fill=%27%23efb93c%27/%3E%3Ctext x=%2750%27 y=%2766%27 font-size=%2756%27 text-anchor=%27middle%27%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
 <meta name="google-adsense-account" content="ca-pub-8362200361779290">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8362200361779290" crossorigin="anonymous"></script>
 <title>Spaceship Shootdown Name Picker — Duel &amp; Decide</title>
@@ -34,133 +34,143 @@
 
   .stage {
     border: var(--border); border-radius: var(--radius);
-    background: radial-gradient(circle at 80% 20%, #1c2a4d, #0c1226 70%);
+    background:
+      radial-gradient(ellipse 70% 55% at 88% 92%, rgba(74,120,215,0.55), transparent 70%),
+      radial-gradient(ellipse 55% 45% at 10% 62%, rgba(105,58,176,0.38), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 70% 40%, rgba(40,90,160,0.22), transparent 70%),
+      linear-gradient(#02030a, #060a1c 55%, #0a102c);
     padding: 16px;
     position: relative; overflow: hidden;
   }
-  .stage.projector { background: #050812; }
+  .stage.projector { background: #01020a; }
   .stage.finished-glow { box-shadow: 0 0 0 4px var(--pencil), 0 0 40px rgba(239,185,60,0.55) inset; }
 
-  .starfield { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-  .star { position: absolute; background: #fff; border-radius: 50%; animation: twinkle ease-in-out infinite; }
-  @keyframes twinkle { 0%,100% { opacity: 0.25; } 50% { opacity: 1; } }
+  /* -- scrolling starfield: stars streak downward so the fleet reads as flying "up" -- */
+  .starfield { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .star {
+    position: absolute; top: 0; border-radius: 2px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), #fff);
+    animation: star-fall linear infinite;
+  }
+  @keyframes star-fall { from { transform: translateY(-16px); } to { transform: translateY(780px); } }
 
-  /* -- deep-space set dressing: drifting nebula wisps + distant planets --- */
-  .nebula { position: absolute; border-radius: 50%; filter: blur(18px); z-index: 0; pointer-events: none; opacity: 0.5; animation: nebula-drift ease-in-out infinite; }
-  @keyframes nebula-drift { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3%,-2%) scale(1.05); } }
+  /* -- drifting nebula clouds -- */
+  .nebula { position: absolute; border-radius: 50%; filter: blur(22px); z-index: 0; pointer-events: none; opacity: 0.6; animation: nebula-drift ease-in-out infinite; }
+  @keyframes nebula-drift { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3%,-2%) scale(1.06); } }
 
-  .planet { position: absolute; border-radius: 50%; z-index: 1; pointer-events: none; animation: planet-drift ease-in-out infinite; }
-  .planet::after { content: ""; position: absolute; inset: -12% -34%; border-radius: 50%; border: 5px solid rgba(255,255,255,0.14); transform: rotate(-18deg); }
-  .planet.no-ring::after { display: none; }
-  @keyframes planet-drift { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
+  /* -- asteroid / wreckage cluster, top right -- */
+  .debris { position: absolute; right: 4%; top: 5%; width: 104px; z-index: 1; pointer-events: none; animation: debris-drift 13s ease-in-out infinite; }
+  .debris .rock { transform-box: fill-box; transform-origin: center; animation: rock-spin 26s linear infinite; }
+  .debris .rock.r2 { animation-duration: 18s; animation-direction: reverse; }
+  .debris .rock.r3 { animation-duration: 33s; }
+  @keyframes rock-spin { to { transform: rotate(360deg); } }
+  @keyframes debris-drift { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-6px, 8px); } }
 
-  /* -- ambient thruster puffs (calm flight) --- */
+  /* -- engine embers + ambient tracer shots (below the ships) -- */
   .exhaust-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
-  .exhaust-puff { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle, rgba(255,205,120,0.9), rgba(255,120,60,0) 70%); }
-  @keyframes puff-fade { 0% { transform: scale(0.5); opacity: 0.9; } 100% { transform: scale(2.2) translateX(-18px); opacity: 0; } }
+  .ember {
+    position: absolute; width: 2px; height: 22px; margin-left: -1px; border-radius: 2px;
+    background: linear-gradient(to bottom, rgba(255,170,60,0.95), rgba(255,100,20,0));
+    animation: ember-fall 0.6s linear forwards;
+  }
+  @keyframes ember-fall { 0% { transform: translateY(0) scaleY(0.6); opacity: 0.95; } 100% { transform: translateY(52px) scaleY(1.7); opacity: 0; } }
+  .tracer {
+    position: absolute; width: 3px; height: 20px; margin-left: -1.5px; border-radius: 3px;
+    background: linear-gradient(to top, rgba(255,120,30,0), #ffb347 55%, #fff6c8);
+    box-shadow: 0 0 8px 1px rgba(255,150,40,0.8);
+    animation: tracer-up 0.8s linear forwards;
+  }
+  @keyframes tracer-up { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-300px); opacity: 0; } }
 
-  /* -- combat layer: lasers + explosions, drawn above the ships --- */
+  /* -- combat layer: fireballs + explosions, drawn above the ships -- */
   .fx-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
-  .laser-wrap { position: absolute; height: 0; transform-origin: 0 50%; }
-  .laser-beam {
-    position: absolute; left: 0; top: -1.5px; width: 100%; height: 3px; border-radius: 2px;
-    background: linear-gradient(90deg, var(--bc, #fff) 0%, #fff 55%, rgba(255,255,255,0) 100%);
-    box-shadow: 0 0 10px 1px var(--bc, #fff);
-    animation: laser-fire 0.25s ease-out forwards;
+  .fireball { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+  .fireball i { position: absolute; display: block; }
+  .fb-tail {
+    right: 0; top: -4px; width: 58px; height: 8px; border-radius: 8px; filter: blur(0.8px);
+    background: linear-gradient(90deg, rgba(255,110,20,0), rgba(255,170,50,0.9));
   }
-  @keyframes laser-fire {
-    0% { opacity: 0; transform: scaleX(0.15); }
-    30% { opacity: 1; transform: scaleX(1); }
-    100% { opacity: 0; transform: scaleX(1); }
+  .fb-orb {
+    left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; box-sizing: border-box;
+    border: 2px solid #ffd25c;
+    background: radial-gradient(circle, #fff 0 22%, #ffe27a 45%, #ff8a1f 100%);
+    box-shadow: 0 0 14px 4px rgba(255,140,30,0.85);
   }
-  .explosion-fx {
-    position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
-    background: radial-gradient(circle, #fff 0%, #ffd25c 25%, #ff7a3d 55%, rgba(255,90,40,0) 75%);
-    animation: explosion-grow 0.55s ease-out forwards;
+  .boom { position: absolute; width: 0; height: 0; }
+  .boom i { position: absolute; display: block; }
+  .b-core {
+    left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, #ffe27a 28%, #ff8a1f 58%, rgba(255,60,20,0) 76%);
+    animation: boom-core 0.6s ease-out forwards;
   }
-  .explosion-fx.big { animation: explosion-grow-big 0.75s ease-out forwards; }
-  @keyframes explosion-grow {
-    0% { transform: scale(0.3); opacity: 1; }
-    60% { transform: scale(2.6); opacity: 1; }
-    100% { transform: scale(3.4); opacity: 0; }
+  .b-ring {
+    left: -11px; top: -11px; width: 22px; height: 22px; border-radius: 50%; box-sizing: border-box;
+    border: 2px solid rgba(255,222,130,0.95);
+    animation: boom-ring 0.6s ease-out forwards;
   }
-  @keyframes explosion-grow-big {
-    0% { transform: scale(0.4); opacity: 1; }
-    60% { transform: scale(4.2); opacity: 1; }
-    100% { transform: scale(5.4); opacity: 0; }
+  .b-spark {
+    left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%;
+    background: #ffd25c; box-shadow: 0 0 6px 1px #ff8a1f;
+    animation: boom-spark 0.65s ease-out forwards;
   }
+  .boom.big .b-core { animation-name: boom-core-big; animation-duration: 0.8s; }
+  .boom.big .b-ring { animation-name: boom-ring-big; animation-duration: 0.8s; }
+  .boom.big .b-spark { width: 5px; height: 5px; animation-duration: 0.85s; }
+  @keyframes boom-core { 0% { transform: scale(0.3); opacity: 1; } 50% { transform: scale(3.4); opacity: 1; } 100% { transform: scale(4.6); opacity: 0; } }
+  @keyframes boom-core-big { 0% { transform: scale(0.4); opacity: 1; } 50% { transform: scale(5.6); opacity: 1; } 100% { transform: scale(7.4); opacity: 0; } }
+  @keyframes boom-ring { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(4.4); opacity: 0; } }
+  @keyframes boom-ring-big { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(7); opacity: 0; } }
+  @keyframes boom-spark { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; } }
 
   .stage-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; position: relative; z-index: 5; }
-  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+  .stage-header .status { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: #eef1fb; }
+  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; color: #ffd25c; }
   .stage.projector .stage-header .status { color: #fff; }
-  .stage-header .clock { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
   .stage.projector .stage-header .clock { color: var(--pencil); }
 
-  .field { background: rgba(255,255,255,0.06); position: relative; z-index: 5; }
-  .field-token { left: 0; top: 0; transform: translate(0,0); animation: none; will-change: transform; }
+  .field { height: 440px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 5; }
+  .field.many-names { height: 500px; }
+  .field-token { left: 0; top: 0; width: 40px; height: 52px; transform: translate(0,0); animation: none; will-change: transform; }
+  .field.many-names .field-token { width: 28px; height: 36px; }
   .field-token.stalled { animation: none; }
-
   .field-token .token-art { width: 100%; height: 100%; display: block; position: relative; }
-  .field-token .token-art svg { width: 100%; height: 100%; display: block; }
-  .field-token .name-tag { background: rgba(10,14,28,0.75); color: #eef1fb; }
+  .field-token .token-art svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .field-token .name-tag { bottom: auto; top: -19px; background: rgba(6,10,26,0.78); color: #eef1fb; border: 1px solid rgba(255,255,255,0.14); }
 
-  /* Engine flame + firing/hit flashes live on the SAME element (.token-art)
-     that carries the heading rotation, so the flame trails correctly behind
-     the nose no matter which way a ship is flying. */
-  .field-token .token-art::before {
-    content: ""; position: absolute; right: 100%; top: 50%; transform: translateY(-50%);
-    width: 34px; height: 6px;
-    background: linear-gradient(90deg, transparent, rgba(239,185,60,0.85));
-    border-radius: 4px;
-    transition: width 0.1s ease, opacity 0.1s ease;
-    opacity: 0;
-  }
-  .field-token.surging .token-art::before { width: 54px; opacity: 1; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95)); animation: flame-flicker 0.18s ease-in-out infinite; }
-  @keyframes flame-flicker { 0%,100% { transform: translateY(-50%) scaleX(1); } 50% { transform: translateY(-50%) scaleX(0.85); } }
   .field-token.firing .token-art { animation: firing-flash 0.22s ease-in-out; }
-  @keyframes firing-flash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.9) drop-shadow(0 0 8px #fff); } }
-  .field-token.hit-flash .token-art { animation: hit-flash 0.13s ease-in-out 2; }
-  @keyframes hit-flash { 0%,100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(2.6) saturate(0.2); } }
-  .field-token.destroyed { transition: opacity 0.45s ease, filter 0.45s ease; opacity: 0.18; filter: grayscale(1) brightness(0.5); pointer-events: none; }
-  .field-token.destroyed .rank-badge { display: block; background: #3a1010; color: #ff9a7a; }
+  @keyframes firing-flash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.8) drop-shadow(0 0 8px #ffb347); } }
+  .field-token.destroyed { opacity: 0; transition: opacity 0.3s ease 0.5s; pointer-events: none; }
+  .field-token.destroyed .name-tag { opacity: 0; }
+  .field-token.destroyed .token-art { animation: ship-down 0.55s ease-in forwards; }
+  @keyframes ship-down {
+    0%   { filter: brightness(2.8) saturate(0.2); transform: scale(1) rotate(0deg); opacity: 1; }
+    35%  { filter: brightness(1.6); }
+    100% { filter: brightness(0.3); transform: scale(0.45) rotate(140deg); opacity: 0; }
+  }
+  .field-token.victor { z-index: 9; }
   .field-token.victor .token-art { animation: victor-glow 0.9s ease-in-out infinite; }
   @keyframes victor-glow {
     0%,100% { filter: drop-shadow(0 0 8px rgba(239,185,60,0.7)); }
     50% { filter: drop-shadow(0 0 22px rgba(239,185,60,1)); }
   }
 
-  /* A perspective wrapper around the ship art itself (never on .field-token
-     — JS drives that element's own transform for arena position, so any
-     decorative animation lives one level down). Idle drift is a slow
-     pitch/roll wobble; surging adds a forward-leaning bank so a burst of
-     speed visibly tilts the nose. */
-  .rocket3d {
-    position: relative; width: 100%; height: 100%;
-    transform-style: preserve-3d; transform-origin: 50% 50%;
-    animation: rocket-drift 1.3s ease-in-out infinite;
-  }
-  .rocket3d svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
-  @keyframes rocket-drift {
-    0%, 100% { transform: rotateX(10deg) rotateZ(-3deg) translateY(0) translateZ(0); }
-    50%      { transform: rotateX(-8deg) rotateZ(3deg) translateY(-3px) translateZ(5px); }
-  }
-  .field-token.surging .rocket3d { animation: rocket-drift-surge 0.42s ease-in-out infinite; }
-  @keyframes rocket-drift-surge {
-    0%, 100% { transform: rotateX(6deg) rotateZ(-8deg) translateY(0) translateZ(0); }
-    50%      { transform: rotateX(-4deg) rotateZ(-2deg) translateY(-2px) translateZ(4px); }
-  }
-  /* Fins flutter independently of the body wobble so the ship doesn't
-     read as one rigid cutout. */
-  .r-fin { animation: fin-flutter 0.6s ease-in-out infinite; transform-box: fill-box; }
-  .r-fin.top { transform-origin: 0% 100%; }
-  .r-fin.bottom { transform-origin: 0% 0%; animation-delay: -0.3s; }
-  @keyframes fin-flutter { 0%,100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
-  .field-token.surging .r-fin { animation-duration: 0.24s; }
-  /* The engine core glow pulses on its own rhythm, independent of the trail
-     flame outside the token, for a lit-from-within look. */
+  /* Ship art: nose points UP (-y). The hull hovers on a slow bob; the twin
+     engine flames flicker on their own fast loop and stretch while surging. */
+  .rocket3d { position: relative; width: 100%; height: 100%; animation: ship-hover 2.2s ease-in-out infinite; }
+  .rocket3d svg { filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55)); }
+  @keyframes ship-hover { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  .r-flame { transform-box: fill-box; transform-origin: 50% 0%; animation: flame-flick 0.13s ease-in-out infinite alternate; }
+  .r-flame.f2 { animation-delay: -0.07s; }
+  @keyframes flame-flick { from { transform: scaleY(0.72) scaleX(0.95); } to { transform: scaleY(1.18) scaleX(1.05); } }
+  .field-token.surging .r-flame { animation-name: flame-flick-surge; animation-duration: 0.1s; }
+  @keyframes flame-flick-surge { from { transform: scaleY(1.3) scaleX(1); } to { transform: scaleY(1.9) scaleX(1.1); } }
   .r-core { animation: core-pulse 0.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-  @keyframes core-pulse { 0%,100% { opacity: 0.55; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
+  @keyframes core-pulse { 0%,100% { opacity: 0.65; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.2); } }
   .field-token.surging .r-core { animation-duration: 0.16s; }
+
+  /* Fleet Status panel, restyled dark to sit inside the space scene */
+  .stage .leaderboard-panel { background: rgba(6,10,26,0.72); border-color: rgba(255,255,255,0.18); color: #e8ecfa; }
+  .stage .leaderboard-panel .lb-title { color: #9fb0d8; }
 
   .winner-banner {
     margin-top: 14px; border: var(--border); border-radius: var(--radius);
@@ -184,14 +194,15 @@
   .leaderboard-panel.many-names .fleet-row { padding: 2px 0; font-size: 0.72rem; }
 
   @media (max-width: 860px) {
+    .field { height: 400px; }
+    .field.many-names { height: 460px; }
     .tool-wrap { grid-template-columns: 1fr; }
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .field-token svg, .star, .rocket3d, .r-fin, .r-core, .laser-beam, .explosion-fx { animation: none !important; transition: none !important; }
-    /* .field-token itself keeps its JS-driven transform — that's the ship's
-       actual position, not a decorative flourish — so it stays visible and
-       correctly placed even with reduced motion on. */
+    .star, .rocket3d, .r-flame, .r-core, .debris, .debris .rock, .nebula, .ember, .tracer { animation: none !important; transition: none !important; }
+    /* .field-token itself keeps its JS-driven transform (the ship's real
+       position), so ships stay visible and correctly placed. */
   }
 </style>
 <link rel="stylesheet" href="../assets/css/responsive.css">
@@ -249,10 +260,9 @@ Isla</textarea>
     <div>
       <div class="stage" id="stage">
         <div class="starfield" id="starfield"></div>
-        <div class="nebula" style="width:38%; aspect-ratio:1; left:-6%; top:12%; background:radial-gradient(circle, rgba(201,143,216,0.55), transparent 70%); animation-duration:16s;"></div>
-        <div class="nebula" style="width:30%; aspect-ratio:1; right:2%; bottom:-8%; background:radial-gradient(circle, rgba(143,185,216,0.4), transparent 70%); animation-duration:20s; animation-delay:-6s;"></div>
-        <div class="planet" style="width:46px; height:46px; left:8%; top:14%; background:radial-gradient(circle at 32% 30%, #efb93c, #a9660f 75%); animation-duration:9s;"></div>
-        <div class="planet no-ring" style="width:26px; height:26px; right:12%; top:22%; background:radial-gradient(circle at 35% 30%, #8fb9d8, #2c5b7a 75%); animation-duration:7s; animation-delay:-3s;"></div>
+        <div class="nebula" style="width:46%; aspect-ratio:1; right:-10%; bottom:-14%; background:radial-gradient(circle, rgba(88,132,230,0.7), transparent 70%); animation-duration:20s;"></div>
+        <div class="nebula" style="width:34%; aspect-ratio:1; left:-8%; top:30%; background:radial-gradient(circle, rgba(140,80,210,0.55), transparent 70%); animation-duration:16s; animation-delay:-6s;"></div>
+        <div class="nebula" style="width:22%; aspect-ratio:1; right:4%; top:6%; background:radial-gradient(circle, rgba(255,150,60,0.28), transparent 70%); animation-duration:12s; animation-delay:-3s;"></div>
         <div class="stage-header">
           <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
           <span class="clock" id="clock">–</span>
@@ -260,6 +270,18 @@ Isla</textarea>
         <div class="field-stage">
           <div class="field-wrap" id="fieldWrap">
             <div class="field" id="field">
+              <svg class="debris" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="rockOrange" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#ffd08a"/><stop offset="0.5" stop-color="#e0761f"/><stop offset="1" stop-color="#5a2208"/></radialGradient>
+            <radialGradient id="rockTeal" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#9fe8ff"/><stop offset="0.5" stop-color="#2a8fb8"/><stop offset="1" stop-color="#0d3550"/></radialGradient>
+          </defs>
+          <g class="rock"><polygon points="38,22 58,12 78,20 84,40 70,56 46,58 32,42" fill="url(#rockOrange)"/><circle cx="56" cy="30" r="5" fill="rgba(0,0,0,0.25)"/><circle cx="68" cy="44" r="3.5" fill="rgba(0,0,0,0.22)"/></g>
+          <g class="rock r2"><polygon points="6,42 18,32 30,40 26,56 11,58" fill="url(#rockTeal)"/></g>
+          <g class="rock r3"><polygon points="88,12 102,6 112,16 104,30 91,28" fill="url(#rockTeal)"/></g>
+          <g class="rock r2"><polygon points="92,48 106,44 115,56 105,70 92,63" fill="url(#rockOrange)"/></g>
+          <g class="rock"><polygon points="62,62 72,60 76,68 68,74 60,70" fill="url(#rockOrange)"/></g>
+          <g class="rock r3"><polygon points="12,8 20,6 24,13 17,18 10,15" fill="url(#rockOrange)"/></g>
+        </svg>
               <div class="exhaust-layer" id="exhaustLayer"></div>
               <div class="field-tokens" id="fieldTokens"></div>
               <div class="fx-layer" id="fxLayer"></div>
@@ -323,54 +345,55 @@ Isla</textarea>
   const historyList = document.getElementById("historyList");
   const starfield = document.getElementById("starfield");
 
-  // A layered, gradient-shaded ship instead of one flat solid path: a
-  // radial-gradient fuselage (light source upper-left) for a rounded-tube
-  // look, separate nose-cone and fin shapes so they can move independently,
-  // a glass-highlight porthole, and a pulsing engine core. Each token gets
-  // a phase offset (idx-based) so a fleet of ships doesn't flutter/bob in
-  // perfect unison. The nose points along the SVG's +x axis (right), which
-  // is what lets a plain CSS rotate() line the nose up with the ship's
-  // actual heading in the arena.
+  // A top-down silver fighter, nose pointing UP (-y), in the style of a
+  // classic vertical space shooter: swept wings, twin engine nacelles with
+  // orange flames, and a glowing center engine. The hull is the same silver
+  // for everyone; each pilot's color shows up on the canopy, wing tips and
+  // center engine glow so ships stay easy to tell apart. Flames sit in their
+  // own groups (outer <g> positions, inner <g> animates) so CSS keyframes
+  // never fight the SVG transform attribute.
   function tokenHTML(entrant, color, idx) {
-    const gid = `rocketGrad${idx}`;
-    const gid2 = `rocketFinGrad${idx}`;
-    const mid = shade(color, -25);
-    const deep = shade(color, -95);
-    const phase = ((idx * 0.11) % 1).toFixed(2);
+    const m = `shipMetal${idx}`, g = `shipGlow${idx}`, c = `shipCanopy${idx}`;
+    const deep = shade(color, -110);
+    const phase = ((idx * 0.37) % 2.2).toFixed(2);
+    const flame = (x) => `
+      <g transform="translate(${x} 62)"><g class="r-flame ${x < 30 ? "f1" : "f2"}">
+        <path d="M-4 0 Q-2 14 0 24 Q2 14 4 0 Z" fill="#ff8a1f"/>
+        <path d="M-2 0 Q-1 9 0 15 Q1 9 2 0 Z" fill="#fff3b0"/>
+      </g></g>`;
     return `
       <div class="rocket3d" style="animation-delay:-${phase}s">
-        <svg viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" overflow="visible">
           <defs>
-            <radialGradient id="${gid}" cx="38%" cy="26%" r="85%">
-              <stop offset="0%" stop-color="#fff" stop-opacity="0.7"/>
-              <stop offset="24%" stop-color="${color}" stop-opacity="1"/>
-              <stop offset="62%" stop-color="${mid}" stop-opacity="1"/>
-              <stop offset="100%" stop-color="${deep}" stop-opacity="1"/>
+            <linearGradient id="${m}" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#7d8597"/><stop offset="0.3" stop-color="#eef1f7"/>
+              <stop offset="0.62" stop-color="#b4bccb"/><stop offset="1" stop-color="#697184"/>
+            </linearGradient>
+            <radialGradient id="${g}" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#fff"/><stop offset="0.45" stop-color="${color}"/>
+              <stop offset="1" stop-color="${color}" stop-opacity="0"/>
             </radialGradient>
-            <linearGradient id="${gid2}" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#c3dcee"/>
-              <stop offset="100%" stop-color="#4d7495"/>
+            <linearGradient id="${c}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${deep}"/>
             </linearGradient>
           </defs>
-          <path class="r-fin bottom" style="animation-delay:-${phase}s" d="M18 22 L28 19 L18 18 Z" fill="url(#${gid2})"/>
-          <path class="r-fin top" style="animation-delay:-${phase}s" d="M18 8 L28 11 L18 12 Z" fill="url(#${gid2})" opacity="0.92"/>
-          <path d="M4 15 L44 6 Q58 15 44 24 Z" fill="url(#${gid})" stroke="${deep}" stroke-width="0.6" stroke-opacity="0.4"/>
-          <!-- Underside shading: a soft dark sweep along the belly of the
-               fuselage so it reads as a cylinder, not a flat wedge. -->
-          <path class="r-shade" d="M10 20 Q28 27 46 18 Q28 24 10 20 Z" fill="rgba(0,0,0,0.2)"/>
-          <path class="r-hi" d="M10 10 Q26 6 40 9 Q26 9.5 10 10 Z" fill="rgba(255,255,255,0.4)"/>
-          <!-- Faint panel seams + a bright streak so the hull reads as a
-               riveted metal tube catching a glancing light, not a smooth
-               balloon of flat color. -->
-          <path d="M20 8.6 Q19 15 20 21.4 M32 6.6 Q30.5 15 32 23.4" fill="none" stroke="rgba(0,0,0,0.16)" stroke-width="0.6"/>
-          <path d="M8 13.4 Q22 8.2 40 8.4" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="0.9" stroke-linecap="round"/>
-          <circle cx="30" cy="15" r="4.6" fill="#1e2a45"/>
-          <circle class="r-core" cx="30" cy="15" r="3.6" fill="#eef1fb"/>
-          <circle cx="31.3" cy="13.7" r="1.1" fill="#fff" opacity="0.6"/>
+          ${flame(21)}${flame(39)}
+          <path d="M30 4 L35 20 L37 28 L58 50 L58 60 L41 55 L39 64 L21 64 L19 55 L2 60 L2 50 L23 28 L25 20 Z"
+                fill="url(#${m})" stroke="#3b4152" stroke-width="0.8" stroke-linejoin="round"/>
+          <path d="M30 8 L30 52 M23 30 L12 50 M37 30 L48 50" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="0.7"/>
+          <path d="M30 6 L33 20 L31 34 L30 34 Z" fill="rgba(255,255,255,0.55)"/>
+          <path d="M2 50 L9 47 L9 56 L2 60 Z" fill="${color}"/>
+          <path d="M58 50 L51 47 L51 56 L58 60 Z" fill="${color}"/>
+          <rect x="17" y="56" width="8" height="9" rx="2" fill="#2b3040"/>
+          <rect x="35" y="56" width="8" height="9" rx="2" fill="#2b3040"/>
+          <circle cx="21" cy="65" r="3" fill="#ffb347"/><circle cx="39" cy="65" r="3" fill="#ffb347"/>
+          <circle class="r-core" cx="30" cy="58" r="6.5" fill="url(#${g})"/>
+          <path d="M30 14 Q34 22 33 32 L27 32 Q26 22 30 14 Z" fill="url(#${c})" stroke="#1d2230" stroke-width="0.6"/>
+          <path d="M29.4 17 Q31 22 30.6 27" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1" stroke-linecap="round"/>
         </svg>
       </div>`;
   }
-  const PALETTE = ["#d9503f", "#efb93c", "#8fb9d8", "#c98fd8", "#ffffff", "#35604a"];
+  const PALETTE = ["#ff4fd8", "#ffb62e", "#4fd0ff", "#7dff7a", "#ff5a4f", "#b48cff"];
 
   // shade(color, amt): nudge every RGB channel of a hex color by amt
   // (negative = darker, positive = lighter) to derive real matching
@@ -391,54 +414,25 @@ Isla</textarea>
   let fleet = null;
   const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // A couple of small sparks flung off a ship's tail as it flies — cheap
-  // DOM particles, capped so a big roster can't flood the layer.
-  function spawnExhaustPuff(tokEl) {
-    SoundFX.sputter(0.85 + Math.random() * 0.4);
-    if (prefersReducedMotion || exhaustLayer.childElementCount > 40) return;
-    const tRect = tokEl.getBoundingClientRect();
-    const fRect = field.getBoundingClientRect();
-    const p = document.createElement("div");
-    p.className = "exhaust-puff";
-    p.style.left = (tRect.left - fRect.left + tRect.width * 0.5 + (Math.random() * 8 - 4)) + "px";
-    p.style.top = (tRect.top - fRect.top + tRect.height * 0.5 + (Math.random() * 8 - 4)) + "px";
-    p.style.animation = `puff-fade ${0.4 + Math.random() * 0.3}s ease-out forwards`;
-    exhaustLayer.appendChild(p);
-    setTimeout(() => p.remove(), 750);
-  }
-
-  // A bright bolt drawn straight from a shooter's current position to its
-  // target's, at the instant of firing. A wrapper div carries the
-  // position+rotation (set once, never animated) so the inner bar's own
-  // grow/fade keyframes never fight with that placement.
-  function spawnLaser(fromEl, toEl, color) {
-    SoundFX.laserZap(0.85 + Math.random() * 0.35);
-    const fr = field.getBoundingClientRect();
-    const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
-    const ax = a.left - fr.left + a.width / 2, ay = a.top - fr.top + a.height / 2;
-    const bx = b.left - fr.left + b.width / 2, by = b.top - fr.top + b.height / 2;
-    const dx = bx - ax, dy = by - ay;
-    const dist = Math.hypot(dx, dy) || 1;
-    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    const wrap = document.createElement("div");
-    wrap.className = "laser-wrap";
-    wrap.style.cssText = `left:${ax}px; top:${ay}px; width:${dist}px; transform: rotate(${angle}deg);`;
-    wrap.innerHTML = `<div class="laser-beam" style="--bc:${color}"></div>`;
-    fxLayer.appendChild(wrap);
-    setTimeout(() => wrap.remove(), 260);
-  }
-
-  // A flash + a ring of debris where a ship went down. `big` marks the
-  // decisive final blow, which gets a larger boom and a bigger shockwave.
+  // A flash + shockwave ring + a spray of sparks where a ship went down.
+  // `big` marks the decisive final blow, with a larger boom.
   function spawnExplosion(shipEl, big) {
     const r = shipEl.getBoundingClientRect();
     const fr = field.getBoundingClientRect();
     const cx = r.left - fr.left + r.width / 2, cy = r.top - fr.top + r.height / 2;
-    const ring = document.createElement("div");
-    ring.className = "explosion-fx" + (big ? " big" : "");
-    ring.style.left = cx + "px"; ring.style.top = cy + "px";
-    fxLayer.appendChild(ring);
-    setTimeout(() => ring.remove(), big ? 800 : 600);
+    const boom = document.createElement("div");
+    boom.className = "boom" + (big ? " big" : "");
+    boom.style.left = cx + "px"; boom.style.top = cy + "px";
+    let html = '<i class="b-core"></i><i class="b-ring"></i>';
+    const n = big ? 14 : 8;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rnd(-0.3, 0.3);
+      const d = rnd(26, 52) * (big ? 1.5 : 1);
+      html += `<i class="b-spark" style="--dx:${(Math.cos(a) * d).toFixed(0)}px; --dy:${(Math.sin(a) * d).toFixed(0)}px"></i>`;
+    }
+    boom.innerHTML = html;
+    fxLayer.appendChild(boom);
+    setTimeout(() => boom.remove(), big ? 950 : 750);
     SoundFX.explosionBoom(big);
     SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, {
       count: big ? 26 : 14, spread: big ? 0.9 : 0.5,
@@ -446,12 +440,16 @@ Isla</textarea>
     });
   }
 
+  function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
   /**
    * Builds one battle's worth of ships + fleet-status rows, and owns their
-   * movement/combat state. Ships wander the arena with the same
-   * steer-toward-a-drifting-target feel as the other pickers' racers, just
-   * in two dimensions instead of one — RaceEngine still decides who wins,
-   * this only decides how the fight *looks*.
+   * movement/combat state. Ships hover and strafe around the arena nose-up
+   * (banking into their turns, tilting toward whoever they're shooting) like
+   * a vertical space shooter. Fireballs fly in real time from shooter to
+   * target and home on the target's current position, driven by step() so
+   * they stay in sync with the battle clock (including the final slow-mo).
+   * RaceEngine still decides who wins — this only decides how it *looks*.
    */
   function createFleet(tokensEl, fleetListEl, entrants) {
     const n = entrants.length;
@@ -459,6 +457,8 @@ Isla</textarea>
     const fieldEl = tokensEl.closest(".field") || tokensEl;
 
     tokensEl.innerHTML = "";
+    exhaustLayer.innerHTML = "";
+    fxLayer.innerHTML = "";
     fieldEl.classList.toggle("many-names", many);
     if (fleetListEl) {
       fleetListEl.innerHTML = "";
@@ -468,6 +468,7 @@ Isla</textarea>
 
     const showNamesAlways = n <= 10;
     const marginX = 0.09, marginY = 0.15;
+    const tokW = many ? 28 : 40, tokH = many ? 36 : 52;
 
     const ships = entrants.map((entrant, i) => {
       const color = PALETTE[i % PALETTE.length];
@@ -486,14 +487,15 @@ Isla</textarea>
         artEl: el.querySelector(".token-art"),
         badgeEl: el.querySelector(".rank-badge"),
         x: rnd(marginX, 1 - marginX), y: rnd(marginY, 1 - marginY),
-        vx: 0, vy: 0, angle: rnd(0, 360),
+        vx: 0, vy: 0, angle: 0,
         tx: 0.5, ty: 0.5, wanderTimer: 0,
-        speed: rnd(0.045, 0.085), turnRate: rnd(1.3, 2.6),
+        speed: rnd(0.06, 0.11), turnRate: rnd(1.3, 2.6),
         aimUntil: -1, aimTarget: null,
         alive: true, rowEl: null,
       };
     });
     const byName = Object.fromEntries(ships.map((s) => [s.name, s]));
+    const bolts = [];
 
     if (fleetListEl) {
       ships.forEach((ship) => {
@@ -505,29 +507,26 @@ Isla</textarea>
       });
     }
 
-    // Place every ship once so the arena isn't empty before a battle starts
-    // (matches the idle-preview behaviour of the other pickers).
-    function paint() {
-      const rect = fieldEl.getBoundingClientRect();
-      ships.forEach((ship) => {
-        ship.el.style.transform = `translate(${(ship.x * rect.width).toFixed(1)}px, ${(ship.y * rect.height).toFixed(1)}px) translate(-50%, -50%)`;
-        ship.artEl.style.transform = `rotate(${ship.angle.toFixed(1)}deg)`;
-      });
+    function place(ship, W, H) {
+      ship.el.style.transform = `translate(${(ship.x * W).toFixed(1)}px, ${(ship.y * H).toFixed(1)}px) translate(-50%, -50%)`;
+      ship.artEl.style.transform = `rotate(${ship.angle.toFixed(1)}deg)`;
     }
-    paint();
+
+    // Place every ship once so the arena isn't empty before a battle starts.
+    ships.forEach((s) => place(s, fieldEl.clientWidth, fieldEl.clientHeight));
 
     function step(dt) {
       if (dt <= 0) return;
-      const rect = fieldEl.getBoundingClientRect();
-      const tokenSize = many ? 22 : 34;
-      const mx = Math.min(0.4, (tokenSize / 2 + 6) / Math.max(rect.width, 1));
-      const my = Math.min(0.4, (tokenSize / 2 + 6) / Math.max(rect.height, 1));
+      const W = Math.max(fieldEl.clientWidth, 1), H = Math.max(fieldEl.clientHeight, 1);
+      const mx = Math.min(0.4, (tokW / 2 + 6) / W);
+      const my = Math.min(0.4, (tokH / 2 + 18) / H);
       const now = performance.now() / 1000;
       ships.forEach((ship) => {
         if (!ship.alive) return;
+        const aiming = ship.aimUntil > now && ship.aimTarget && ship.aimTarget.alive;
         let tx, ty, spd = ship.speed;
-        if (ship.aimUntil > now && ship.aimTarget && ship.aimTarget.alive) {
-          tx = ship.aimTarget.x; ty = ship.aimTarget.y; spd = ship.speed * 1.7;
+        if (aiming) {
+          tx = ship.aimTarget.x; ty = ship.aimTarget.y; spd = ship.speed * 1.5;
         } else {
           ship.wanderTimer -= dt;
           if (ship.wanderTimer <= 0) {
@@ -538,48 +537,105 @@ Isla</textarea>
         }
         const dx = tx - ship.x, dy = ty - ship.y;
         const dist = Math.hypot(dx, dy) || 0.0001;
-        const dvx = (dx / dist) * spd, dvy = (dy / dist) * spd;
         const turn = Math.min(1, dt * ship.turnRate);
-        ship.vx += (dvx - ship.vx) * turn;
-        ship.vy += (dvy - ship.vy) * turn;
-        ship.x = Math.min(1 - mx, Math.max(mx, ship.x + ship.vx * dt));
-        ship.y = Math.min(1 - my, Math.max(my, ship.y + ship.vy * dt));
-        const targetAngle = Math.atan2(ship.vy, ship.vx) * 180 / Math.PI;
-        const diff = ((targetAngle - ship.angle + 540) % 360) - 180;
-        ship.angle += diff * Math.min(1, dt * 6);
+        ship.vx += ((dx / dist) * spd - ship.vx) * turn;
+        ship.vy += ((dy / dist) * spd - ship.vy) * turn;
+        ship.x = clamp(ship.x + ship.vx * dt, mx, 1 - mx);
+        ship.y = clamp(ship.y + ship.vy * dt, my, 1 - my);
+        // Nose stays up: bank into sideways motion, and swing toward the
+        // target (within limits) while lining up a shot.
+        let want;
+        if (aiming) {
+          const adx = (ship.aimTarget.x - ship.x) * W, ady = (ship.aimTarget.y - ship.y) * H;
+          want = clamp(Math.atan2(adx, -ady) * 180 / Math.PI, -38, 38);
+        } else {
+          want = clamp((ship.vx / ship.speed) * 9, -16, 16);
+        }
+        ship.angle += (want - ship.angle) * Math.min(1, dt * 7);
         const surging = Math.hypot(ship.vx, ship.vy) > ship.speed * 1.25;
         ship.el.classList.toggle("surging", surging);
-        ship.el.style.transform = `translate(${(ship.x * rect.width).toFixed(1)}px, ${(ship.y * rect.height).toFixed(1)}px) translate(-50%, -50%)`;
-        ship.artEl.style.transform = `rotate(${ship.angle.toFixed(1)}deg)`;
+        place(ship, W, H);
       });
+
+      for (let i = bolts.length - 1; i >= 0; i--) {
+        const b = bolts[i];
+        b.t += dt;
+        const p = Math.min(1, b.t / b.dur);
+        const e = 0.15 * p + 0.85 * p * p;
+        const ex = b.victim.x * W, ey = b.victim.y * H;
+        const bx = b.sx + (ex - b.sx) * e, by = b.sy + (ey - b.sy) * e;
+        const ang = Math.atan2(ey - by, ex - bx) * 180 / Math.PI;
+        b.el.style.transform = `translate(${bx.toFixed(1)}px, ${by.toFixed(1)}px) rotate(${ang.toFixed(1)}deg)`;
+        if (p >= 1) { b.el.remove(); bolts.splice(i, 1); }
+      }
     }
 
-    // Called right as a shot is fired: the shooter banks toward its target
-    // for a beat (a little pursuit flourish) while the beam + sound play.
-    function fire(shooterName, victimName) {
+    // Engine embers streaming down from every live ship (more while surging).
+    function trails() {
+      if (prefersReducedMotion) return;
+      const W = fieldEl.clientWidth, H = fieldEl.clientHeight;
+      let anySurge = false;
+      ships.forEach((ship) => {
+        if (!ship.alive || exhaustLayer.childElementCount > 70) return;
+        const surging = ship.el.classList.contains("surging");
+        if (surging) anySurge = true;
+        if (Math.random() > (surging ? 0.95 : 0.5)) return;
+        const e = document.createElement("i");
+        e.className = "ember";
+        e.style.left = (ship.x * W + rnd(-9, 9) * (tokW / 40)).toFixed(1) + "px";
+        e.style.top = (ship.y * H + tokH * 0.3).toFixed(1) + "px";
+        e.style.animationDuration = (0.4 + Math.random() * 0.3) + "s";
+        exhaustLayer.appendChild(e);
+        setTimeout(() => e.remove(), 750);
+      });
+      if (anySurge) SoundFX.sputter(0.85 + Math.random() * 0.4);
+    }
+
+    // Harmless tracer shots straight up from a random ship, just for that
+    // constant dogfight feel. Purely visual; they never decide anything.
+    function ambient() {
+      if (prefersReducedMotion || exhaustLayer.childElementCount > 60) return;
+      const live = ships.filter((s) => s.alive);
+      if (!live.length) return;
+      const ship = live[Math.floor(Math.random() * live.length)];
+      const W = fieldEl.clientWidth, H = fieldEl.clientHeight;
+      const t = document.createElement("i");
+      t.className = "tracer";
+      t.style.left = (ship.x * W).toFixed(1) + "px";
+      t.style.top = (ship.y * H - tokH * 0.45).toFixed(1) + "px";
+      exhaustLayer.appendChild(t);
+      setTimeout(() => t.remove(), 850);
+    }
+
+    // Called right as a shot is fired: the shooter swings toward its target
+    // for a beat while a fireball launches and flies in `flightSec` seconds.
+    function fire(shooterName, victimName, flightSec) {
       const shooter = byName[shooterName], victim = byName[victimName];
       if (!shooter || !victim) return;
+      const W = fieldEl.clientWidth, H = fieldEl.clientHeight;
       if (shooter.alive) {
-        shooter.aimUntil = performance.now() / 1000 + 0.5;
+        shooter.aimUntil = performance.now() / 1000 + 0.55;
         shooter.aimTarget = victim;
         shooter.el.classList.add("firing");
         setTimeout(() => shooter.el.classList.remove("firing"), 240);
       }
-      if (victim.alive) {
-        victim.el.classList.add("hit-flash");
-        setTimeout(() => victim.el.classList.remove("hit-flash"), 260);
-      }
-      spawnLaser(shooter.el, victim.el, shooter.color);
+      SoundFX.laserZap(0.85 + Math.random() * 0.35);
+      const el = document.createElement("div");
+      el.className = "fireball";
+      el.innerHTML = '<i class="fb-tail"></i><i class="fb-orb"></i>';
+      const sx = shooter.x * W, sy = shooter.y * H - tokH * 0.4;
+      el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;
+      fxLayer.appendChild(el);
+      bolts.push({ el, victim, sx, sy, t: 0, dur: clamp(flightSec || 0.4, 0.2, 0.7) });
     }
 
-    // Takes one ship out of the fight: explosion, fade, fleet-row update.
+    // Takes one ship out of the fight: explosion, spin-out, fleet-row update.
     function kill(name, big) {
       const ship = byName[name];
       if (!ship || !ship.alive) return;
       ship.alive = false;
       spawnExplosion(ship.el, big);
       ship.el.classList.add("destroyed");
-      if (ship.badgeEl) ship.badgeEl.textContent = "💥";
       if (ship.rowEl) {
         ship.rowEl.classList.add("destroyed");
         const st = ship.rowEl.querySelector(".fleet-status");
@@ -599,12 +655,11 @@ Isla</textarea>
     }
 
     function teardown() {
-      // Nothing async is in flight per-ship (no WAAPI handles to cancel),
-      // but this hook exists so buildFleet() has a clean symmetric API —
-      // and a spot to stop any stray timers if this grows further.
+      bolts.forEach((b) => b.el.remove());
+      bolts.length = 0;
     }
 
-    return { ships, step, fire, kill, celebrate, teardown };
+    return { ships, step, trails, ambient, fire, kill, celebrate, teardown };
   }
 
   function buildFleet(entrants) {
@@ -613,12 +668,18 @@ Isla</textarea>
     return fleet;
   }
 
-  for (let i = 0; i < 60; i++) {
+  // Scrolling starfield: thin streaks falling at different speeds.
+  for (let i = 0; i < 70; i++) {
     const s = document.createElement("div");
     s.className = "star";
-    const size = Math.random() < 0.85 ? 1 + Math.random() : 2 + Math.random();
-    s.style.cssText = `left:${Math.random()*100}%; top:${Math.random()*100}%; width:${size}px; height:${size}px;
-      animation-duration:${1.5 + Math.random()*3}s; animation-delay:${Math.random()*3}s;`;
+    const big = Math.random() < 0.2;
+    const w = big ? 2.2 : 1.2 + Math.random() * 0.6;
+    const h = w * (big ? 6 : 3);
+    const dur = big ? 2.2 + Math.random() * 1.4 : 4 + Math.random() * 5;
+    s.style.cssText = `left:${(Math.random() * 100).toFixed(1)}%; width:${w.toFixed(1)}px; height:${h.toFixed(1)}px;
+      opacity:${big ? 0.9 : (0.35 + Math.random() * 0.4).toFixed(2)};
+      animation-duration:${dur.toFixed(2)}s; animation-delay:-${(Math.random() * dur).toFixed(2)}s;`;
+    if (prefersReducedMotion) s.style.top = (Math.random() * 100).toFixed(1) + "%";
     starfield.appendChild(s);
   }
 
@@ -703,6 +764,7 @@ Isla</textarea>
     let slowMoApplied = false;
     let lastVirt = 0;
     let lastPuffCheck = 0;
+    let lastAmbient = 0;
     let allDone = false;
     let resolvedAt = 0;
     const start = performance.now();
@@ -726,7 +788,7 @@ Isla</textarea>
       events.forEach((ev) => {
         if (!ev.fired && virt >= ev.fireAt) {
           ev.fired = true;
-          battle.fire(ev.shooter, ev.victim);
+          battle.fire(ev.shooter, ev.victim, Math.max(0.2, ev.t - ev.fireAt));
         }
         if (!ev.resolved && virt >= ev.t) {
           ev.resolved = true;
@@ -737,7 +799,11 @@ Isla</textarea>
 
       if (now - lastPuffCheck > 90) {
         lastPuffCheck = now;
-        battle.ships.forEach((s) => { if (s.alive && s.el.classList.contains("surging")) spawnExhaustPuff(s.el); });
+        battle.trails();
+      }
+      if (now - lastAmbient > 520) {
+        lastAmbient = now;
+        battle.ambient();
       }
 
       if (allDone && now - resolvedAt > 650) {
