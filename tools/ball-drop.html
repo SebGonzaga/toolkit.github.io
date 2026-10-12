@@ -510,75 +510,155 @@ Isla</textarea>
   // Physics: one honest simulation, recorded as samples
   // ======================================================================
   function simulatePlinko(startX, targetX) {
-    const { pegs, byRow, bR, pegR, rowH, yStart, rows } = cfg;
+    const { byRow, bR, pegR, rowH, yStart, rows } = cfg;
     const DT = 1 / 300, G = 2600, REST = 0.45, VMAX = 1700, COMB = bR + pegR;
-    const floorY = LANE_FLOOR - bR;
-    let x = startX, y = GATE_Y - bR, vx = rand(-30, 30), vy = 0, t = 0, steps = 0;
-    let neckX0 = null, neckY0 = 0, resid = 0, bounces = 0, stuck = 0, chkY = y, chkStep = 0, slowT = null;
+    let x = startX, y = GATE_Y - bR, vx = rand(-30, 30), vy = 0, t = 0, steps = 0, stuck = 0, chkY = y, chkStep = 0;
     const samples = [{ t, x, y }], hits = [];
 
-    while (steps < 9000) {
+    // Peg field: real gravity + collisions, with a soft tilt toward the winner's side that never overrides a bounce.
+    while (steps < 9000 && y < NECK_TOP) {
       steps++;
       vy = Math.min(VMAX, vy + G * DT);
-      if (slowT === null && y >= NECK_TOP - 170) slowT = t;   // slow-mo kicks in a few rows above the funnel
-      if (y < NECK_TOP) {
-        // Open peg field: gravity + collisions + a very gentle "tilt" toward the
-        // target that grows with depth. It never overrides a bounce.
-        const depth = clamp((y - FIELD_TOP) / (NECK_TOP - FIELD_TOP), 0, 1);
-        // Gentle lane-seeking through the lower pegs: the ball drifts onto its lane while it is still
-        // bouncing, so it leaves the peg field already above the winning bin (no sideways slide after).
-        const seek = Math.pow(Math.max(0, depth - 0.15) / 0.85, 1.5) * 400;
-        vx += (1.6 + 3.4 * depth + seek) * (targetX - x) * DT;
-        if (depth > 0.4) vx *= Math.exp(-12 * ((depth - 0.4) / 0.6) * DT);
-        x += vx * DT; y += vy * DT;
-        if (x < L + bR) { x = L + bR; vx = Math.abs(vx) * 0.5; }
-        if (x > R - bR) { x = R - bR; vx = -Math.abs(vx) * 0.5; }
-        const ro = Math.round((y - yStart) / rowH);
-        for (let r = Math.max(0, ro - 1); r <= Math.min(rows - 1, ro + 1); r++) {
-          for (const p of byRow[r]) {
-            const dx = x - p.x, dy = y - p.y;
-            if (Math.abs(dx) > COMB || Math.abs(dy) > COMB) continue;
-            const dist = Math.hypot(dx, dy);
-            if (dist > 0.0001 && dist < COMB) {
-              const nx = dx / dist, ny = dy / dist, vn = vx * nx + vy * ny;
-              if (vn < 0) {
-                vx -= (1 + REST) * vn * nx; vy -= (1 + REST) * vn * ny;
-                vx += rand(-55, 55) * (bR / 13 + 0.4);       // a kick from THIS impact only
-                hits.push({ t, p, speed: -vn });
-              }
-              const o = COMB - dist; x += nx * o; y += ny * o;
+      const depth = clamp((y - FIELD_TOP) / (NECK_TOP - FIELD_TOP), 0, 1);
+      const seek = Math.pow(Math.max(0, depth - 0.2) / 0.8, 1.5) * 120;
+      vx += (1.6 + 3.4 * depth + seek) * (targetX - x) * DT;
+      if (depth > 0.4) vx *= Math.exp(-8 * ((depth - 0.4) / 0.6) * DT);
+      x += vx * DT; y += vy * DT;
+      if (x < L + bR) { x = L + bR; vx = Math.abs(vx) * 0.5; }
+      if (x > R - bR) { x = R - bR; vx = -Math.abs(vx) * 0.5; }
+      const ro = Math.round((y - yStart) / rowH);
+      for (let r = Math.max(0, ro - 1); r <= Math.min(rows - 1, ro + 1); r++) {
+        for (const p of byRow[r]) {
+          const dx = x - p.x, dy = y - p.y;
+          if (Math.abs(dx) > COMB || Math.abs(dy) > COMB) continue;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 0.0001 && dist < COMB) {
+            const nx = dx / dist, ny = dy / dist, vn = vx * nx + vy * ny;
+            if (vn < 0) {
+              vx -= (1 + REST) * vn * nx; vy -= (1 + REST) * vn * ny;
+              vx += rand(-55, 55) * (bR / 13 + 0.4);       // a kick from THIS impact only
+              hits.push({ t, p, speed: -vn });
             }
+            const o = COMB - dist; x += nx * o; y += ny * o;
           }
         }
-        // stuck-breaker: if we barely moved down in ~0.4s, knock it loose
-        if (++chkStep >= 120) { if (y - chkY < 4) { vx += (Math.random() < 0.5 ? -1 : 1) * 240; stuck++; } chkY = y; chkStep = 0; }
-      } else if (y < DIV_TOP) {
-        // Funnel neck: nothing left to hit, so the guide rails steer the ball
-        // onto the target lane, eased by height so it always arrives centred.
-        if (neckX0 === null) { neckX0 = x; neckY0 = y; resid = Math.abs(x - targetX); }
-        y += vy * DT;
-        const p = clamp((y - neckY0) / (DIV_TOP - neckY0), 0, 1);
-        x = neckX0 + (targetX - neckX0) * smooth(p);
-      } else {
-        // Inside the bin: fall, bounce twice, settle
-        x = targetX; y += vy * DT;
-        if (y >= floorY) {
-          y = floorY; vy = -vy * 0.38; bounces++;
-          if (Math.abs(vy) < 150 || bounces > 3) { t += DT; samples.push({ t, x, y }); break; }
-        }
       }
-      t += DT;
-      samples.push({ t, x, y });
+      // stuck-breaker: if we barely moved down in ~0.4s, knock it loose
+      if (++chkStep >= 120) { if (y - chkY < 4) { vx += (Math.random() < 0.5 ? -1 : 1) * 240; stuck++; } chkY = y; chkStep = 0; }
+      t += DT; samples.push({ t, x, y });
     }
     if (steps >= 9000) return null;
-    return { samples, hits, rawDuration: t, resid: neckX0 === null ? 999 : resid, stuck, slowT: slowT === null ? t * 0.6 : slowT };
+
+    const slowT = t, resid = Math.abs(x - targetX);
+    const fin = finale(x, y, vx, vy, targetX, t);
+    return { samples: samples.concat(fin.samples), hits: hits.concat(fin.hits), rawDuration: fin.t, resid, stuck, slowT };
+  }
+
+  /**
+   * The finale (all movement, no extra graphics): the ball leaves the pegs NOT necessarily over its
+   * winner. It lands on a divider tip and ricochets from divider to divider over the names, each hop
+   * lower than the last (like a roulette ball), then finally balances on the divider next to the
+   * winner, rocks back and forth on the tip, and rolls off into the winning bin. Nothing about the
+   * lane is lit or pointed at before it lands, so the only clue is where the ball is.
+   */
+  function finale(x0, y0, vx0, vy0, targetX, tStart) {
+    const { n, binW, bR } = cfg;
+    const DTF = 1 / 240, G = 2600, GH = 6500;
+    const tipY = DIV_TOP - 2, yC = tipY - bR, floorY = LANE_FLOOR - bR;
+    const X = (d) => L + d * binW;
+    const samples = [], hits = [];
+    let t = tStart;
+    const push = (x, y) => { t += DTF; samples.push({ t, x, y }); };
+    const landHit = (d, speed) => hits.push({ t, p: { x: X(d), y: tipY, row: cfg.rows, litAt: -9 }, speed });
+    const herm = (p0, v0, p1, tau, T) => {                        // cubic hermite, end velocity 0
+      const t2 = tau * tau, t3 = t2 * tau;
+      return (2 * t3 - 3 * t2 + 1) * p0 + (t3 - 2 * t2 + tau) * T * v0 + (-2 * t3 + 3 * t2) * p1;
+    };
+
+    // Final drop from (xr,yr) into the winning bin: falls, settles with a couple of bounces.
+    function binFall(xr, yr, vxr, vyr) {
+      let x = xr, y = yr, vy = vyr, bounces = 0;
+      const DT = 1 / 300;
+      for (let i = 0; i < 3000; i++) {
+        vy += G * DT; y += vy * DT;
+        const pr = clamp((y - yr) / ((floorY - yr) || 1), 0, 1);
+        x = xr + (targetX - xr) * smooth(pr);
+        if (y >= floorY) {
+          y = floorY; vy = -vy * 0.38; bounces++;
+          if (Math.abs(vy) < 150 || bounces > 3) { x = targetX; t += DT; samples.push({ t, x, y }); break; }
+        }
+        t += DT; samples.push({ t, x, y });
+      }
+    }
+
+    if (n < 2) { binFall(x0, y0, vx0, vy0); return { samples, hits, t }; }
+
+    const wIdx = clamp(Math.floor((targetX - L) / binW), 0, n - 1);
+    const lo = 1, hi = n - 1;                                    // inner dividers only (not the side walls)
+    const dFinal = wIdx === 0 ? 1 : wIdx === n - 1 ? n - 1 : (Math.random() < 0.5 ? wIdx : wIdx + 1);
+    const sgn = dFinal === wIdx ? 1 : -1;                        // which way the ball finally tips
+
+    // 1) free fall onto the first divider tip
+    const disc = Math.max(0, vy0 * vy0 + 2 * G * (yC - y0));
+    const tf = Math.max(0.05, (-vy0 + Math.sqrt(disc)) / G);
+    const d0 = clamp(Math.round((x0 + vx0 * tf * 0.6 - L) / binW), lo, hi);
+    const N0 = Math.max(2, Math.round(tf / DTF));
+    for (let i = 1; i <= N0; i++) {
+      const tau = i / N0, tt = tau * tf;
+      push(herm(x0, vx0, X(d0), tau, tf), y0 + vy0 * tt + 0.5 * G * tt * tt);
+    }
+    landHit(d0, vy0 + G * tf);
+
+    // 2) ricochet across the dividers, lower each time, ending on the divider beside the winner
+    let seq = null;
+    if (hi === lo) seq = [lo, lo, lo];
+    else {
+      const m = 3 + ((Math.random() * 3) | 0);                  // 3..5 hops
+      for (let a = 0; a < 400 && !seq; a++) {
+        const c = [d0]; let d = d0;
+        for (let k = 1; k < m; k++) {
+          const toward = Math.sign(dFinal - d) || (Math.random() < 0.5 ? -1 : 1);
+          d = clamp(d + (Math.random() < 0.55 ? toward : -toward) * (Math.random() < 0.7 ? 1 : 2), lo, hi);
+          c.push(d);
+        }
+        c.push(dFinal);
+        let ok = c.slice(1, -1).some((v) => v !== dFinal);
+        for (let k = 1; k < c.length && ok; k++) { const st = Math.abs(c[k] - c[k - 1]); if (st < 1 || st > 3) ok = false; }
+        if (ok) seq = c;
+      }
+      if (!seq) seq = d0 !== dFinal ? [d0, dFinal] : [d0, dFinal + (dFinal > lo ? -1 : 1), dFinal];
+    }
+    const hBase = clamp(yC - (NECK_TOP - 8), 16, 56);
+    for (let k = 1; k < seq.length; k++) {
+      const h = Math.max(9, hBase * Math.pow(0.62, k - 1)), T = 2 * Math.sqrt(2 * h / GH);
+      const xa = X(seq[k - 1]), xb = X(seq[k]), N = Math.max(3, Math.round(T / DTF));
+      for (let i = 1; i <= N; i++) { const tau = i / N; push(lerp(xa, xb, tau), yC - 4 * h * tau * (1 - tau)); }
+      landHit(seq[k], 4 * h / T);
+    }
+
+    // 3) balance on the tip: rock one way, the other, a smaller one back... then roll off toward the winner
+    const Xf = X(dFinal);
+    const keys = [0, -0.50, 0.60, -0.32, 1.42], durs = [0.07, 0.09, 0.07, 0.13];
+    let phi = 0, phiDot = 0;
+    for (let k = 1; k < keys.length; k++) {
+      const N = Math.max(3, Math.round(durs[k - 1] / DTF)), last = k === keys.length - 1;
+      for (let i = 1; i <= N; i++) {
+        const tau = i / N, e = last ? tau * tau : 0.5 - 0.5 * Math.cos(Math.PI * tau);
+        phi = keys[k - 1] + (keys[k] - keys[k - 1]) * e;
+        push(Xf + sgn * bR * Math.sin(phi), tipY - bR * Math.cos(phi));
+      }
+      if (last) phiDot = 2 * (keys[k] - keys[k - 1]) / durs[k - 1];
+    }
+    const xr = Xf + sgn * bR * Math.sin(phi), yr = tipY - bR * Math.cos(phi);
+    binFall(xr, yr, sgn * bR * Math.cos(phi) * phiDot, bR * Math.sin(phi) * phiDot);
+    return { samples, hits, t };
   }
 
   function planDrop(startX, targetX) {
-    // Try a few honest simulations and keep one whose funnel hand-off is small,
-    // so the final glide into the lane looks like guidance, not teleporting.
+    // Try a few honest simulations and keep one that leaves the pegs within a couple of bins of the
+    // winner, so the divider hops only have to cover a short distance.
     let best = null;
-    const accept = Math.max(cfg.binW * 0.15, 12);
+    const accept = Math.max(cfg.binW * 2.2, 36);
     for (let i = 0; i < 80; i++) {
       const s = simulatePlinko(startX, targetX);
       if (!s) continue;
@@ -593,16 +673,18 @@ Isla</textarea>
 
   // A "player" walks a recorded sim forward on a chosen clock (O(1) amortised).
   function makePlayer(sim, duration, startAt, targetX, isGhost) {
-    // Time warp: normal speed through the peg field, then a slow-motion crawl for the final approach
-    // that keeps getting slower. The total still equals the slider, so the clock hits 0 as the ball rests.
-    const tailReal = clamp(duration * 0.5, Math.min(2.2, duration * 0.65), 5.6);
+    // Time warp: the peg field plays at its own pace, then the finale runs in slow motion that starts
+    // no faster than the field and keeps slowing toward the end. The total still equals the slider.
+    const tailReal = clamp(duration * 0.6, Math.min(2.6, duration * 0.7), 6.5);
     const preReal = Math.max(0.05, duration - tailReal);
     const rawPre = clamp(sim.slowT, 0.05, sim.rawDuration - 0.05);
     const rawTail = sim.rawDuration - rawPre;
-    const CRAWL = 1.8;
+    const aa = clamp((preReal / rawPre) * rawTail * 1.1 / tailReal, 0.3, 0.85);
+    const F = (u) => aa * u + (1 - aa) * u * u * u;             // raw fraction -> real fraction (monotonic)
+    const Finv = (f) => { let lo = 0, hi = 1; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (F(m) < f) lo = m; else hi = m; } return (lo + hi) / 2; };
     const pl = { sim, duration, startAt, targetX, isGhost, preReal, tailReal, rawPre, rawTail, tail: false, lastBin: -1, si: 0, hi: 0, x: 0, y: 0, vx: 0, vy: 0, done: false };
-    pl.toRaw = (el) => (el <= preReal ? (el / preReal) * rawPre : rawPre + (1 - Math.pow(1 - Math.min(1, (el - preReal) / tailReal), CRAWL)) * rawTail);
-    pl.toReal = (rt) => (rt <= rawPre ? (rt / rawPre) * preReal : preReal + (1 - Math.pow(Math.max(0, 1 - (rt - rawPre) / rawTail), 1 / CRAWL)) * tailReal);
+    pl.toRaw = (el) => (el <= preReal ? (el / preReal) * rawPre : rawPre + Finv(Math.min(1, (el - preReal) / tailReal)) * rawTail);
+    pl.toReal = (rt) => (rt <= rawPre ? (rt / rawPre) * preReal : preReal + F(Math.min(1, (rt - rawPre) / rawTail)) * tailReal);
     sim.hits.forEach((h) => { h.rt = pl.toReal(h.t); });
     return pl;
   }
@@ -879,7 +961,7 @@ Isla</textarea>
           const bi = clamp(Math.floor((bx - L) / cfg.binW), 0, cfg.n - 1);
           if (bi !== pl.lastBin) {
             if (pl.lastBin >= 0) {
-              fx("tick", 1 - Math.min(1, Math.abs(bi - pl.idx) / 3));
+              fx("tick", 0.6);
             }
             pl.lastBin = bi;
           }
@@ -900,7 +982,7 @@ Isla</textarea>
         // Camera keeps its original behaviour (follow, then zoom on the target lane), except during a far
         // dash, when it pulls wider so you can watch the ball fly out and come back.
         if (farPhase) setCam(lerp(pl.targetX, bx, 0.5), 610, 1.2);
-        else if (pl.y > NECK_TOP - 50) setCam(pl.targetX, 640, 1.6);
+        else if (pl.y > NECK_TOP - 50) setCam(bx, 628, 1.5);
         else setCam(HOP_X + (pl.x - HOP_X) * 0.5, pl.y + 50, 1.22);
         if (pl.el >= pl.duration) finishDrop();
       } else {
@@ -1063,14 +1145,7 @@ Isla</textarea>
       }
     }
 
-    // bin highlights: lane under the ball ("armed") and the pulsing winner
-    if (mode === "drop" && play && ball.y > NECK_TOP - 30) {
-      const bi = clamp(Math.floor((ball.x - L) / binW), 0, n - 1);
-      const col = PALETTE[bi % PALETTE.length];
-      ctx.globalCompositeOperation = glowOp(); ctx.fillStyle = rgba(col, 0.22); ctx.fillRect(L + bi * binW, DIV_TOP, binW, LANE_FLOOR - DIV_TOP);
-      ctx.globalCompositeOperation = "source-over";
-      drawGlow(col, binCenter(bi), LANE_FLOOR - 6, binW * 1.3 + 20, 0.55);
-    }
+    // bin highlight: only the winner, and only once the ball has landed (nothing is lit during the drop)
     if (winnerIdx >= 0) {
       const col = PALETTE[winnerIdx % PALETTE.length], pulse = 0.5 + 0.5 * Math.sin(now * 5), x = L + winnerIdx * binW;
       const plateBot = cfg.vertical ? 752 : 720;
