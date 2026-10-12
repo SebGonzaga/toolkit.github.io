@@ -597,6 +597,60 @@ const SoundFX = (() => {
     else initUI();
   }
 
+
+  /* ------------------------------------------------- balloon suspense sounds */
+  // Slow leak: airy hiss that thins out as the air escapes.
+  function hiss(dur = 1.2, gain = 0.1) {
+    if (!allowed("hiss", 250)) return;
+    noiseBurst(dur, { filterType: "bandpass", filterFreq: 5200, sweepTo: 2400, q: 0.9, gain, fadeIn: dur * 0.15 });
+  }
+  // Rubber being stretched: friction squeal whose pitch climbs with strain (p ~ 0.8..2.2).
+  function stretch(p = 1) {
+    if (!allowed("stretch", 140)) return;
+    tone(520 * p, 0.2, { type: "sawtooth", gain: 0.035, glideTo: 780 * p, vibrato: 40 * p, vibratoRate: 22,
+      filter: { type: "bandpass", freq: 1500 * p, q: 7 } });
+    tone(1250 * p, 0.14, { type: "triangle", gain: 0.05, glideTo: 1650 * p, delay: 0.05, vibrato: 25, vibratoRate: 28 });
+  }
+  // Low groan for a balloon that is about to go (or pretending to).
+  function creak(p = 1) {
+    if (!allowed("creak", 260)) return;
+    tone(150 * p, 0.28, { type: "sawtooth", gain: 0.05, glideTo: 95 * p, vibrato: 30, vibratoRate: 34,
+      filter: { type: "lowpass", freq: 600, q: 4 } });
+  }
+  // Air back into the balloon after a fake-out.
+  function refill() {
+    tone(380, 0.32, { type: "triangle", gain: 0.09, glideTo: 980 });
+    tone(760, 0.12, { type: "sine", gain: 0.06, delay: 0.3, glideTo: 1100 });
+  }
+  function birdChirp() {
+    if (!allowed("chirp", 90)) return;
+    const b = rnd(2300, 3100);
+    tone(b, 0.07, { type: "sine", gain: 0.07, glideTo: b * 1.35 });
+    tone(b * 1.2, 0.08, { type: "sine", gain: 0.06, glideTo: b * 0.9, delay: 0.09 });
+  }
+  function dartThwip() {
+    noiseBurst(0.22, { filterType: "bandpass", filterFreq: 3800, sweepTo: 900, q: 1.5, gain: 0.12 });
+    tone(1500, 0.16, { type: "triangle", gain: 0.05, glideTo: 380 });
+  }
+  // The held-breath beat: everything goes dead silent, then restores right before the bang.
+  function hush() {
+    if (!ctx || !master) return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
+  }
+  function unhush() {
+    if (!ctx || !master) return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(muted ? 0 : VOLUME, ctx.currentTime);
+  }
+  // A harder, bigger pop than balloonPop(): crack + low thump + short air whump.
+  function bigBang() {
+    noiseBurst(0.14, { filterType: "highpass", filterFreq: 600, gain: 0.9 });
+    noiseBurst(0.5, { filterType: "lowpass", filterFreq: 1800, sweepTo: 110, gain: 0.55 });
+    tone(120, 0.4, { type: "sawtooth", gain: 0.5, glideTo: 32, filter: { type: "lowpass", freq: 500 } });
+    tone(60, 0.5, { gain: 0.45, glideTo: 28 });
+  }
+
   return {
     unlock, isMuted, setMuted,
     // ui
@@ -609,6 +663,8 @@ const SoundFX = (() => {
     beep, countdownStep, splash, crowdSwell, cheer, fanfare, winner, leadChange,
     tick, reelTick, reelStop, lever, kaChing, drumroll, ping, matchWin, flutter, flipReveal,
     deal, rattle, stamp, answer, eliminated, plod, sputter, rocketLaunch, laserZap, explosionBoom, balloonPop, drop,
+    // balloon suspense
+    hiss, stretch, creak, refill, birdChirp, dartThwip, hush, unhush, bigBang,
     preview,
   };
 })();

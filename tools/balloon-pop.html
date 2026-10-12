@@ -62,7 +62,7 @@
   .balloon-wrap {
     position: absolute; top: 0; left: 0; transform: translate(-50%, -50%);
     display: flex; flex-direction: column; align-items: center; gap: 4px;
-    transition: transform 0.15s ease; z-index: 6;
+    transition: transform 0.15s ease, opacity 0.45s ease; z-index: 6;
   }
   .balloon-wrap.leader { z-index: 8; }
   .balloon-token {
@@ -71,8 +71,9 @@
     transform-origin: 50% 60%;
     will-change: transform;
   }
+  .balloon-token .skin { width: 100%; height: 100%; }
   .balloon-token svg { width: 100%; height: 100%; animation: sway 1.1s ease-in-out infinite; transform-origin: 50% 65%; }
-  @keyframes sway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  @keyframes sway { 0%,100% { transform: rotate(calc(var(--amp, 4) * -1deg)); } 50% { transform: rotate(calc(var(--amp, 4) * 1deg)); } }
   .balloon-wrap.surging .balloon-token svg { animation-duration: 0.4s; }
   .balloon-wrap.danger .balloon-token svg { animation-duration: 0.26s; filter: drop-shadow(0 0 9px rgba(217,80,63,0.9)); }
   .balloon-wrap.leader .balloon-token svg { filter: drop-shadow(0 0 9px rgba(239,185,60,0.95)); }
@@ -103,8 +104,63 @@
     .panel { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .balloon-token, .balloon-token svg, .balloon-wrap, .cloud, .stage.climax, .clock.hot { animation: none !important; transition: none !important; }
+    .balloon-token, .balloon-token svg, .balloon-wrap, .cloud, .stage.climax, .clock.hot, .skin, .hazard .bird-wing { animation: none !important; transition: none !important; }
   }
+
+  /* ---------- Suspense layer ---------- */
+  .cam { position: relative; z-index: 5; transform-origin: 50% 50%; will-change: transform; }
+  .dusk { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+    background: radial-gradient(circle at 50% 52%, rgba(52,40,98,0.55) 0%, rgba(8,10,28,0.94) 78%); }
+  .stage.dusky .stage-header .status, .stage.dusky .stage-header .clock { color: #fff; }
+
+  /* Stretching skin: the JS thins colour / adds shine + stress lines per balloon. */
+  .balloon-token .skin { transition: none; }
+
+  /* Wobble + creak (decoys and the real thing look alike on purpose) */
+  .balloon-wrap.creaking .balloon-token svg { animation: creakShake 0.13s linear infinite; }
+  @keyframes creakShake {
+    0% { transform: rotate(-3deg) translateX(-1.5px); } 25% { transform: rotate(2deg) translateX(1.5px); }
+    50% { transform: rotate(-2deg) translateX(1px); }   75% { transform: rotate(3deg) translateX(-1px); }
+    100% { transform: rotate(-3deg) translateX(-1.5px); }
+  }
+  .balloon-wrap.leaking .balloon-token svg { animation: leakShudder 0.08s linear infinite; }
+  @keyframes leakShudder {
+    0% { transform: translate(-2px, 0) rotate(-5deg); } 50% { transform: translate(2px, 1px) rotate(5deg); }
+    100% { transform: translate(-2px, 0) rotate(-5deg); }
+  }
+  .balloon-wrap.drooping .balloon-token svg { animation: none; transform: rotate(16deg) scaleY(0.9); }
+  .balloon-wrap.drooping .flight-name { color: #6b7280; background: rgba(255,255,255,0.5); }
+  .balloon-wrap.flinch .skin { animation: flinch 0.4s ease; }
+  @keyframes flinch { 0%,100% { transform: translate(0,0) rotate(0); } 30% { transform: translate(-4px, 3px) rotate(-9deg); } 65% { transform: translate(3px, -1px) rotate(5deg); } }
+
+  /* The held breath: everything freezes for the half-second before the bang. */
+  .stage.silent .balloon-token svg, .stage.silent .cloud, .stage.silent .skin, .stage.silent .hz-bird .bird-wing { animation-play-state: paused !important; }
+  .stage.silent.climax { animation: none; box-shadow: 0 0 60px 10px rgba(0,0,0,0.5) inset; }
+
+  /* Hazards */
+  .hazard { position: absolute; left: 0; top: 0; z-index: 12; pointer-events: none; display: none; will-change: transform; }
+  .hazard .hz-inner svg { display: block; width: 100%; height: 100%; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.3)); }
+  .hz-bird { width: 58px; height: 40px; }
+  .hz-dart { width: 66px; height: 22px; }
+  .many-names .hazard { zoom: 0.8; }
+  .hz-bird .bird-wing { transform-origin: 30px 20px; animation: flap 0.2s ease-in-out infinite alternate; }
+  @keyframes flap { from { transform: rotate(-28deg); } to { transform: rotate(38deg); } }
+
+  /* Air puffs for the slow leak */
+  .air-puff { position: fixed; border-radius: 50%; background: rgba(255,255,255,0.9); z-index: 998; pointer-events: none; }
+
+  /* Mystery card */
+  .rc { position: absolute; left: 0; top: 0; width: 190px; min-height: 112px; z-index: 45; perspective: 700px; pointer-events: none; }
+  .rc-inner { position: relative; width: 100%; min-height: 112px; transform-style: preserve-3d; }
+  .rc-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border: var(--border); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 10px 12px; text-align: center; box-shadow: 4px 5px 0 rgba(30,42,69,0.35); }
+  .rc-back { background: repeating-linear-gradient(45deg, #d9503f 0 10px, #e8705f 10px 20px); color: #fff; font-family: var(--font-display); font-size: 3rem; font-weight: 800; }
+  .rc-front { background: #fff9e8; transform: rotateY(180deg); font-family: var(--font-display); }
+  .rc-front small { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft, #55607a); }
+  .rc-front b { font-size: clamp(1.2rem, 4vw, 1.9rem); line-height: 1.1; word-break: break-word; color: var(--ink, #1e2a45); }
+  .flight-name.mystery { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .toggle-hint { font-size: 0.74rem; color: var(--ink-soft, #55607a); margin: -6px 0 8px 26px; }
 </style>
 <link rel="stylesheet" href="../assets/css/responsive.css">
 <script src="../assets/js/ads.js" defer></script>
@@ -127,7 +183,7 @@
 
 <main class="wrap">
   <h1 style="margin-top:28px;">Balloon Pop Name Picker</h1>
-  <p>Balloons float and drift around the sky as they inflate, wobbling wilder the bigger they get. First one to reach full size pops — and wins. Works for 2 names or 40.</p>
+  <p>Balloons float and drift around the sky as they inflate — but nobody can tell who's ahead until the very end. Watch for stretching skin, slow leaks, a bird (or dart) circling overhead, and a final-two squeeze with a half-second of silence before the bang. Works for 2 names or 40.</p>
 
   <aside class="ad-slot" data-ad="tool-top" aria-label="Advertisement"></aside>
 <div class="tool-wrap">
@@ -153,6 +209,11 @@ Isla</textarea>
         <input type="checkbox" id="projector">
         <label for="projector" style="margin:0;">Projector mode (big/high-contrast)</label>
       </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="mystery">
+        <label for="mystery" style="margin:0;">Mystery names mode</label>
+      </div>
+      <div class="toggle-hint">Balloons show only numbers. The name drops out of the winner on a card.</div>
 
       <button class="btn marker" id="startBtn">Inflate &amp; release</button>
       <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
@@ -161,11 +222,12 @@ Isla</textarea>
     <div>
       <div class="stage" id="stage">
         <div id="clouds"></div>
+        <div class="dusk" id="dusk"></div>
         <div class="stage-header">
           <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
           <span class="clock" id="clock">–</span>
         </div>
-        <div class="flight-area" id="flightArea"></div>
+        <div class="cam" id="cam"><div class="flight-area" id="flightArea"></div></div>
       </div>
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
       <div class="history" id="historyList"></div>
@@ -180,6 +242,10 @@ Isla</textarea>
     <ul><li>Pick a birthday helper or a class leader.</li><li>Choose who gets to hand out materials.</li><li>Run a quick opener before a spelling or maths game.</li><li>Decide who goes first in an indoor-recess game.</li></ul>
     <h3>A lesson idea</h3>
     <p>Balloons suit short, cheerful moments such as the start of a lesson or the end of the day. Put the names of helpers for the next day's jobs on the balloons, pick one balloon per job, and let the pops decide. The suspense of the wobble makes even routine chores feel like a game.</p>
+    <h3>Why you can't guess the winner</h3>
+    <p>The leader's glow stays hidden until the last stretch, a few other balloons creak and wobble like they're about to go, and one big balloon may spring a slow leak, shrink, and then recover. A bird or dart sweeps past a few balloons, then returns for the real pop. In the final seconds the last two balloons are shoved together under a darkening sky, the sound drops out, and then the bang lands.</p>
+    <h3>Mystery names mode</h3>
+    <p>Turn on <strong>Mystery names mode</strong> and the balloons carry only numbers. When the winner pops, a card drops out of it, flutters down in a shower of confetti, and flips over to reveal the name.</p>
     <h3>Good to know</h3>
     <p>Balloons are simply the costume for the same fair draw used across the site. Turn on <strong>No repeats</strong> and everyone gets a turn before any name comes up a second time, which keeps it fair over a whole week. <strong>Projector mode</strong> switches to bigger, higher-contrast graphics so the back row can see the result.</p>
     <h3>Questions teachers ask</h3>
@@ -204,10 +270,13 @@ Isla</textarea>
   const durationVal = document.getElementById("durationVal");
   const noRepeatEl = document.getElementById("noRepeat");
   const projectorEl = document.getElementById("projector");
+  const mysteryEl = document.getElementById("mystery");
   const startBtn = document.getElementById("startBtn");
   const resetHistoryBtn = document.getElementById("resetHistory");
   const stage = document.getElementById("stage");
   const flightArea = document.getElementById("flightArea");
+  const cam = document.getElementById("cam");
+  const dusk = document.getElementById("dusk");
   const statusText = document.getElementById("statusText");
   const clock = document.getElementById("clock");
   const winnerBanner = document.getElementById("winnerBanner");
@@ -215,10 +284,15 @@ Isla</textarea>
   const clouds = document.getElementById("clouds");
 
   const PALETTE = ["#d9503f", "#efb93c", "#35604a", "#8fb9d8", "#c98fd8", "#ffffff"];
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp01 = (x) => Math.min(1, Math.max(0, x));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const sfx = (name, ...args) => { try { if (SoundFX[name]) SoundFX[name](...args); } catch (e) { /* audio is never critical */ } };
 
   // shade(color, amt): nudge every RGB channel of a hex color by amt
-  // (negative = darker, positive = lighter) to derive real matching
-  // shadow/highlight tones from each racer's palette color.
   function shade(hex, amt) {
     const n = parseInt(hex.slice(1), 16);
     const clamp = (v) => Math.min(255, Math.max(0, v));
@@ -226,12 +300,9 @@ Isla</textarea>
     return `#${(1 << 24 | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
   }
 
-  // A glossy latex balloon instead of one flat-filled ellipse: a multi-stop
-  // radial gradient (light upper-left) for a rounded, stretched-rubber
-  // look, a broad soft sheen plus a sharp specular dot (the combo that
-  // reads as "shiny", not just "light"), and a dark rim shadow along the
-  // lower edge so it reads as a sphere, not a disc. Each balloon gets its
-  // own gradient id since every one renders its own inline <svg>.
+  // A glossy latex balloon. On top of the base look there are two layers that
+  // only appear as the rubber stretches: a bigger, brighter shine (.shine2) and
+  // tiny hairline stress marks near the belly (.stress). JS fades both in.
   function balloonHTML(color, idx) {
     const gid = `balloonGrad${idx}`;
     const mid = shade(color, -20);
@@ -250,22 +321,44 @@ Isla</textarea>
       <ellipse cx="20" cy="18" rx="16" ry="18" fill="url(#${gid})" stroke="${deep}" stroke-width="0.5" stroke-opacity="0.4"/>
       <ellipse cx="14" cy="11" rx="6" ry="8.5" fill="#fff" opacity="0.32" transform="rotate(-18 14 11)"/>
       <ellipse cx="12.3" cy="8" rx="2" ry="2.8" fill="#fff" opacity="0.8" transform="rotate(-18 12.3 8)"/>
+      <ellipse class="shine2" cx="14.5" cy="12" rx="4.6" ry="7.4" fill="#fff" transform="rotate(-18 14.5 12)" style="opacity:0"/>
       <path d="M8 29 Q20 37 32 29 Q20 34 8 29 Z" fill="rgba(0,0,0,0.17)"/>
+      <g class="stress" style="opacity:0" fill="none" stroke="#fff" stroke-width="0.6" stroke-linecap="round">
+        <path d="M5.2 14 l3.4 -1.6 M4.9 19 l4.4 0.4 M5.8 24.5 l3.6 2 M34.8 14 l-3.4 -1.6 M35.1 19 l-4.4 0.4 M34.2 24.5 l-3.6 2 M12 31.5 l1.6 -3 M28 31.5 l-1.6 -3"/>
+      </g>
       <path d="M20 36 L17 40 L23 40 Z" fill="${knot}"/>
       <ellipse cx="20" cy="36.6" rx="2.1" ry="0.9" fill="rgba(255,255,255,0.35)"/>
       <path d="M20 40 Q16 44 20 50" stroke="#4a5674" stroke-width="1.2" fill="none"/>
     </svg>`;
   }
 
+  const BIRD_SVG = `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 26 L3 35 L21 31 Z" fill="#2c3e5c"/>
+      <ellipse cx="34" cy="25" rx="17" ry="10.5" fill="#3d5a8a"/>
+      <g class="bird-wing"><path d="M31 21 C23 3 9 3 3 8 C12 10 19 16 25 25 Z" fill="#26364f"/></g>
+      <circle cx="48" cy="18" r="8.2" fill="#3d5a8a"/>
+      <path d="M55 17 L64 20.5 L55 23 Z" fill="#efb93c"/>
+      <circle cx="50.5" cy="16.2" r="2.2" fill="#fff"/><circle cx="51.2" cy="16.3" r="1.1" fill="#111"/>
+      <path d="M46.5 12.2 L54 14.6" stroke="#1b2538" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>`;
+  const DART_SVG = `<svg viewBox="0 0 70 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M26 12 L4 1.5 L10 12 L4 22.5 Z" fill="#efb93c"/>
+      <path d="M26 12 L12 5 L15 12 L12 19 Z" fill="#d9503f"/>
+      <rect x="24" y="8" width="24" height="8" rx="3.5" fill="#d9503f"/>
+      <rect x="32" y="8" width="4" height="8" fill="#fff" opacity="0.6"/>
+      <path d="M70 12 L46 8.8 L46 15.2 Z" fill="#c9d2dc"/>
+    </svg>`;
+
   let alreadyWon = [];
   let racing = false;
   let homes = [];
+  let refs = [];
+  let hazardRef = null;
+  let hazardType = "bird";
 
   const MIN_SCALE = 0.35;      // starting (barely-inflated) size
-  const MAX_SCALE = 1.45;      // size right at pop — bigger swell for more visual intensity
+  const MAX_SCALE = 1.45;      // size right at pop
   const POP_SCALE = MAX_SCALE + 0.35;
-  const DANGER_AT = 0.8;       // progress fraction where the "about to pop" jitters kick in
-  const rand = (a, b) => a + Math.random() * (b - a);
 
   for (let i = 0; i < 5; i++) {
     const c = document.createElement("div");
@@ -294,12 +387,7 @@ Isla</textarea>
     return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
-  /**
-   * A tiny confetti-dust mote that spawns at a balloon's current on-screen
-   * position and drifts off, fading out — a light trail so a fast-growing,
-   * fast-flying balloon leaves a little wake of sparkle behind it instead
-   * of just silently sliding across the sky.
-   */
+  /** Tiny confetti-dust mote at a balloon's on-screen position. */
   function spawnTrail(x, y, color) {
     const el = document.createElement("div");
     const size = 4 + Math.random() * 4;
@@ -317,15 +405,26 @@ Isla</textarea>
     anim.onfinish = () => el.remove();
   }
 
-  /**
-   * Lays balloons out on a rough grid of "home" positions (so a big roster
-   * doesn't all pile into the same spot), each with its own random flight
-   * personality — independent wobble frequencies/phases/amplitudes for x
-   * and y — so every balloon drifts and swoops on its own unique, organic
-   * path instead of a single shared pattern that would read as robotic.
-   */
-  function buildStage(order) {
+  /** A little puff of escaping air for the slow-leak fake-out. */
+  function spawnPuff(x, y) {
+    const el = document.createElement("div");
+    const size = 5 + Math.random() * 6;
+    el.className = "air-puff";
+    el.style.cssText = `left:${x}px; top:${y}px; width:${size}px; height:${size}px;`;
+    document.body.appendChild(el);
+    const dx = rand(-26, 26), dy = rand(14, 40);
+    const anim = el.animate(
+      [{ transform: "translate(0,0) scale(0.6)", opacity: 0.85 },
+       { transform: `translate(${dx}px, ${dy}px) scale(1.9)`, opacity: 0 }],
+      { duration: 520 + Math.random() * 260, easing: "ease-out" }
+    );
+    anim.onfinish = () => el.remove();
+  }
+
+  function buildStage(order, mystery) {
     flightArea.innerHTML = "";
+    cam.style.transition = "none";
+    cam.style.transform = "scale(1)";
     const many = order.length > 14;
     flightArea.classList.toggle("many-names", many);
 
@@ -335,6 +434,7 @@ Isla</textarea>
     const cols = Math.max(1, Math.round(Math.sqrt(n * (w / h))));
     const rows = Math.max(1, Math.ceil(n / cols));
 
+    refs = [];
     homes = order.map((entrant, i) => {
       const col = i % cols, row = Math.floor(i / cols);
       const jitterX = rand(-0.28, 0.28) / cols;
@@ -344,10 +444,21 @@ Isla</textarea>
       const wrap = document.createElement("div");
       wrap.className = "balloon-wrap";
       wrap.id = `wrap-${i}`;
+      const label = mystery ? `#${i + 1}` : escapeHtml(entrant.name);
       wrap.innerHTML = `
-        <div class="balloon-token" id="balloon-${i}">${balloonHTML(color, i)}</div>
-        <div class="flight-name">${escapeHtml(entrant.name)}</div>`;
+        <div class="balloon-token" id="balloon-${i}"><div class="skin">${balloonHTML(color, i)}</div></div>
+        <div class="flight-name${mystery ? " mystery" : ""}">${label}</div>`;
       flightArea.appendChild(wrap);
+
+      const tok = wrap.querySelector(".balloon-token");
+      refs.push({
+        wrap, tok,
+        skin: tok.querySelector(".skin"),
+        svg: tok.querySelector("svg"),
+        shine: tok.querySelector(".shine2"),
+        stress: tok.querySelector(".stress"),
+        lastThin: -1, lastStress: -1, lastDur: -1, lastAmp: -1,
+      });
 
       return {
         xFrac: Math.min(1, Math.max(0, (col + 0.5) / cols + jitterX)),
@@ -358,10 +469,62 @@ Isla</textarea>
         fy2: rand(0.45, 0.75), py2: rand(0, Math.PI * 2),
         fj: rand(0.5, 0.95), pj: rand(0, Math.PI * 2),
         color,
-        lastTrail: 0,
-        wentDanger: false,
+        lastTrail: 0, lastCreak: 0, lastStretch: 0, lastPuff: 0,
+        creak: null, leak: null, hissed: false, refilled: false,
       };
     });
+
+    // One hazard element per race (bird or dart), hidden until needed.
+    const hz = document.createElement("div");
+    hz.className = `hazard hz-${hazardType}`;
+    hz.innerHTML = `<div class="hz-inner">${hazardType === "bird" ? BIRD_SVG : DART_SVG}</div>`;
+    flightArea.appendChild(hz);
+    hazardRef = { el: hz, inner: hz.firstChild, x: null, y: null, rot: 0, flip: 1, snap: null };
+  }
+
+  /* --------------------------------------------------------------------
+   * The mystery card: falls out of the popped balloon, sways down to the
+   * middle of the stage, lands, and flips to show the name.
+   * ------------------------------------------------------------------ */
+  async function dropMysteryCard(name, fromRect) {
+    const sRect = stage.getBoundingClientRect();
+    const card = document.createElement("div");
+    card.className = "rc";
+    card.innerHTML = `<div class="rc-inner"><div class="rc-face rc-back">?</div><div class="rc-face rc-front"><small>It's…</small><b>${escapeHtml(name)}</b></div></div>`;
+    stage.appendChild(card);
+    const w = card.offsetWidth || 190, h = card.offsetHeight || 112;
+    const x0 = fromRect.left + fromRect.width / 2 - sRect.left;
+    const y0 = fromRect.top + fromRect.height * 0.4 - sRect.top;
+    const x1 = sRect.width / 2, y1 = sRect.height * 0.56;
+    const T = (x, y, r, s) => `translate(${x - w / 2}px, ${y - h / 2}px) rotate(${r}deg) scale(${s})`;
+    const kf = [
+      { transform: T(x0, y0, -12, 0.12), opacity: 0, offset: 0 },
+      { transform: T(lerp(x0, x1, 0.2) + 36, lerp(y0, y1, 0.22), 20, 0.5), opacity: 1, offset: 0.18 },
+      { transform: T(lerp(x0, x1, 0.45) - 46, lerp(y0, y1, 0.46), -18, 0.78), opacity: 1, offset: 0.42 },
+      { transform: T(lerp(x0, x1, 0.75) + 30, lerp(y0, y1, 0.74), 12, 0.95), opacity: 1, offset: 0.72 },
+      { transform: T(x1, y1, 0, 1), opacity: 1, offset: 1 },
+    ];
+    sfx("whoosh", 0.5, false, 0.1);
+    const fall = card.animate(kf, { duration: reduceMotion ? 300 : 1800, easing: "ease-in-out", fill: "forwards" });
+    const flutterTimer = setInterval(() => sfx("flutter"), 120);
+    await fall.finished.catch(() => {});
+    clearInterval(flutterTimer);
+
+    sfx("thud");
+    await card.animate(
+      [{ transform: T(x1, y1, 0, 1) }, { transform: T(x1, y1 - 14, 0, 1.04), offset: 0.4 }, { transform: T(x1, y1, 0, 1) }],
+      { duration: 260, easing: "ease-out", fill: "forwards" }
+    ).finished.catch(() => {});
+
+    const inner = card.firstChild;
+    sfx("flipReveal");
+    await inner.animate([{ transform: "rotateY(0deg)" }, { transform: "rotateY(180deg)" }],
+      { duration: reduceMotion ? 100 : 650, easing: "cubic-bezier(.3,1.3,.5,1)", fill: "forwards" }).finished.catch(() => {});
+
+    const r = card.getBoundingClientRect();
+    SuspenseFX.winnerSpotlight(stage);
+    SuspenseFX.burst(r.left + r.width / 2, r.top + r.height / 2, { count: 70, spread: 1.15 });
+    return card;
   }
 
   async function runRace() {
@@ -369,15 +532,63 @@ Isla</textarea>
     const roster = getNames();
     if (roster.length < 2) { statusText.textContent = "Add at least two names first"; return; }
     racing = true;
+    sfx("unhush");
+    const isMystery = mysteryEl.checked;
     winnerBanner.classList.remove("show");
-    stage.classList.remove("finished-glow", "climax");
+    stage.classList.remove("finished-glow", "climax", "silent", "dusky");
+    stage.querySelectorAll(".rc").forEach((c) => c.remove());
+    dusk.style.transition = "none"; dusk.style.opacity = 0;
     clock.classList.remove("hot");
     const duration = Number(durationEl.value);
     const result = RaceEngine.run(roster, { duration, noRepeat: noRepeatEl.checked, alreadyWon });
 
     const byName = Object.fromEntries(result.order.map((o) => [o.name, o]));
     const displayOrder = result.eligiblePool.map((name) => byName[name]);
-    buildStage(displayOrder);
+    hazardType = Math.random() < 0.5 ? "bird" : "dart";
+    buildStage(displayOrder, isMystery);
+
+    const n = displayOrder.length;
+    const winnerIdx = displayOrder.findIndex((o) => o.name === result.winner);
+    const winnerEntrant = displayOrder[winnerIdx];
+    const maxTime = winnerEntrant.finishTime; // engine guarantees this equals the slider value
+    // Runner-up = the fastest balloon that isn't the winner (and isn't a same-named twin).
+    let runnerIdx = -1;
+    displayOrder.forEach((o, i) => {
+      if (i === winnerIdx || o.name === result.winner) return;
+      if (runnerIdx === -1 || o.finishTime < displayOrder[runnerIdx].finishTime) runnerIdx = i;
+    });
+    if (runnerIdx === -1) runnerIdx = (winnerIdx + 1) % n;
+
+    /* ---------------- suspense script for this race ---------------- */
+    const rich = maxTime >= 5;                      // short races skip the slow set-pieces
+    const nonWinners = RaceEngine.shuffle(displayOrder.map((_, i) => i).filter((i) => i !== winnerIdx));
+    const leakIdx = rich ? nonWinners[0] : -1;      // the fake-out balloon
+    const creakers = nonWinners.filter((i) => i !== leakIdx).slice(0, Math.min(3, Math.max(1, Math.floor(n / 3))));
+    if (creakers.length === 0 && nonWinners.length) creakers.push(nonWinners[0]);
+    creakers.forEach((i) => {
+      const a = rich ? rand(0.30, 0.54) : rand(0.35, 0.5);
+      homes[i].creak = { a, b: Math.min(0.76, a + rand(0.15, 0.21)) };
+    });
+    if (leakIdx >= 0) {
+      const a = rand(0.42, 0.49);
+      homes[leakIdx].leak = { a, b: Math.min(0.79, a + rand(0.27, 0.31)) };
+      homes[leakIdx].creak = null;
+    }
+    // Hazard passes: a decoy, the winner and another decoy, in random order, so
+    // "who did the bird nearly hit?" tells you nothing.
+    const decoyA = nonWinners[0] ?? runnerIdx;
+    const decoyB = nonWinners[1] ?? decoyA;
+    const passTargets = rich ? RaceEngine.shuffle([decoyA, winnerIdx, decoyB]) : [];
+    const passStarts = [0.22, 0.38, 0.54];
+    const passDur = (hazardType === "dart" ? 0.62 : 1) * Math.min(1.7, Math.max(0.7, 0.13 * maxTime));
+    const passes = passTargets.map((target, k) => ({
+      target, t0: passStarts[k] * maxTime, dir: Math.random() < 0.5 ? 1 : -1, flinched: false, sounded: false,
+    }));
+    const attackDur = Math.min(1.6, maxTime * 0.24);
+    const hushDur = Math.min(0.55, attackDur * 0.42);
+    const attackStart = maxTime - attackDur;
+    const diveU0 = 1 - hushDur / attackDur;         // the dive begins the instant the room goes silent
+    const pairSide = Math.random() < 0.5 ? 1 : -1;
 
     statusText.textContent = "Get ready…";
     await SuspenseFX.countdown(stage, ["READY!", "3", "2", "1", "Inflate!"], null, flightArea);
@@ -385,178 +596,389 @@ Isla</textarea>
     statusText.textContent = "Inflating…";
     SoundFX.slideWhistle(300, 1500, 0.6, 0.1);
     const start = performance.now();
-    // Timed to the WINNER's own inflation time, not the slowest balloon's, so
-    // the clock/finish actually land the instant the winner pops instead of
-    // the winner popping while the clock still counts down for stragglers.
-    const winnerTime = displayOrder.find((o) => o.name === result.winner).finishTime;
-    const maxTime = winnerTime; // the engine sets this to the slider value (see race-engine.js)
-    let lastLeaderIdx = -1;
-    let winnerPopped = false;
-    let lastGroupShake = 0;
-    let climaxOn = false;
-    let lastHeartbeat = 0;
-    const many = displayOrder.length > 14;
-    const showTrails = !many; // keep the sky readable when the roster is big
+
+    const many = n > 14;
+    const showTrails = !many;
+    const pos = displayOrder.map(() => ({ x: 0, y: 0, scale: MIN_SCALE }));
+    const st = displayOrder.map(() => ({}));
+    let lastLeaderIdx = -1, revealDone = false, squeezeDone = false, hushed = false;
+    let lastHeartbeat = 0, lastBumpIdx = null, lastChirp = 0, announcedHazard = false;
+
+    function placeHazard(x, y, faceX, faceY) {
+      const hz = hazardRef;
+      if (hazardType === "bird") {
+        hz.flip = faceX >= x ? 1 : -1;
+        hz.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scaleX(${hz.flip})`;
+      } else {
+        const target = Math.atan2(faceY - y, faceX - x) * 180 / Math.PI;
+        const diff = ((target - hz.rot + 540) % 360) - 180;
+        hz.rot += diff * 0.4;
+        hz.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${hz.rot.toFixed(1)}deg)`;
+      }
+      hz.x = x; hz.y = y;
+    }
+
+    function updateHazard(e, areaW, areaH) {
+      const hz = hazardRef;
+      let shown = false;
+
+      // --- narrow-miss passes
+      for (const p of passes) {
+        if (e < p.t0 || e > p.t0 + passDur) continue;
+        const s = (e - p.t0) / passDur;
+        const T = pos[p.target];
+        const R = 22 * T.scale;
+        const bY = T.y - 6;
+        const xs = p.dir > 0 ? -50 : areaW + 50, xe = p.dir > 0 ? areaW + 50 : -50;
+        const bird = hazardType === "bird";
+        const easeOut = (t) => 1 - (1 - t) * (1 - t), easeIn = (t) => t * t;
+        const x = s < 0.5
+          ? lerp(xs, T.x, bird ? easeOut(s * 2) : s * 2)
+          : lerp(T.x, xe, bird ? easeIn((s - 0.5) * 2) : (s - 0.5) * 2);
+        const bell = Math.pow(Math.sin(Math.PI * s), 2);
+        let y = bY - (R + 11) - 60 * (1 - bell);
+        if (bird) y += Math.sin(s * 15) * 7; else y += (s - 0.5) * 46;
+        if (hz.x === null || hz.passRef !== p) { hz.x = null; hz.passRef = p; hz.rot = p.dir > 0 ? 0 : 180; }
+        const px = hz.x === null ? x - p.dir * 6 : hz.x, py = hz.y === null ? y : hz.y;
+        placeHazard(x, y, x + (x - px) * 10 + p.dir * 2, y + (y - py) * 10);
+        shown = true;
+        if (!announcedHazard) {
+          announcedHazard = true;
+          statusText.textContent = bird ? "Look out — a bird!" : "Look out — a dart!";
+        }
+        if (!p.sounded && s > (bird ? 0.28 : 0.4)) { p.sounded = true; bird ? sfx("birdChirp") : sfx("dartThwip"); }
+        if (!p.flinched && s > 0.42) {
+          p.flinched = true;
+          const w = refs[p.target].wrap;
+          w.classList.add("flinch");
+          setTimeout(() => w.classList.remove("flinch"), 450);
+          if (bird) sfx("gasp"); 
+        }
+        break;
+      }
+
+      // --- the final attack: circle the last two, then strike the winner
+      if (!shown && e >= attackStart) {
+        const u = clamp01((e - attackStart) / attackDur);
+        const pw = pos[winnerIdx], pr = pos[runnerIdx];
+        const midX = (pw.x + pr.x) / 2, midY = (pw.y + pr.y) / 2;
+        const R = 22 * Math.max(pw.scale, pr.scale);
+        const spanX = Math.abs(pw.x - pr.x) / 2 + 52;
+        const hoverAt = (t) => ({ x: midX + Math.sin(t * 3.0) * spanX, y: midY - R - 46 + Math.sin(t * 5.3) * 9 });
+        if (!announcedHazard) {
+          announcedHazard = true;
+          statusText.textContent = hazardType === "bird" ? "A bird is circling…" : "A dart is lining up…";
+        }
+        let x, y, fx, fy;
+        if (u < diveU0) {
+          const h = hoverAt(e);
+          const k = smooth(0, 0.3, u / diveU0);
+          const entryX = areaW + 50, entryY = -40;
+          x = lerp(entryX, h.x, k); y = lerp(entryY, h.y, k);
+          const aim = 0.5 + 0.5 * Math.sin(e * 4.0);       // dithers between the two balloons
+          fx = lerp(pr.x, pw.x, aim); fy = lerp(pr.y, pw.y, aim);
+          if (hz.x === null || hz.passRef) { hz.x = null; hz.passRef = null; hz.rot = 180; }
+          hz.snap = null;
+          if (!hushed && hazardType === "bird" && performance.now() - lastChirp > 430) { lastChirp = performance.now(); sfx("birdChirp"); }
+        } else {
+          if (!hz.snap) hz.snap = hoverAt(e);
+          const v = clamp01((u - diveU0) / (1 - diveU0));
+          const k = v * v;
+          x = lerp(hz.snap.x, pw.x, k); y = lerp(hz.snap.y, pw.y - 6, k);
+          fx = pw.x; fy = pw.y - 6;
+        }
+        placeHazard(x, y, fx, fy);
+        shown = true;
+      }
+      hz.el.style.display = shown ? "block" : "none";
+    }
 
     function frame(now) {
-      const elapsed = (now - start) / 1000;
-      clock.textContent = Math.max(0, maxTime - elapsed).toFixed(1) + "s"; // maxTime == the slider value (engine guarantees it)
+      const elapsedRaw = (now - start) / 1000;
+      const e = Math.min(elapsedRaw, maxTime);
+      const f = e / maxTime;
+      clock.textContent = Math.max(0, maxTime - e).toFixed(1) + "s";
 
       const areaW = flightArea.clientWidth, areaH = flightArea.clientHeight;
-      // Horizontal margin has to clear the name tag (wider than the balloon
-      // itself); vertical has to clear the balloon-plus-tag stack at its
-      // biggest (near-pop) size. Sized so a balloon's full silhouette stays
-      // inside the visible box at all times instead of clipping at the edge.
       const marginX = many ? 36 : 58;
       const marginY = many ? 44 : 66;
+      const cx = areaW / 2, cy = areaH / 2;
 
-      let leaderIdx = 0, leaderProgress = -1, surgingCount = 0;
+      // Global phases
+      const wSq = smooth(0.78, 0.9, f);                       // final-two squeeze
+      const duskK = smooth(0.78, 0.96, f);                    // sky darkening
+      const zoomK = reduceMotion ? 0 : smooth(0.8, 1, f);     // slow camera push-in
+      const spread = 0.18 + 0.82 * smooth(0.70, 0.97, f);     // poker face: sizes cluster until late
+      const revealed = f >= 0.9;                              // leader glow allowed
+
+      // ---- pass 1: true progress -> disguised display size, decoy events
+      const progs = displayOrder.map((o) => o.progressAt(e));
+      const pack = progs.reduce((a, b) => a + b, 0) / n;
+      let leaderIdx = 0, leaderProgress = -1;
       displayOrder.forEach((entrant, i) => {
-        const wrapEl = document.getElementById(`wrap-${i}`);
-        const el = document.getElementById(`balloon-${i}`);
-        const home = homes[i];
-        if (!wrapEl || !el || !home) return;
+        const h = homes[i];
+        const p = progs[i];
+        let dp = clamp01(pack + (p - pack) * spread);
+        let bump = 0, extra = 0, creaking = false, leaking = false, drooping = false;
+        if (h.creak) {
+          const u = (f - h.creak.a) / (h.creak.b - h.creak.a);
+          if (u > 0 && u < 1) { const s = Math.sin(Math.PI * u); bump = 0.22 * s; extra = 0.13 * s; creaking = true; }
+        }
+        if (h.leak) {
+          const u = (f - h.leak.a) / (h.leak.b - h.leak.a);
+          if (u > 0 && u < 1) {
+            if (u < 0.3) {                                   // swells like it's about to go
+              const k = smooth(0, 0.3, u); bump = 0.32 * k; extra = 0.15 * k; creaking = u > 0.14;
+            } else if (u < 0.78) {                           // the hiss: shudder, then shrink + droop
+              const k = smooth(0.3, 0.78, u), eo = 1 - (1 - k) * (1 - k);
+              bump = lerp(0.32, -0.14, eo); extra = 0.15 * (1 - k);
+              leaking = k < 0.6; drooping = k >= 0.6;
+              if (!h.hissed) { h.hissed = true; sfx("hiss", 1.3, 0.11); statusText.textContent = "Uh-oh… is that a leak?"; }
+            } else {                                         // …and it springs back
+              const k = smooth(0.78, 1, u); bump = -0.14 * (1 - k);
+              if (!h.refilled) { h.refilled = true; sfx("refill"); statusText.textContent = "…it's back!"; }
+            }
+          }
+        }
+        dp = clamp01(dp + bump);
+        const strain = clamp01(dp + extra);
+        let scale = MIN_SCALE + dp * (MAX_SCALE - MIN_SCALE);
+        const inPair = i === winnerIdx || i === runnerIdx;
+        if (!inPair) scale *= 1 - 0.28 * wSq;
+        st[i] = { p, dp, strain, scale, creaking, leaking, drooping };
+        pos[i].scale = scale;
+        if (p > leaderProgress) { leaderProgress = p; leaderIdx = i; }
+      });
 
-        const progress = entrant.progressAt(elapsed);
-        const prevScale = parseFloat(el.dataset.prevScale || String(MIN_SCALE));
-        const scale = MIN_SCALE + progress * (MAX_SCALE - MIN_SCALE);
+      // ---- final-two geometry
+      const phase = e * (6.5 + 6 * smooth(0.85, 1, f));
+      const touch = 0.8 * 46 * (st[winnerIdx].scale + st[runnerIdx].scale) / 2;
+      const closeK = smooth(0.8, 0.95, f);
+      const d = touch * (1 + 0.09 * Math.sin(phase)) + 54 * (1 - closeK);
+      const bumpIdx = Math.floor((phase - 1.5 * Math.PI) / (2 * Math.PI));
+      if (wSq > 0.6 && !hushed) {
+        if (lastBumpIdx !== null && bumpIdx !== lastBumpIdx) {
+          sfx("bump"); sfx("squeak", 0.9 + Math.random() * 0.4);
+          if (!reduceMotion) SuspenseFX.microShake(stage);
+        }
+      }
+      lastBumpIdx = bumpIdx;
 
-        // Flight gets a bit more lively as a balloon grows — a slow, calm
-        // drift near the start, a touch livelier right before it pops —
-        // but stays gentle throughout rather than swinging wildly.
-        const intensity = 1 + progress * 0.85;
+      // ---- pass 2: positions + DOM
+      displayOrder.forEach((entrant, i) => {
+        const r = refs[i], home = homes[i], s = st[i];
+        if (!r || !home) return;
+        const intensity = 1 + s.dp * 0.85;
         const ampX = home.ampXFrac * areaW * 0.55;
         const ampY = home.ampYFrac * areaH * 0.55;
         const baseX = marginX + home.xFrac * (areaW - marginX * 2);
         const baseY = marginY + home.yFrac * (areaH - marginY * 2);
-        const lateral = entrant.lateralAt ? entrant.lateralAt(elapsed) : 0; // -1..1, tied to the underlying pace sim
-        const jitter = Math.sin(elapsed * home.fj + home.pj);
+        const lateral = entrant.lateralAt ? entrant.lateralAt(e) : 0;
+        const jitter = Math.sin(e * home.fj + home.pj);
         const xOff = (lateral * 0.7 + jitter * 0.3) * ampX * intensity;
-        const yOff = (Math.sin(elapsed * home.fy1 + home.py1) * 0.65 +
-                      Math.sin(elapsed * home.fy2 + home.py2) * 0.35) * ampY * intensity;
-        // Clamped to the FULL margin (not half) so the balloon's whole
-        // silhouette — including the name tag — never slips past the edge
-        // of the visible box, even mid-swing.
-        const x = Math.min(areaW - marginX, Math.max(marginX, baseX + xOff));
-        const y = Math.min(areaH - marginY, Math.max(marginY, baseY + yOff));
-        wrapEl.style.left = x + "px";
-        wrapEl.style.top = y + "px";
-        el.style.transform = `scale(${scale.toFixed(3)})`;
+        const yOff = (Math.sin(e * home.fy1 + home.py1) * 0.65 +
+                      Math.sin(e * home.fy2 + home.py2) * 0.35) * ampY * intensity;
+        let x = baseX + xOff, y = baseY + yOff;
+        let tilt = 0;
 
-        const surging = scale - prevScale > 0.008;
-        wrapEl.classList.toggle("surging", surging);
-        if (surging) surgingCount++;
-        el.dataset.prevScale = scale;
-
-        const inDanger = progress >= DANGER_AT;
-        wrapEl.classList.toggle("danger", inDanger && !winnerPopped);
-        if (inDanger && !home.wentDanger) {
-          home.wentDanger = true;
-          SoundFX.squeak(1.35 + Math.random() * 0.2);
+        if (i === winnerIdx || i === runnerIdx) {
+          const isW = i === winnerIdx;
+          const sgn = isW ? pairSide : -pairSide;
+          const px = cx + sgn * d / 2;
+          const py = cy + Math.sin(phase * 0.5 + (isW ? 0 : 2)) * 5;
+          x = lerp(Math.min(areaW - marginX, Math.max(marginX, x)), px, wSq);
+          y = lerp(Math.min(areaH - marginY, Math.max(marginY, y)), py, wSq);
+          tilt = sgn * -7 * Math.sin(phase) * wSq;
+        } else {
+          x = Math.min(areaW - marginX, Math.max(marginX, x));
+          y = Math.min(areaH - marginY, Math.max(marginY, y));
+          x = Math.min(areaW - marginX, Math.max(marginX, cx + (x - cx) * (1 + 0.3 * wSq)));
+          y = Math.min(areaH - marginY, Math.max(marginY, cy + (y - cy) * (1 + 0.25 * wSq)));
         }
+        pos[i].x = x; pos[i].y = y;
+        r.wrap.style.left = x + "px";
+        r.wrap.style.top = y + "px";
+        r.wrap.style.transform = tilt ? `translate(-50%, -50%) rotate(${tilt.toFixed(1)}deg)` : "";
+        r.wrap.style.opacity = !(i === winnerIdx || i === runnerIdx) && wSq > 0 ? (1 - 0.55 * wSq).toFixed(2) : "";
+        r.tok.style.transform = `scale(${s.scale.toFixed(3)})`;
+        r.tok.style.setProperty("--s", s.scale.toFixed(3));
 
-        if (showTrails) {
-          const spawnGap = 260 - progress * 170;
-          if (now - home.lastTrail > spawnGap) {
-            home.lastTrail = now;
-            const rect = wrapEl.getBoundingClientRect();
-            spawnTrail(rect.left + rect.width / 2, rect.top + rect.height * 0.35, home.color);
+        // Stretching skin: colour thins out, shine brightens, hairline stress marks appear.
+        const thin = smooth(0.55, 0.98, s.strain);
+        if (Math.abs(thin - r.lastThin) > 0.012) {
+          r.lastThin = thin;
+          r.skin.style.opacity = (1 - thin * 0.3).toFixed(3);
+          r.skin.style.filter = `saturate(${(1 - thin * 0.5).toFixed(2)}) brightness(${(1 + thin * 0.25).toFixed(2)})`;
+          r.shine.style.opacity = thin.toFixed(2);
+        }
+        const stressK = smooth(0.62, 0.92, s.strain);
+        if (Math.abs(stressK - r.lastStress) > 0.02) { r.lastStress = stressK; r.stress.style.opacity = stressK.toFixed(2); }
+        // Wobble speeds up and widens with strain (disguised strain, not true progress).
+        const dur = 1.1 - 0.84 * smooth(0.35, 0.95, s.strain);
+        if (Math.abs(dur - r.lastDur) > 0.04) { r.lastDur = dur; r.svg.style.animationDuration = dur.toFixed(2) + "s"; }
+        const amp = 4 + 7 * smooth(0.55, 1, s.strain);
+        if (Math.abs(amp - r.lastAmp) > 0.3) { r.lastAmp = amp; r.tok.style.setProperty("--amp", amp.toFixed(1)); }
+
+        r.wrap.classList.toggle("creaking", s.creaking);
+        r.wrap.classList.toggle("leaking", s.leaking);
+        r.wrap.classList.toggle("drooping", s.drooping);
+        r.wrap.classList.toggle("danger", s.strain >= 0.86);
+        r.wrap.classList.toggle("leader", revealed && i === leaderIdx);
+
+        // Sounds: creaks for the wobblers, rubbery squeal as strain climbs, air puffs for the leak.
+        const now2 = performance.now();
+        if (!hushed) {
+          if ((s.creaking || s.leaking) && now2 - home.lastCreak > 340) {
+            home.lastCreak = now2; sfx("creak", 0.85 + Math.random() * 0.4);
+          }
+          if (s.leaking && now2 - home.lastPuff > 95) {
+            home.lastPuff = now2;
+            const rc = r.wrap.getBoundingClientRect();
+            spawnPuff(rc.left + rc.width / 2, rc.top + rc.height * 0.55);
+          }
+          if (s.strain > 0.74 && now2 - home.lastStretch > 900 - s.strain * 450) {
+            home.lastStretch = now2; sfx("stretch", 0.85 + s.strain * 1.2);
           }
         }
-
-        if (progress >= 0.999 && entrant.name === result.winner && !winnerPopped) {
-          winnerPopped = true;
-          el.style.transform = `scale(${POP_SCALE.toFixed(2)})`;
-          wrapEl.classList.add("popped");
-          SoundFX.balloonPop();
+        if (showTrails && !hushed) {
+          const spawnGap = 260 - s.strain * 170;
+          if (now - home.lastTrail > spawnGap) {
+            home.lastTrail = now;
+            const rc = r.wrap.getBoundingClientRect();
+            spawnTrail(rc.left + rc.width / 2, rc.top + rc.height * 0.35, home.color);
+          }
         }
-        if (progress > leaderProgress) { leaderProgress = progress; leaderIdx = i; }
       });
 
-      if (displayOrder.length >= 3 && surgingCount / displayOrder.length >= 0.35 && now - lastGroupShake > 900) {
-        lastGroupShake = now;
-        SoundFX.squeak(0.9 + Math.random() * 0.5);   // rubbery squeaks as the pack surges
-        SuspenseFX.microShake(stage);
+      updateHazard(e, areaW, areaH);
+
+      // Squeeze begins: the sky darkens and the camera creeps in on the last two.
+      dusk.style.opacity = (duskK * (hushed ? 1 : 0.9)).toFixed(3);
+      stage.classList.toggle("dusky", duskK > 0.45);
+      if (zoomK > 0) cam.style.transform = `scale(${(1 + 0.42 * zoomK * zoomK).toFixed(4)})`;
+      if (wSq > 0.02 && !squeezeDone) {
+        squeezeDone = true;
+        statusText.textContent = "Down to two…";
+        sfx("dramatic");
       }
 
-      if (leaderIdx !== lastLeaderIdx) {
-        document.querySelectorAll(".balloon-wrap.leader").forEach((c) => c.classList.remove("leader"));
-        const el = document.getElementById(`wrap-${leaderIdx}`);
-        if (el) el.classList.add("leader");
-        if (lastLeaderIdx !== -1) SoundFX.leadChange();
-        lastLeaderIdx = leaderIdx;
-      }
-
-      // A rising "heartbeat" squeak tied to whoever's currently biggest —
-      // quiet and slow early on, faster and higher-pitched as they get
-      // closer to popping, so the tension builds in the ears as well as
-      // on screen.
-      if (leaderProgress > 0.45 && !winnerPopped) {
-        const gap = 620 - leaderProgress * 420;
-        if (now - lastHeartbeat > gap) {
-          lastHeartbeat = now;
-          SoundFX.squeak(1 + leaderProgress * 0.75);
+      // Lead glow stays hidden until the last stretch.
+      if (revealed) {
+        if (leaderIdx !== lastLeaderIdx) {
+          if (lastLeaderIdx !== -1) sfx("leadChange");
+          lastLeaderIdx = leaderIdx;
+        }
+        if (!revealDone) {
+          revealDone = true;
+          stage.classList.add("climax");
+          clock.classList.add("hot");
+          SuspenseFX.flash(stage);
+          sfx("gasp");
         }
       }
 
-      // Climax mode: once the leader is deep in the danger zone, the whole
-      // stage starts pulsing and the clock throbs too, so the tension isn't
-      // only visible on the one balloon you happen to be looking at.
-      const wantsClimax = leaderProgress >= 0.88;
-      if (wantsClimax !== climaxOn) {
-        climaxOn = wantsClimax;
-        stage.classList.toggle("climax", climaxOn);
-        clock.classList.toggle("hot", climaxOn);
-        if (climaxOn) { SuspenseFX.flash(stage); SoundFX.gasp(); }
+      // Global heartbeat squeal, rising in pitch + tempo with TIME (not with any one balloon).
+      if (f > 0.3 && !hushed) {
+        const gap = 720 - f * 480;
+        if (now - lastHeartbeat > gap) { lastHeartbeat = now; sfx("stretch", 0.85 + f * 1.15); }
       }
 
-      if (elapsed < maxTime) {
+      // The held breath: all sound cut, motion frozen, for the last half-second.
+      if (!hushed && e >= maxTime - hushDur) {
+        hushed = true;
+        sfx("hush");
+        stage.classList.add("silent");
+        clock.classList.remove("hot");
+        statusText.textContent = "…";
+      }
+
+      if (elapsedRaw < maxTime) {
         requestAnimationFrame(frame);
       } else {
-        finishRace(result, displayOrder);
+        // THE POP: the hazard has arrived at the winner. Sound returns with a harder bang.
+        sfx("unhush");
+        sfx("bigBang");
+        const wRef = refs[winnerIdx];
+        wRef.tok.style.transform = `scale(${POP_SCALE.toFixed(2)})`;
+        wRef.wrap.classList.add("popped");
+        hitHazard();
+        finishRace(result, displayOrder, winnerIdx, isMystery);
       }
     }
+
+    function hitHazard() {
+      const hz = hazardRef;
+      if (hz.el.style.display === "none") return;
+      const bird = hazardType === "bird";
+      const a = hz.inner.animate(
+        bird
+          ? [{ transform: "translate(0,0) rotate(0)", opacity: 1 }, { transform: "translate(60px,-110px) rotate(22deg)", opacity: 0 }]
+          : [{ transform: "translate(0,0) rotate(0)", opacity: 1, offset: 0 }, { transform: "translate(0,6px) rotate(0)", opacity: 1, offset: 0.35 }, { transform: "translate(8px,70px) rotate(40deg)", opacity: 0, offset: 1 }],
+        { duration: bird ? 800 : 950, easing: bird ? "ease-out" : "ease-in", fill: "forwards" }
+      );
+      a.onfinish = () => { hz.el.style.display = "none"; };
+    }
+
     requestAnimationFrame(frame);
   }
 
-  function finishRace(result, displayOrder) {
+  function finishRace(result, displayOrder, winnerIdx, isMystery) {
     racing = false;
-    stage.classList.remove("climax");
+    stage.classList.remove("climax", "silent");
     clock.classList.remove("hot");
     SuspenseFX.shake(stage, 300);
     SuspenseFX.flash(stage, 400);
-    SuspenseFX.winnerSpotlight(stage);
     stage.classList.add("finished-glow");
     setTimeout(() => stage.classList.remove("finished-glow"), 1400);
-    statusText.textContent = "Pop!";
+    statusText.textContent = isMystery ? "Pop! Who was it?" : "Pop!";
     clock.textContent = "🎈";
     winnerBanner.classList.remove("show");
     void winnerBanner.offsetWidth;
-    winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🎈 ${escapeHtml(result.winner)}'s balloon is the first to pop!</span>`;
-    winnerBanner.classList.add("show");
     if (result.photoFinish) SuspenseFX.photoFinishBanner(stage, "Photo finish!");
     if (noRepeatEl.checked) { alreadyWon.push(result.winner); renderHistory(); }
 
-    // Everyone else gets a little startled jump at the pop, so the moment
-    // reads as something that just happened *to the whole flock*, not only
-    // to the winner. A staggered squeak chorus sells the same beat in sound.
-    let squeakDelay = 0;
+    // Camera relaxes, sky brightens (a beat later so the bang gets its moment).
+    cam.style.transition = "transform 0.9s cubic-bezier(.2,.7,.3,1)";
+    cam.style.transform = "scale(1)";
+    setTimeout(() => {
+      dusk.style.transition = "opacity 1.4s ease"; dusk.style.opacity = 0;
+      stage.classList.remove("dusky");
+      refs.forEach((r, i) => { if (i !== winnerIdx) r.wrap.style.opacity = ""; });
+    }, 900);
+
+    // The rest of the flock gets startled; a staggered squeak chorus sells the beat.
+    let squeakDelay = 120;
     displayOrder.forEach((entrant, i) => {
-      if (entrant.name === result.winner) return;
-      const wrapEl = document.getElementById(`wrap-${i}`);
+      if (i === winnerIdx) return;
+      const wrapEl = refs[i] && refs[i].wrap;
       if (wrapEl) wrapEl.classList.add("startled");
       squeakDelay += 40 + Math.random() * 50;
-      setTimeout(() => SoundFX.squeak(0.8 + Math.random() * 0.5), squeakDelay);
+      setTimeout(() => sfx("squeak", 0.8 + Math.random() * 0.5), squeakDelay);
     });
 
-    const winnerIdx = result.eligiblePool.indexOf(result.winner);
-    const winnerEl = document.getElementById(`wrap-${winnerIdx}`);
+    const winnerEl = refs[winnerIdx] && refs[winnerIdx].wrap;
     const rect = (winnerEl || stage).getBoundingClientRect();
-    SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
+
+    if (isMystery) {
+      // Confetti puffs out of the balloon as the card tumbles free; the big reveal comes when it flips.
+      SuspenseFX.burst(rect.left + rect.width / 2, rect.top, { count: 26, spread: 0.7 });
+      dropMysteryCard(result.winner, rect).then(() => {
+        winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🎈 Balloon #${winnerIdx + 1} was ${escapeHtml(result.winner)}!</span>`;
+        winnerBanner.classList.add("show");
+        statusText.textContent = "It's " + result.winner + "!";
+      });
+    } else {
+      setTimeout(() => {
+        SuspenseFX.winnerSpotlight(stage);
+        SuspenseFX.burst(rect.left + rect.width / 2, rect.top);
+      }, 320);
+      winnerBanner.innerHTML = `<span class="wb-eyebrow">🏆 Winner</span><span class="wb-name">🎈 ${escapeHtml(result.winner)}'s balloon is the first to pop!</span>`;
+      winnerBanner.classList.add("show");
+    }
   }
 
   startBtn.addEventListener("click", runRace);
-  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })));
+  buildStage(getNames().map((name) => ({ name, finishTime: 1, progressAt: () => 0 })), false);
 </script>
 
 </body>
