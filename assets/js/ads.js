@@ -19,7 +19,7 @@
   "use strict";
 
   /* ------------------------------ CONFIG ------------------------------ */
-  var PROVIDER = "adsense";                        // "none" = no ads at all. Use "adsterra" or "adsense" to turn ads on
+  var PROVIDER = "adsterra";                        // "none" = no ads at all. Use "adsterra" or "adsense" to turn ads on
 
   var ADSTERRA = {
     host: "https://bauval.org",
@@ -35,11 +35,7 @@
   var SLOTS = {                                     // AdSense ad unit slot IDs
     "home":        "5369012132",   // home page, below the hero
     "tool-top":    "7201802700",   // race pages, above the race area
-    "tool-bottom": "9879013494",   // every tool, below the stage / results
-    // extra placements reuse the same responsive units (AdSense allows one unit in several places)
-    "tool-mid":    "9879013494",   // every tool, between the stage and the explanation text
-    "home-mid":    "5369012132",   // home page, between the tool list and the how-to text
-    "home-bottom": "5369012132"    // home page, bottom
+    "tool-bottom": "9879013494"    // every tool, below the stage / results
   };
   /* -------------------------------------------------------------------- */
 

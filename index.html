@@ -3,12 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="canonical" href="https://pickanamegames.com/">
-<meta property="og:url" content="https://pickanamegames.com/">
-<meta property="og:site_name" content="Pick &amp; Race">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2748%27 fill=%27%23efb93c%27/%3E%3Ctext x=%2750%27 y=%2766%27 font-size=%2756%27 text-anchor=%27middle%27%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E">
-<meta name="google-adsense-account" content="ca-pub-8362200361779290">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8362200361779290" crossorigin="anonymous"></script>
 <title>Pick &amp; Race — classroom name pickers that don't feel like a spreadsheet</title>
 <meta name="description" content="Duck races, spinning wheels, and a dozen other ways to pick a name at random — built for teachers, free to use, no login wall.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,67 +22,28 @@
   .hero .stat-line { margin-top: 26px; font-size: 0.9rem; color: var(--ink-soft); display: flex; gap: 18px; }
   .hero .stat-line strong { color: var(--ink); font-family: var(--font-display); }
 
-  /* ---------- Hero arena: a four-lane mixed race that loops forever ---------- */
   .pond {
     border: var(--border);
     border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--chalk-dim), #dff0e5);
     aspect-ratio: 4/3;
     position: relative;
     overflow: hidden;
-    background: var(--paper-dim);
-    box-shadow: 5px 5px 0 var(--ink);
-    cursor: pointer;
   }
-  .lane { position: absolute; left: 0; right: 0; height: 25%; border-bottom: 2px solid rgba(30,42,69,0.22); overflow: hidden; }
-  .lane:last-of-type { border-bottom: 0; }
-  .lane::before { content: ""; position: absolute; inset: 0; animation: laneScroll 5s linear infinite; }
-  .lane.sky   { top: 0;   background: linear-gradient(180deg, #bfe0ff, #e6f4ff); }
-  .lane.water { top: 25%; background: linear-gradient(180deg, #bfe8ec, #d6f1f0); }
-  .lane.grass { top: 50%; background: linear-gradient(180deg, #d3ecc6, #e2f2d6); }
-  .lane.track { top: 75%; background: linear-gradient(180deg, #f3e2bf, #f8ecd0); }
-  .lane.sky::before   { background: repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 26px, transparent 26px 84px) 0 28% / 100% 2px no-repeat,
-                                    repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 44px, transparent 44px 120px) 40px 72% / 100% 2px no-repeat; animation-duration: 1.4s; --shift: -84px; }
-  .lane.water::before { background: radial-gradient(ellipse 14px 3px at 16px 50%, rgba(255,255,255,.75), transparent 75%) 0 0 / 64px 22px; animation-duration: 3.2s; --shift: -64px; }
-  .lane.grass::before { background: radial-gradient(circle at 3px 3px, rgba(53,96,74,.35) 1.6px, transparent 2.2px) 0 0 / 24px 15px; animation-duration: 6s; --shift: -24px; }
-  .lane.track::before { background: repeating-linear-gradient(90deg, rgba(30,42,69,.13) 0 3px, transparent 3px 36px); animation-duration: 2.2s; --shift: -36px; }
-  @keyframes laneScroll { to { background-position-x: var(--shift, -40px), var(--shift, -40px); } }
-
   .pond .finish {
-    position: absolute; left: 91%; top: 0; bottom: 0; width: 12px; z-index: 2;
-    background: repeating-conic-gradient(var(--ink) 0 25%, #fff 0 50%) 0 0 / 12px 12px;
-    border-left: 2px solid var(--ink); border-right: 2px solid var(--ink);
+    position: absolute; right: 8%; top: 0; bottom: 0; width: 3px;
+    background: repeating-linear-gradient(180deg, var(--ink) 0 8px, transparent 8px 16px);
   }
-  .racer {
-    position: absolute; left: 0; width: 58px; height: 42px; z-index: 3;
-    top: calc(12.5% + var(--lane) * 25%); margin-top: -21px;
-    will-change: transform; transform: translateX(-80px);
+  .duck {
+    position: absolute; left: -8%; width: 42px; height: 34px;
+    animation: swim linear infinite;
+    cursor: pointer; pointer-events: auto;   /* click a duck: it quacks */
   }
-  .racer .body { width: 100%; height: 100%; display: block; animation: bob 0.9s ease-in-out infinite; transform-origin: 50% 70%; }
-  .racer[data-kind="rocket"] .body { animation-duration: 0.35s; }
-  .racer[data-kind="ball"] .body svg { animation: none; }
-  .racer .body svg { width: 100%; height: 100%; overflow: visible; }
-  .racer .flame { transform-origin: 100% 50%; transform-box: fill-box; animation: flicker 0.12s linear infinite alternate; }
-  .racer .ball-spin { transform-origin: 20px 22px; animation: spin 0.55s linear infinite; }
-  .racer[data-kind="turtle"] .body { animation-duration: 1.4s; }
-  @keyframes flicker { from { transform: scaleX(0.7); } to { transform: scaleX(1.25); } }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .racer .tag {
-    position: absolute; left: 50%; top: -15px; transform: translateX(-50%);
-    font: 700 10px/1.5 var(--font-display); letter-spacing: .02em;
-    background: var(--paper); border: 1.5px solid var(--ink); border-radius: 999px;
-    padding: 0 7px; white-space: nowrap; pointer-events: none;
+  @keyframes swim {
+    0% { left: -8%; transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+    100% { left: 84%; transform: translateY(0); }
   }
-  .racer.won .tag { background: var(--pencil); }
-  .arena-badge {
-    position: absolute; left: 50%; top: 6px; z-index: 5; pointer-events: none;
-    transform: translateX(-50%) scale(0); opacity: 0;
-    font: 800 15px/1 var(--font-display); background: var(--pencil); color: var(--ink);
-    border: var(--border); border-radius: 999px; padding: 7px 16px; white-space: nowrap;
-    box-shadow: 3px 3px 0 var(--ink);
-  }
-  .arena-badge.show { animation: badgePop .5s cubic-bezier(.2,1.5,.4,1) forwards; }
-  @keyframes badgePop { to { transform: translateX(-50%) scale(1); opacity: 1; } }
-  .confetti-bit { position: absolute; width: 7px; height: 10px; z-index: 4; pointer-events: none; border-radius: 1px; }
   @keyframes bob { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-3px) rotate(-3deg); } }
 
   section.intro { padding: 8px 0 0; }
@@ -105,8 +60,7 @@
     .hero { grid-template-columns: 1fr; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .btn, .lane::before, .racer .body, .racer .flame, .racer .ball-spin, .arena-badge { animation: none !important; transition: none !important; }
-    .arena-badge.show { transform: translateX(-50%) scale(1); opacity: 1; }
+    .duck, .btn { animation: none !important; transition: none !important; }
   }
 </style>
 <link rel="stylesheet" href="assets/css/responsive.css">
@@ -130,9 +84,9 @@
   <section class="hero">
     <div>
       <h1>Pick a name without another silent cold-call spinner.</h1>
-      <p class="lede">A dozen different ways to choose who goes next — ducks paddle, rockets blast off, turtles plod, balls drop through pegs — all free, no login, no ads blocking the picker itself.</p>
+      <p class="lede">A dozen different ways to choose who goes next — ducks paddle, wheels spin, balls drop through pegs — all free, no login, no ads blocking the picker itself.</p>
       <div class="cta-row">
-        <a class="btn marker" href="#" id="surprise">🎲 Surprise me</a>
+        <a class="btn marker" href="tools/duck-race.html">Try the duck race</a>
         <a class="btn ghost" href="#tools">Browse every tool</a>
       </div>
       <div class="stat-line">
@@ -141,14 +95,11 @@
         <span><strong>2–30s</strong> race length, your call</span>
       </div>
     </div>
-    <div class="pond" id="arena" aria-hidden="true" title="Click to run another race">
-      <div class="lane sky"></div><div class="lane water"></div><div class="lane grass"></div><div class="lane track"></div>
+    <div class="pond" aria-hidden="true">
       <div class="finish"></div>
-      <div class="racer" data-kind="rocket" style="--lane:0"><div class="body"><svg viewBox="0 0 70 40"><path class="flame" d="M2 20 L17 12 L17 28 Z" fill="#ffb703" stroke="#d9503f" stroke-width="1.5"/><path d="M18 8 L8 0 L30 8 Z M18 32 L8 40 L30 32 Z" fill="#d9503f" stroke="#1e2a45" stroke-width="2" stroke-linejoin="round"/><path d="M16 8 H44 Q62 8 68 20 Q62 32 44 32 H16 Z" fill="#fff" stroke="#1e2a45" stroke-width="2"/><path d="M50 9 Q62 11 68 20 Q62 29 50 31 Z" fill="#d9503f"/><circle cx="36" cy="20" r="5.5" fill="#4cc9f0" stroke="#1e2a45" stroke-width="2"/></svg></div><span class="tag"></span></div>
-      <div class="racer" data-kind="duck" style="--lane:1"><div class="body"><svg viewBox="0 0 60 48"><ellipse cx="26" cy="30" rx="20" ry="14" fill="#efb93c" stroke="#1e2a45" stroke-width="2"/><circle cx="42" cy="16" r="11" fill="#efb93c" stroke="#1e2a45" stroke-width="2"/><path d="M50 14 L60 17 L50 20 Z" fill="#d9503f"/><circle cx="45" cy="13" r="2" fill="#1e2a45"/><path d="M14 30 Q24 24 34 30" fill="none" stroke="#c98f12" stroke-width="2" stroke-linecap="round"/></svg></div><span class="tag"></span></div>
-      <div class="racer" data-kind="turtle" style="--lane:2"><div class="body"><svg viewBox="0 0 64 40"><path d="M10 12 L4 18 L12 20 Z" fill="#7fb069" stroke="#1e2a45" stroke-width="1.5" stroke-linejoin="round" transform="translate(0,12)"/><rect x="16" y="30" width="9" height="8" rx="3" fill="#7fb069" stroke="#1e2a45" stroke-width="2"/><rect x="40" y="30" width="9" height="8" rx="3" fill="#7fb069" stroke="#1e2a45" stroke-width="2"/><path d="M8 32 Q8 6 31 6 Q54 6 54 32 Z" fill="#35604a" stroke="#1e2a45" stroke-width="2"/><path d="M31 6 V32 M19 12 Q22 24 20 32 M43 12 Q40 24 42 32" fill="none" stroke="#1e2a45" stroke-opacity=".45" stroke-width="1.6"/><circle cx="57" cy="24" r="7" fill="#7fb069" stroke="#1e2a45" stroke-width="2"/><circle cx="59.5" cy="22" r="1.7" fill="#1e2a45"/></svg></div><span class="tag"></span></div>
-      <div class="racer" data-kind="ball" style="--lane:3"><div class="body"><svg viewBox="0 0 40 40"><g class="ball-spin"><circle cx="20" cy="22" r="15" fill="#d9503f" stroke="#1e2a45" stroke-width="2"/><path d="M5 22 H35" stroke="#fff" stroke-opacity=".6" stroke-width="5"/><circle cx="28" cy="22" r="2.4" fill="#1e2a45" fill-opacity=".5"/></g><ellipse cx="14" cy="15" rx="4" ry="2.4" fill="#fff" fill-opacity=".85" transform="rotate(-35 14 15)"/></svg></div><span class="tag"></span></div>
-      <div class="arena-badge" id="arenaBadge"></div>
+      <svg class="duck" style="top:14%; animation-duration:4.6s;" viewBox="0 0 60 48"><ellipse cx="26" cy="30" rx="20" ry="14" fill="#efb93c"/><circle cx="42" cy="16" r="11" fill="#efb93c"/><path d="M50 14 L60 17 L50 20 Z" fill="#d9503f"/><circle cx="45" cy="13" r="2" fill="#1e2a45"/></svg>
+      <svg class="duck" style="top:42%; animation-duration:3.8s; animation-delay:.4s" viewBox="0 0 60 48"><ellipse cx="26" cy="30" rx="20" ry="14" fill="#fff"/><circle cx="42" cy="16" r="11" fill="#fff"/><path d="M50 14 L60 17 L50 20 Z" fill="#d9503f"/><circle cx="45" cy="13" r="2" fill="#1e2a45"/></svg>
+      <svg class="duck" style="top:70%; animation-duration:5.4s; animation-delay:.9s" viewBox="0 0 60 48"><ellipse cx="26" cy="30" rx="20" ry="14" fill="#35604a"/><circle cx="42" cy="16" r="11" fill="#35604a"/><path d="M50 14 L60 17 L50 20 Z" fill="#efb93c"/><circle cx="45" cy="13" r="2" fill="#fff"/></svg>
     </div>
   </section>
 
@@ -166,7 +117,7 @@
     </div>
 
     <div class="tool-grid">
-      <a class="tool-card" href="tools/duck-race.html"><span class="tab race">race</span><span class="icon">🦆</span><h3>Duck Race</h3><p>Ducks race down a winding river; first to the line wins.</p></a>
+      <a class="tool-card" href="tools/duck-race.html"><span class="tab race">race</span><span class="icon">🦆</span><h3>Duck Race</h3><p>Ducks paddle across a pond; first to the line wins.</p></a>
       <a class="tool-card" href="tools/rocket-race.html"><span class="tab race">race</span><span class="icon">🚀</span><h3>Spaceship Shootdown</h3><p>Ships duel it out in orbit — last one flying wins.</p></a>
       <a class="tool-card" href="tools/turtle-race.html"><span class="tab race">race</span><span class="icon">🐢</span><h3>Turtle Race</h3><p>Deliberately, comedically slow.</p></a>
       <a class="tool-card" href="tools/ball-drop.html"><span class="tab race">race</span><span class="icon">🔴</span><h3>Ball Drop</h3><p>One ball tumbles through pegs into a name slot.</p></a>
@@ -174,8 +125,7 @@
       <a class="tool-card" href="tools/spinning-wheel.html"><span class="tab spin">spin</span><span class="icon">🎡</span><h3>Spinning Wheel</h3><p>The classic. Spin it, watch it settle.</p></a>
       <a class="tool-card" href="tools/slot-machine.html"><span class="tab spin">spin</span><span class="icon">🎰</span><h3>Slot Machine</h3><p>Reels tumble and lock in a name.</p></a>
       <a class="tool-card" href="tools/claw-machine.html"><span class="tab spin">spin</span><span class="icon">🕹️</span><h3>Claw Machine</h3><p>The claw creeps, drops, and grabs a name — will it hold on?</p></a>
-      <a class="tool-card" href="tools/fishing-game.html"><span class="tab spin">spin</span><span class="icon">🎣</span><h3>Fishing Game</h3><p>Aim the hook cannon, shoot a mystery fish, reveal the winner.</p></a>
-      <a class="tool-card" href="tools/mystery-card-flip.html"><span class="tab spin">spin</span><span class="icon">🃏</span><h3>Mystery Card Flip</h3><p>Watch the cards shuffle, then pick one.</p></a>
+      <a class="tool-card" href="tools/mystery-card-flip.html"><span class="tab spin">spin</span><span class="icon">🃏</span><h3>Mystery Card Flip</h3><p>Flip through a deck to reveal the pick.</p></a>
       <a class="tool-card" href="tools/team-generator.html"><span class="tab mix">mix</span><span class="icon">👥</span><h3>Team Generator</h3><p>Random pairs or groups of any size.</p></a>
       <a class="tool-card" href="tools/tournament-bracket.html"><span class="tab mix">mix</span><span class="icon">🏆</span><h3>Tournament Bracket</h3><p>Seed the class and run a bracket.</p></a>
       <a class="tool-card" href="tools/weighted-picker.html"><span class="tab mix">mix</span><span class="icon">⚖️</span><h3>Weighted Picker</h3><p>Give some names better odds, quietly.</p></a>
@@ -185,8 +135,7 @@
   </section>
 
 
-  <aside class="ad-slot" data-ad="home-mid" aria-label="Advertisement"></aside>
-<section class="about-tool" aria-labelledby="how-home">
+  <section class="about-tool" aria-labelledby="how-home">
     <h2 id="how-home">How teachers use Pick &amp; Race</h2>
     <p>Pick &amp; Race turns a plain class list into a short, fair and fun moment. Paste your roster, press the button, and an animated duck race, wheel, claw machine or bracket decides who answers, who leads, or who goes first. Every tool shares one engine, so each name has the same chance unless you choose to change the odds.</p>
     <h3>Why a picker helps</h3>
@@ -199,11 +148,10 @@
     <p>Turn on <strong>No repeats</strong> so everyone gets a turn before any name returns, use <strong>Projector mode</strong> for big screens, and try the <strong>Weighted Picker</strong> when you want to quietly give quieter students a better chance. Read more on the <a href="about.html">About page</a>.</p>
   </section>
 
-<aside class="ad-slot" data-ad="home-bottom" aria-label="Advertisement"></aside>
 </main>
 
 <footer class="site-footer">
-  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="about.html">About</a> · <a href="privacy.html">Privacy policy</a> · <a href="contact.html">Contact</a></div>
+  <div class="wrap">Pick &amp; Race — built for classrooms. No account needed, ever. · <a href="about.html">About</a> · <a href="privacy.html">Privacy policy</a></div>
 </footer>
 
 <script src="assets/js/sound-fx.js"></script>
@@ -213,7 +161,7 @@
     "duck-race": "duck", "rocket-race": "rocket", "turtle-race": "turtle", "ball-drop": "ball",
     "balloon-pop": "balloon", "spinning-wheel": "wheel", "slot-machine": "slot", "mystery-card-flip": "card",
     "team-generator": "team", "tournament-bracket": "bracket", "weighted-picker": "weighted",
-    "elimination-mode": "elim", "yes-no-wheel": "yesno", "claw-machine": "weighted", "fishing-game": "fishing",
+    "elimination-mode": "elim", "yes-no-wheel": "yesno", "claw-machine": "weighted",
   };
   document.querySelectorAll(".tool-card").forEach((card) => {
     const slug = (card.getAttribute("href") || "").split("/").pop().replace(".html", "");
@@ -221,10 +169,11 @@
     card.addEventListener("mouseenter", () => SoundFX.preview(PREVIEWS[slug]));
   });
 
-  // Logo easter egg: click for a quack, a squeak, and a little wiggle.
-  document.querySelectorAll(".brand .mark").forEach((el) => {
+  // Easter egg: click a pond duck (or the logo) for a quack, a squeak, and a little wiggle.
+  document.querySelectorAll(".pond .duck, .brand .mark").forEach((el) => {
     el.addEventListener("click", (e) => {
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();          // the logo links to this same page; stay put and quack instead
+      e.stopPropagation();
       SoundFX.unlock();
       SoundFX.quack(0.9 + Math.random() * 0.4);
       setTimeout(() => SoundFX.squeak(1 + Math.random() * 0.3), 120);
@@ -235,112 +184,6 @@
       );
     });
   });
-
-  // "Surprise me": jump straight into a random picker.
-  document.getElementById("surprise").addEventListener("click", (e) => {
-    e.preventDefault();
-    const links = [...document.querySelectorAll(".tool-card")].map((a) => a.getAttribute("href")).filter(Boolean);
-    if (links.length) location.href = links[Math.floor(Math.random() * links.length)];
-  });
-
-  // Hero arena: rocket, duck, turtle and ball race to one finish line, a random
-  // name wins, confetti, repeat. Click a racer for its sound, the track for a rerun.
-  (() => {
-    const arena = document.getElementById("arena");
-    const badge = document.getElementById("arenaBadge");
-    const racers = [...arena.querySelectorAll(".racer")];
-    const EMOJI = { rocket: "🚀", duck: "🦆", turtle: "🐢", ball: "🔴" };
-    const NAMES = ["Ava", "Liam", "Noor", "Diego", "Priya", "Mateo", "Yuki", "Isla", "Zane", "Mina"];
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const rand = (a, b) => a + Math.random() * (b - a);
-    let anims = [], timer = null, run = 0;
-
-    function geometry() {
-      const w = arena.clientWidth;
-      return { start: -80, end: w * 0.91 - 58 + 4 };
-    }
-
-    function confetti() {
-      const colors = ["#d9503f", "#efb93c", "#35604a", "#4cc9f0", "#b388ff"];
-      const w = arena.clientWidth, h = arena.clientHeight;
-      for (let i = 0; i < 26; i++) {
-        const bit = document.createElement("i");
-        bit.className = "confetti-bit";
-        bit.style.background = colors[i % colors.length];
-        bit.style.left = (w * 0.91) + "px"; bit.style.top = rand(h * 0.3, h * 0.7) + "px";
-        arena.appendChild(bit);
-        const dx = rand(-130, 50), dy = rand(-110, 60);
-        bit.animate(
-          [{ transform: "translate(0,0) rotate(0)", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) rotate(${rand(-540, 540)}deg)`, opacity: 0 }],
-          { duration: rand(800, 1400), easing: "cubic-bezier(.2,.7,.4,1)" }
-        ).onfinish = () => bit.remove();
-      }
-    }
-
-    function celebrate(w, name) {
-      racers[w].classList.add("won");
-      badge.textContent = `${EMOJI[racers[w].dataset.kind]} ${name} wins!`;
-      badge.classList.remove("show"); void badge.offsetWidth; badge.classList.add("show");
-      if (reduce) return;
-      confetti();
-      racers[w].querySelector(".body").animate(
-        [{ transform: "translateY(0) scale(1)" }, { transform: "translateY(-10px) scale(1.2) rotate(-6deg)" }, { transform: "translateY(0) scale(1)" }],
-        { duration: 520, iterations: 2, easing: "ease-out" }
-      );
-    }
-
-    function start() {
-      clearTimeout(timer);
-      anims.forEach((a) => a.cancel());
-      const id = ++run;
-      const { start, end } = geometry();
-      const names = NAMES.slice().sort(() => Math.random() - 0.5).slice(0, racers.length);
-      const winner = Math.floor(Math.random() * racers.length);
-      badge.classList.remove("show");
-      racers.forEach((r, i) => { r.classList.remove("won"); r.querySelector(".tag").textContent = names[i]; });
-
-      if (reduce) {   // static photo finish, no motion
-        racers.forEach((r, i) => { r.style.transform = `translateX(${end - (i === winner ? 0 : 18 + i * 6)}px)`; });
-        celebrate(winner, names[winner]);
-        return;
-      }
-
-      // Everyone follows a wobbly, monotonic path (so the lead changes), and the
-      // winner just gets the shortest total time.
-      anims = racers.map((r, i) => {
-        const dur = i === winner ? rand(4200, 4800) : rand(5000, 6800);
-        let last = 0;
-        const frames = [0, 0.28, 0.55, 0.8, 1].map((o) => {
-          let p = o === 0 || o === 1 ? o : Math.min(0.98, Math.max(last + 0.04, o + rand(-0.13, 0.13)));
-          last = p;
-          return { transform: `translateX(${start + (end - start) * p}px)`, offset: o };
-        });
-        return r.animate(frames, { duration: dur, delay: i * 120, easing: "linear", fill: "forwards" });
-      });
-      Promise.all(anims.map((a) => a.finished)).then(() => {
-        if (id !== run) return;
-        celebrate(winner, names[winner]);
-        timer = setTimeout(start, 3400);
-      }).catch(() => {});
-    }
-
-    racers.forEach((r) => r.addEventListener("click", (e) => {
-      e.stopPropagation();
-      SoundFX.unlock();
-      const kind = r.dataset.kind;
-      if (kind === "duck") { SoundFX.quack(0.9 + Math.random() * 0.4); setTimeout(() => SoundFX.squeak(1 + Math.random() * 0.3), 120); }
-      else if (kind === "rocket") SoundFX.whoosh();
-      else if (kind === "turtle") SoundFX.plod();
-      else SoundFX.boing();
-      r.querySelector(".body").animate(
-        [{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-14deg) scale(1.3)" }, { transform: "rotate(10deg) scale(1.1)" }, { transform: "rotate(0) scale(1)" }],
-        { duration: 380, easing: "ease-out" }
-      );
-    }));
-    arena.addEventListener("click", start);
-    window.addEventListener("resize", () => { if (reduce) start(); });
-    start();
-  })();
 </script>
 
 </body>
