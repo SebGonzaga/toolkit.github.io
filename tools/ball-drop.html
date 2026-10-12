@@ -162,7 +162,7 @@ Isla</textarea>
           <div class="ball" id="ball" style="display:none;"><div class="ball-spin" id="ballSpin"></div></div>
         </div>
         <div class="slots" id="slots"></div>
-        <div class="susp-layer" aria-hidden="true"><div class="susp-tint"></div><div class="susp-beat"></div><div class="susp-bar top"></div><div class="susp-bar bot"></div><div class="susp-label">HERE IT COMES</div></div>
+        <div class="susp-layer" aria-hidden="true"><div class="susp-tint"></div><div class="susp-beat"></div><div class="susp-bar top"></div><div class="susp-bar bot"></div><div class="susp-label">◀◀ SLOW-MO ▶▶</div></div>
       </div>
       <div class="winner-banner" id="winnerBanner" aria-live="polite" aria-atomic="true"></div>
       <div class="history" id="historyList"></div>
@@ -265,9 +265,25 @@ Isla</textarea>
     pegSvg.innerHTML = svg;
   }
 
-  function setSusp(v, beat) {
-    stage.style.setProperty("--susp", v.toFixed(3));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let susp = 0, suspTarget = 0;
+
+  function applySusp(beat) {
+    stage.style.setProperty("--susp", susp.toFixed(3));
     stage.style.setProperty("--beat", beat.toFixed(3));
+  }
+  function resetSuspense() { susp = 0; suspTarget = 0; applySusp(0.5); }
+  function fadeOutSuspense() {
+    suspTarget = 0;
+    let last = performance.now();
+    (function step(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      susp += (0 - susp) * (1 - Math.exp(-dt * 5));
+      if (susp > 0.01 && !dropping) { applySusp(0.5); requestAnimationFrame(step); }
+      else if (!dropping) { susp = 0; applySusp(0.5); }
+    })(last);
   }
 
   function rand(min, max) { return min + Math.random() * (max - min); }
@@ -381,7 +397,7 @@ Isla</textarea>
     dropping = true;
     winnerBanner.classList.remove("show");
     stage.classList.remove("zoom", "finished-glow");
-    setSusp(0, 0.5);
+    resetSuspense();
     document.querySelectorAll(".slot").forEach((s) => s.classList.remove("landed", "armed"));
 
     const duration = Number(durationEl.value);
@@ -421,6 +437,9 @@ Isla</textarea>
     let sampleIdx = 0;
     let hitIdx = 0;
     let armedIdx = -1;
+    let tail = false, lastFrame = start;
+    const tailReal = clamp(duration * 0.5, Math.min(2.2, duration * 0.65), 5.6);
+    const preReal = Math.max(0.05, duration - tailReal);
 
     function frame(now) {
       const elapsed = (now - start) / 1000;
@@ -482,9 +501,11 @@ Isla</textarea>
 
       if (progress > 0.8 && !stage.classList.contains("zoom")) stage.classList.add("zoom");
 
-      // Overlay: eases in over the final stretch with a heartbeat pulse.
-      const ramp = Math.min(1, Math.max(0, (progress - 0.7) / 0.15));
-      setSusp(ramp, 0.5 + 0.5 * Math.sin((now / 1000) * 8));
+      // Overlay (bars, tint, heartbeat glow) — same look and timing as before; ball motion untouched.
+      const dtF = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+      if (!tail && elapsed >= preReal) { tail = true; suspTarget = 1; statusText.textContent = "Here it comes…"; }
+      susp = lerp(susp, suspTarget, 1 - Math.exp(-dtF * 3.5));
+      applySusp(reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin((now / 1000) * 7.5));
 
       if (progress < 1) {
         requestAnimationFrame(frame);
@@ -497,7 +518,7 @@ Isla</textarea>
 
   function finishDrop(result, idx) {
     dropping = false;
-    setSusp(0, 0.5);
+    fadeOutSuspense();
     SoundFX.matchWin();   // ding! it landed
     stage.classList.remove("zoom");
     SuspenseFX.shake(stage, 350);
