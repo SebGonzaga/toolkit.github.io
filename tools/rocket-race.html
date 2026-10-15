@@ -130,12 +130,12 @@
 
   .field { height: 440px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 5; }
   .field.many-names { height: 500px; }
-  .field-token { left: 0; top: 0; width: 40px; height: 52px; transform: translate(0,0); animation: none; will-change: transform; }
-  .field.many-names .field-token { width: 28px; height: 36px; }
+  .field-token { left: 0; top: 0; width: calc(40px * var(--ship-scale, 1)); height: calc(52px * var(--ship-scale, 1)); transform: translate(0,0); animation: none; will-change: transform; }
+  .field.many-names .field-token { width: calc(28px * var(--ship-scale, 1)); height: calc(36px * var(--ship-scale, 1)); }
   .field-token.stalled { animation: none; }
   .field-token .token-art { width: 100%; height: 100%; display: block; position: relative; }
   .field-token .token-art svg { width: 100%; height: 100%; display: block; overflow: visible; }
-  .field-token .name-tag { bottom: auto; top: -19px; background: rgba(6,10,26,0.78); color: #eef1fb; border: 1px solid rgba(255,255,255,0.14); }
+  .field-token .name-tag { bottom: auto; top: calc(-19px * var(--ship-scale, 1)); background: rgba(6,10,26,0.78); color: #eef1fb; border: 1px solid rgba(255,255,255,0.14); }
 
   .field-token.firing .token-art { animation: firing-flash 0.22s ease-in-out; }
   @keyframes firing-flash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.8) drop-shadow(0 0 8px #ffb347); } }
@@ -249,6 +249,25 @@
   .fleet-row.winner .fleet-name { font-weight: 800; }
   .leaderboard-panel.many-names .fleet-row { padding: 2px 0; font-size: 0.72rem; }
 
+
+  /* -- full screen mode (native Fullscreen API, with a fixed-position fallback for iPhone) -- */
+  .hdr-right { display: flex; align-items: baseline; gap: 4px; }
+  .fs-btn { margin-left: 12px; font: 700 0.78rem var(--font-display); color: #eef1fb; background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }
+  .fs-btn:hover, .fs-btn:focus-visible { background: rgba(255,255,255,0.22); }
+  .stage-shell.fs-on { position: fixed; inset: 0; z-index: 9999; background: #01020a; padding: 12px 16px;
+    display: flex; flex-direction: column; overflow: auto; }
+  .stage-shell.fs-on .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; border-radius: 12px; }
+  .stage-shell.fs-on .field-stage { flex: 1; min-height: 0; align-items: stretch; grid-template-columns: 1fr 210px; }
+  .stage-shell.fs-on .field-wrap { height: 100%; min-height: 0; }
+  .stage-shell.fs-on .field, .stage-shell.fs-on .field.many-names { height: 100%; }
+  .stage-shell.fs-on .leaderboard-panel { max-height: 100%; overflow-y: auto; }
+  .stage-shell.fs-on .stage-header .status { font-size: 1.4rem; }
+  .stage-shell.fs-on .stage-header .clock { font-size: 1.8rem; }
+  .stage-shell.fs-on .winner-banner { flex: none; }
+  .stage-shell.fs-on .history { flex: none; color: #9fb0d8; }
+  @media (max-width: 860px) { .stage-shell.fs-on .field-stage { grid-template-columns: 1fr 130px; } }
+
   @media (max-width: 860px) {
     .field { height: 400px; }
     .field.many-names { height: 460px; }
@@ -314,7 +333,7 @@ Isla</textarea>
       <button class="btn ghost small" id="resetHistory" style="margin-top:8px; width:100%;">Reset no-repeat history</button>
     </div>
 
-    <div>
+    <div class="stage-shell" id="stageShell">
       <div class="stage" id="stage">
         <div class="starfield" id="starfield"></div>
         <div class="nebula" style="width:46%; aspect-ratio:1; right:-10%; bottom:-14%; background:radial-gradient(circle, rgba(88,132,230,0.7), transparent 70%); animation-duration:20s;"></div>
@@ -322,7 +341,7 @@ Isla</textarea>
         <div class="nebula" style="width:22%; aspect-ratio:1; right:4%; top:6%; background:radial-gradient(circle, rgba(255,150,60,0.28), transparent 70%); animation-duration:12s; animation-delay:-3s;"></div>
         <div class="stage-header">
           <span class="status" id="statusText" aria-live="polite">Ready when you are</span>
-          <span class="clock" id="clock">–</span>
+          <span class="hdr-right"><span class="clock" id="clock">–</span><button type="button" class="fs-btn" id="fsBtn" aria-pressed="false" title="Full screen">⛶ Full screen</button></span>
         </div>
         <div class="field-stage">
           <div class="field-wrap" id="fieldWrap">
@@ -548,8 +567,25 @@ Isla</textarea>
     const marginX = 0.09, marginY = 0.15;
     const tokW = many ? 28 : 40, tokH = many ? 36 : 52;
 
+    // Start positions: for each ship, try several random spots and keep the one
+    // farthest from the ships already placed, so nobody spawns on top of anyone.
+    const placed = [];
+    function spreadPoint() {
+      const pw = fieldEl.clientWidth || 700, ph = fieldEl.clientHeight || 440;
+      let best = null, bestD = -1;
+      for (let k = 0; k < 40; k++) {
+        const p = { x: rnd(marginX, 1 - marginX), y: rnd(marginY, 1 - marginY) };
+        let d = Infinity;
+        for (const q of placed) d = Math.min(d, Math.hypot((p.x - q.x) * pw, (p.y - q.y) * ph));
+        if (d > bestD) { bestD = d; best = p; }
+      }
+      placed.push(best);
+      return best;
+    }
+
     const ships = entrants.map((entrant, i) => {
       const color = PALETTE[i % PALETTE.length];
+      const start = spreadPoint();
       const el = document.createElement("div");
       el.className = "field-token" + (showNamesAlways ? " always-visible" : "");
       el.tabIndex = 0;
@@ -564,7 +600,7 @@ Isla</textarea>
         name: entrant.name, color, el,
         artEl: el.querySelector(".token-art"),
         badgeEl: el.querySelector(".rank-badge"),
-        x: rnd(marginX, 1 - marginX), y: rnd(marginY, 1 - marginY),
+        x: start.x, y: start.y,
         vx: 0, vy: 0, angle: 0,
         tx: 0.5, ty: 0.5, wanderTimer: 0,
         speed: rnd(0.06, 0.11), turnRate: rnd(1.3, 2.6),
@@ -634,8 +670,9 @@ Isla</textarea>
     function step(dt) {
       if (dt <= 0) return;
       const W = Math.max(fieldEl.clientWidth, 1), H = Math.max(fieldEl.clientHeight, 1);
-      const mx = Math.min(0.4, (tokW / 2 + 6) / W);
-      const my = Math.min(0.4, (tokH / 2 + 18) / H);
+      const sc = Number(fieldEl.dataset.scale) || 1;
+      const mx = Math.min(0.4, (tokW * sc / 2 + 6) / W);
+      const my = Math.min(0.4, (tokH * sc / 2 + 18) / H);
       const now = performance.now() / 1000;
       ships.forEach((ship) => {
         if (!ship.alive) return;
@@ -676,6 +713,30 @@ Isla</textarea>
         ship.angle += (want - ship.angle) * Math.min(1, dt * 7);
         const surging = Math.hypot(ship.vx, ship.vy) > ship.speed * 1.25;
         ship.el.classList.toggle("surging", surging);
+      });
+
+      // Keep ships from bunching up: any two closer than minD get nudged apart.
+      // minD shrinks automatically when the arena is crowded (lots of names).
+      const live = ships.filter((s) => s.alive);
+      const minD = Math.min(tokW * sc * 2.8, Math.sqrt((W * H * 0.5) / Math.max(live.length, 1)));
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < live.length; i++) {
+          for (let j = i + 1; j < live.length; j++) {
+            const a = live[i], b = live[j];
+            let dx = (a.x - b.x) * W, dy = (a.y - b.y) * H;
+            let d = Math.hypot(dx, dy);
+            if (d >= minD) continue;
+            if (d < 0.001) { dx = rnd(-1, 1); dy = rnd(-1, 1); d = Math.hypot(dx, dy) || 1; }
+            const push = (minD - d) * 0.5 * Math.min(1, dt * 10);
+            const ux = dx / d, uy = dy / d;
+            a.x += (ux * push) / W; a.y += (uy * push) / H;
+            b.x -= (ux * push) / W; b.y -= (uy * push) / H;
+          }
+        }
+      }
+      live.forEach((ship) => {
+        ship.x = clamp(ship.x, mx, 1 - mx);
+        ship.y = clamp(ship.y, my, 1 - my);
         place(ship, W, H);
       });
       placeReticle();
@@ -842,7 +903,9 @@ Isla</textarea>
       ret.el.remove();
     }
 
-    return { ships, step, trails, ambient, fire, kill, celebrate, teardown, setReticle, clearReticle, duel };
+    function relayout() { ships.forEach((s) => place(s, fieldEl.clientWidth, fieldEl.clientHeight)); placeReticle(); }
+
+    return { ships, step, trails, ambient, fire, kill, celebrate, teardown, setReticle, clearReticle, duel, relayout };
   }
 
   function buildFleet(entrants) {
@@ -865,6 +928,45 @@ Isla</textarea>
     if (prefersReducedMotion) s.style.top = (Math.random() * 100).toFixed(1) + "%";
     starfield.appendChild(s);
   }
+
+  // ---- Full screen: native Fullscreen API where available, otherwise a
+  // fixed-position overlay (iPhone Safari can't fullscreen arbitrary elements).
+  const shell = document.getElementById("stageShell");
+  const fsBtn = document.getElementById("fsBtn");
+  const nativeFsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  function updateScale() {
+    const on = shell.classList.contains("fs-on");
+    setTimeout(() => {
+      const W = field.clientWidth, H = field.clientHeight;
+      const s = on ? Math.min(1.8, Math.max(1, Math.min(W / 760, H / 460))) : 1;
+      field.dataset.scale = s.toFixed(2);
+      field.style.setProperty("--ship-scale", s.toFixed(2));
+      if (fleet && fleet.relayout) fleet.relayout();
+    }, 80);
+  }
+  function setFs(on) {
+    shell.classList.toggle("fs-on", on);
+    fsBtn.textContent = on ? "✕ Exit full screen" : "⛶ Full screen";
+    fsBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    document.body.style.overflow = on ? "hidden" : "";
+    updateScale();
+  }
+  async function enterFs() {
+    setFs(true);
+    const req = shell.requestFullscreen || shell.webkitRequestFullscreen;
+    if (req) { try { await req.call(shell); } catch (e) { /* overlay fallback stays on */ } }
+  }
+  function exitFs() {
+    if (nativeFsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {} }
+    setFs(false);
+  }
+  fsBtn.addEventListener("click", () => (shell.classList.contains("fs-on") ? exitFs() : enterFs()));
+  ["fullscreenchange", "webkitfullscreenchange"].forEach((ev) =>
+    document.addEventListener(ev, () => { if (!nativeFsEl() && shell.classList.contains("fs-on")) setFs(false); }));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && shell.classList.contains("fs-on") && !nativeFsEl()) setFs(false);
+  });
+  window.addEventListener("resize", updateScale);
 
   durationEl.addEventListener("input", () => { durationVal.textContent = durationEl.value + "s"; });
   projectorEl.addEventListener("change", () => stage.classList.toggle("projector", projectorEl.checked));
